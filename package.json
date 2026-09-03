@@ -1,0 +1,47 @@
+{
+  "name": "diagrameria-backend",
+  "version": "0.1.0",
+  "description": "Backend do jogo Diagrameria - montagem de diagramas UML sob pressao de tempo",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js",
+    "migrate": "knex migrate:latest",
+    "migrate:rollback": "knex migrate:rollback",
+    "seed": "knex seed:run",
+    "test": "jest --runInBand",
+    "test:unitarios": "jest testes/unitarios",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "formatar": "prettier --write ."
+  },
+  "keywords": [
+    "uml",
+    "jogo",
+    "engenharia-de-software"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
+    "knex": "^3.3.0",
+    "pg": "^8.23.0"
+  },
+  "devDependencies": {
+    "eslint": "^10.9.1",
+    "eslint-config-prettier": "^10.1.8",
+    "jest": "^30.5.1",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.9.6",
+    "supertest": "^7.2.2"
+  }
+}
