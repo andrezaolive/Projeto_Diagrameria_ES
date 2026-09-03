@@ -1,0 +1,167 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/andrezaolive/Projeto_Diagrameria_ES/docs/schemas/diagrama.schema.json",
+  "title": "Diagrama de Classes UML",
+  "description": "Formato canonico de um diagrama de classes no Diagrameria. E o mesmo formato em tres lugares: o JSON que o Canvas produz ao enviar um pedido, o gabarito guardado na coluna gabaritos.diagrama, e a entrada do ValidadorUML. Se os tres nao falarem exatamente esta lingua, a validacao nao funciona.",
+  "type": "object",
+  "required": ["versao", "classes", "relacionamentos"],
+  "additionalProperties": false,
+  "properties": {
+    "versao": {
+      "description": "Versao do formato. Permite evoluir o schema sem invalidar gabaritos ja gravados no banco.",
+      "type": "string",
+      "const": "1.0"
+    },
+    "classes": {
+      "description": "Blocos do diagrama. Pode vir vazio: um canvas em branco e uma entrega ruim, nao uma requisicao invalida.",
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 40,
+      "items": { "$ref": "#/$defs/classe" }
+    },
+    "relacionamentos": {
+      "description": "Ligacoes entre os blocos. As pontas 'origem' e 'destino' referenciam o campo 'id' de uma classe DESTE diagrama.",
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 80,
+      "items": { "$ref": "#/$defs/relacionamento" }
+    }
+  },
+
+  "$defs": {
+    "identificador": {
+      "description": "Id local ao diagrama, gerado pelo Canvas. Nao tem significado fora deste JSON e nunca e comparado com o gabarito: serve apenas para os relacionamentos apontarem para uma classe.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{1,64}$"
+    },
+
+    "nomeUml": {
+      "description": "Nome de classe, atributo ou metodo. A comparacao com o gabarito e feita sobre este campo, normalizado (sem espacos nas pontas, sem diferenca de maiuscula/minuscula, sem acento).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60,
+      "pattern": "^[A-Za-zÀ-ÖØ-öø-ÿ_][A-Za-zÀ-ÖØ-öø-ÿ0-9_ ]*$"
+    },
+
+    "tipoDado": {
+      "description": "Tipo de um atributo ou retorno de metodo. Aceita generics simples (List<Item>) e arrays (int[]). 'void' e valido como retorno.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "pattern": "^[A-Za-zÀ-ÖØ-öø-ÿ_][A-Za-zÀ-ÖØ-öø-ÿ0-9_<>,\\[\\]\\. ]*$"
+    },
+
+    "visibilidade": {
+      "description": "Visibilidade UML por extenso. O Canvas exibe o simbolo correspondente: publico '+', privado '-', protegido '#', pacote '~'.",
+      "type": "string",
+      "enum": ["publico", "privado", "protegido", "pacote"]
+    },
+
+    "multiplicidade": {
+      "description": "Cardinalidade de uma ponta do relacionamento. Enum fechado de proposito: formato livre faria gabarito e envio divergirem por formatacao. Na comparacao, '*' e tratado como equivalente a '0..*'.",
+      "type": "string",
+      "enum": ["1", "0..1", "1..*", "0..*", "*"]
+    },
+
+    "posicao": {
+      "description": "Coordenada do bloco no canvas, em pixels. Persistida para o jogador poder retomar o desenho, mas IGNORADA pelo validador: mover um bloco de lugar nao muda se o diagrama esta certo.",
+      "type": "object",
+      "required": ["x", "y"],
+      "additionalProperties": false,
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" }
+      }
+    },
+
+    "atributo": {
+      "type": "object",
+      "required": ["nome", "tipo", "visibilidade"],
+      "additionalProperties": false,
+      "properties": {
+        "nome": { "$ref": "#/$defs/nomeUml" },
+        "tipo": { "$ref": "#/$defs/tipoDado" },
+        "visibilidade": { "$ref": "#/$defs/visibilidade" }
+      }
+    },
+
+    "metodo": {
+      "description": "RESERVADO PARA A v1.1: o campo 'parametros' (lista de {nome, tipo}) ainda nao existe. Foi deixado de fora da v1 porque exigiria um editor de assinatura de metodo no Canvas ja na Sprint 1. Quando entrar, sera opcional, e diagramas v1.0 continuarao validos.",
+      "type": "object",
+      "required": ["nome", "retorno", "visibilidade"],
+      "additionalProperties": false,
+      "properties": {
+        "nome": { "$ref": "#/$defs/nomeUml" },
+        "retorno": { "$ref": "#/$defs/tipoDado" },
+        "visibilidade": { "$ref": "#/$defs/visibilidade" }
+      }
+    },
+
+    "classe": {
+      "type": "object",
+      "required": ["id", "nome"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/identificador" },
+        "nome": { "$ref": "#/$defs/nomeUml" },
+        "estereotipo": {
+          "description": "Natureza do bloco. Ausente equivale a 'classe'. O Canvas desenha interface e abstrata de forma diferente (<<interface>>, nome em italico).",
+          "type": "string",
+          "enum": ["classe", "abstrata", "interface", "enum"],
+          "default": "classe"
+        },
+        "atributos": {
+          "type": "array",
+          "maxItems": 30,
+          "items": { "$ref": "#/$defs/atributo" },
+          "default": []
+        },
+        "metodos": {
+          "type": "array",
+          "maxItems": 30,
+          "items": { "$ref": "#/$defs/metodo" },
+          "default": []
+        },
+        "posicao": { "$ref": "#/$defs/posicao" }
+      }
+    },
+
+    "relacionamento": {
+      "type": "object",
+      "required": ["tipo", "origem", "destino"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "$ref": "#/$defs/identificador" },
+        "tipo": {
+          "description": "Tipo da ligacao. A DIRECAO IMPORTA e cada tipo le a seta de um jeito: heranca -> 'origem HERDA DE destino' (origem e a subclasse); dependencia -> 'origem DEPENDE DE destino'; agregacao e composicao -> 'origem CONTEM destino' (o losango fica na origem, que e o todo). CONVENCAO: o enum e fechado nestes 5 tipos, entao a realizacao de interface (classe implementa interface) tambem e representada como 'heranca' apontando para a classe de estereotipo 'interface'. O Canvas pode desenhar a linha tracejada ao perceber que o destino e uma interface.",
+          "type": "string",
+          "enum": ["associacao", "agregacao", "composicao", "heranca", "dependencia"]
+        },
+        "origem": { "$ref": "#/$defs/identificador" },
+        "destino": { "$ref": "#/$defs/identificador" },
+        "multiplicidadeOrigem": { "$ref": "#/$defs/multiplicidade" },
+        "multiplicidadeDestino": { "$ref": "#/$defs/multiplicidade" },
+        "rotulo": {
+          "description": "Texto exibido sobre a linha (ex: 'contem', 'trabalha em'). Decorativo: persistido, mas IGNORADO pelo validador.",
+          "type": "string",
+          "maxLength": 40
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "Heranca e dependencia nao tem multiplicidade em UML. Bloquear aqui evita que o Canvas envie e o gabarito espere coisas diferentes.",
+          "if": {
+            "properties": { "tipo": { "enum": ["heranca", "dependencia"] } },
+            "required": ["tipo"]
+          },
+          "then": {
+            "properties": {
+              "multiplicidadeOrigem": false,
+              "multiplicidadeDestino": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}

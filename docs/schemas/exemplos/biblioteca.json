@@ -1,0 +1,71 @@
+{
+  "versao": "1.0",
+  "classes": [
+    {
+      "id": "b1",
+      "nome": "Usuario",
+      "atributos": [
+        { "nome": "nome", "tipo": "String", "visibilidade": "protegido" },
+        { "nome": "matricula", "tipo": "String", "visibilidade": "protegido" }
+      ],
+      "metodos": [{ "nome": "limiteEmprestimos", "retorno": "int", "visibilidade": "publico" }],
+      "posicao": { "x": 100, "y": 60 }
+    },
+    {
+      "id": "b2",
+      "nome": "Aluno",
+      "atributos": [{ "nome": "curso", "tipo": "String", "visibilidade": "privado" }],
+      "metodos": [{ "nome": "limiteEmprestimos", "retorno": "int", "visibilidade": "publico" }],
+      "posicao": { "x": 20, "y": 260 }
+    },
+    {
+      "id": "b3",
+      "nome": "Professor",
+      "atributos": [{ "nome": "departamento", "tipo": "String", "visibilidade": "privado" }],
+      "metodos": [{ "nome": "limiteEmprestimos", "retorno": "int", "visibilidade": "publico" }],
+      "posicao": { "x": 240, "y": 260 }
+    },
+    {
+      "id": "b4",
+      "nome": "Emprestimo",
+      "atributos": [
+        { "nome": "dataRetirada", "tipo": "Date", "visibilidade": "privado" },
+        { "nome": "dataDevolucao", "tipo": "Date", "visibilidade": "privado" }
+      ],
+      "metodos": [{ "nome": "estaAtrasado", "retorno": "boolean", "visibilidade": "publico" }],
+      "posicao": { "x": 480, "y": 60 }
+    },
+    {
+      "id": "b5",
+      "nome": "Livro",
+      "atributos": [
+        { "nome": "titulo", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "isbn", "tipo": "String", "visibilidade": "privado" }
+      ],
+      "metodos": [],
+      "posicao": { "x": 480, "y": 280 }
+    }
+  ],
+  "relacionamentos": [
+    { "id": "rb1", "tipo": "heranca", "origem": "b2", "destino": "b1" },
+    { "id": "rb2", "tipo": "heranca", "origem": "b3", "destino": "b1" },
+    {
+      "id": "rb3",
+      "tipo": "associacao",
+      "origem": "b1",
+      "destino": "b4",
+      "multiplicidadeOrigem": "1",
+      "multiplicidadeDestino": "0..*",
+      "rotulo": "realiza"
+    },
+    {
+      "id": "rb4",
+      "tipo": "associacao",
+      "origem": "b4",
+      "destino": "b5",
+      "multiplicidadeOrigem": "0..*",
+      "multiplicidadeDestino": "1",
+      "rotulo": "refere-se a"
+    }
+  ]
+}
