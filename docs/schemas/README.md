@@ -43,25 +43,25 @@ canvas em branco é uma entrega ruim, não uma requisição malformada.
 }
 ```
 
-| Campo | Obrigatório | Observação |
-|---|---|---|
-| `id` | sim | Gerado por vocês, local ao diagrama. Só serve para os relacionamentos apontarem para a classe. **Nunca é comparado com o gabarito** — pode ser `"c1"`, um nanoid, o que for conveniente |
-| `nome` | sim | **É por aqui que a comparação acontece** |
-| `estereotipo` | não | `classe` (padrão), `abstrata`, `interface`, `enum` |
-| `atributos` | não | Lista vazia se omitido |
-| `metodos` | não | Lista vazia se omitido |
-| `posicao` | não | Persistida, mas **ignorada** na validação: mover o bloco não muda se o diagrama está certo |
+| Campo         | Obrigatório | Observação                                                                                                                                                                              |
+| ------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`          | sim         | Gerado por vocês, local ao diagrama. Só serve para os relacionamentos apontarem para a classe. **Nunca é comparado com o gabarito** — pode ser `"c1"`, um nanoid, o que for conveniente |
+| `nome`        | sim         | **É por aqui que a comparação acontece**                                                                                                                                                |
+| `estereotipo` | não         | `classe` (padrão), `abstrata`, `interface`, `enum`                                                                                                                                      |
+| `atributos`   | não         | Lista vazia se omitido                                                                                                                                                                  |
+| `metodos`     | não         | Lista vazia se omitido                                                                                                                                                                  |
+| `posicao`     | não         | Persistida, mas **ignorada** na validação: mover o bloco não muda se o diagrama está certo                                                                                              |
 
 ### Visibilidade
 
 Escrita por extenso, não em símbolo. O Canvas exibe o símbolo correspondente:
 
-| No JSON | Exibir como |
-|---|---|
-| `publico` | `+` |
-| `privado` | `-` |
-| `protegido` | `#` |
-| `pacote` | `~` |
+| No JSON     | Exibir como |
+| ----------- | ----------- |
+| `publico`   | `+`         |
+| `privado`   | `-`         |
+| `protegido` | `#`         |
+| `pacote`    | `~`         |
 
 ### Relacionamento
 
@@ -82,13 +82,13 @@ Escrita por extenso, não em símbolo. O Canvas exibe o símbolo correspondente:
 **A direção importa, e cada tipo lê a seta de um jeito.** Este é o detalhe que mais gera bug de
 integração, então está explícito:
 
-| `tipo` | Como ler | Multiplicidade |
-|---|---|---|
-| `associacao` | `origem` se relaciona com `destino` | permitida |
-| `agregacao` | `origem` **contém** `destino` (losango vazio fica na origem, que é o todo) | permitida |
-| `composicao` | `origem` **contém** `destino` (losango cheio na origem; a parte não vive sem o todo) | permitida |
-| `heranca` | `origem` **herda de** `destino` — **a origem é a subclasse** | proibida |
-| `dependencia` | `origem` **depende de** `destino` | proibida |
+| `tipo`        | Como ler                                                                             | Multiplicidade |
+| ------------- | ------------------------------------------------------------------------------------ | -------------- |
+| `associacao`  | `origem` se relaciona com `destino`                                                  | permitida      |
+| `agregacao`   | `origem` **contém** `destino` (losango vazio fica na origem, que é o todo)           | permitida      |
+| `composicao`  | `origem` **contém** `destino` (losango cheio na origem; a parte não vive sem o todo) | permitida      |
+| `heranca`     | `origem` **herda de** `destino` — **a origem é a subclasse**                         | proibida       |
+| `dependencia` | `origem` **depende de** `destino`                                                    | proibida       |
 
 Herança e dependência não têm cardinalidade em UML; o schema **rejeita** o envio se elas vierem
 com multiplicidade.
@@ -118,7 +118,7 @@ que vocês enviam:
 - **Ignorados na comparação**: `id`, `posicao`, `rotulo`, e a ordem dos itens em qualquer lista.
 - A resposta é um **diff**, não um sim/não: a pontuação é parcial e o jogador vê o que faltou.
 
-## Duas coisas que o schema *não* pega
+## Duas coisas que o schema _não_ pega
 
 JSON Schema não consegue expressar estas duas regras, então **passar no schema não significa que o
 diagrama é coerente**:
@@ -151,11 +151,11 @@ Validar antes de enviar economiza um round-trip e dá erro imediato no canvas.
 
 Em [`exemplos/`](exemplos/), todos válidos e cobertos por teste automatizado:
 
-| Arquivo | O que exercita |
-|---|---|
-| `pedido-item.json` | composição `1 → 1..*`, atributos e métodos |
-| `biblioteca.json` | herança (duas subclasses) + associações com multiplicidade nas duas pontas |
-| `veiculos.json` | interface, classe abstrata, enum, agregação e dependência |
+| Arquivo            | O que exercita                                                             |
+| ------------------ | -------------------------------------------------------------------------- |
+| `pedido-item.json` | composição `1 → 1..*`, atributos e métodos                                 |
+| `biblioteca.json`  | herança (duas subclasses) + associações com multiplicidade nas duas pontas |
+| `veiculos.json`    | interface, classe abstrata, enum, agregação e dependência                  |
 
 ## Versionamento
 
