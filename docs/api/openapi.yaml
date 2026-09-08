@@ -1,0 +1,266 @@
+openapi: 3.1.0
+
+info:
+  title: Diagrameria — API
+  version: 0.1.0
+  description: |
+    Backend do Diagrameria. Esta é a fonte de verdade dos contratos consumidos
+    pelo frontend React.
+
+    **Escopo desta versão (Sprint 1):** apenas conta de usuário. As rotas de
+    partida, pedido e entrega de diagrama entram na Sprint 2, junto com o
+    `ValidadorUML`.
+
+    ## Autenticação
+
+    Token JWT no header `Authorization: Bearer <token>`. O token sai do cadastro
+    e do login e vale por `JWT_EXPIRACAO` (24h por padrão). Ele carrega apenas
+    `sub` (id do usuário) e `email` — nada de pontuação ou saldo: **o servidor é
+    a autoridade** sobre estado de jogo e sempre consulta o banco.
+
+    ## Formato de erro
+
+    Toda resposta de erro tem a mesma forma:
+
+    ```json
+    { "erro": { "codigo": "EMAIL_EM_USO", "mensagem": "...", "detalhes": [ ... ] } }
+    ```
+
+    Ramifique pelo `codigo` (estável) e exiba a `mensagem` (pode mudar de texto).
+    `detalhes` só aparece em erro de validação.
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3000/api
+    description: Desenvolvimento local
+
+tags:
+  - name: Saúde
+    description: Verificação de que o processo está de pé
+  - name: Autenticação
+    description: Cadastro, login e perfil do jogador
+
+paths:
+  /saude:
+    get:
+      tags: [Saúde]
+      summary: Verifica se o servidor está no ar
+      description: |
+        Não consulta o banco de propósito: responde sobre o processo, não sobre
+        a infraestrutura.
+      security: []
+      responses:
+        '200':
+          description: Servidor no ar
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, versao]
+                properties:
+                  status: { type: string, const: ok }
+                  versao: { type: string, example: '0.1.0' }
+
+  /auth/cadastro:
+    post:
+      tags: [Autenticação]
+      summary: Cria uma conta
+      description: Já devolve o token, para o jogador não precisar logar em seguida.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [nome, email, senha]
+              additionalProperties: false
+              properties:
+                nome: { type: string, minLength: 2, maxLength: 80, example: Andreza Oliveira }
+                email:
+                  type: string
+                  format: email
+                  maxLength: 255
+                  description: Normalizado para minúsculas antes de gravar.
+                  example: andreza@diagrameria.dev
+                senha:
+                  type: string
+                  minLength: 8
+                  maxLength: 72
+                  description: |
+                    O limite de 72 é do bcrypt, que ignora bytes além disso.
+                  example: uma-senha-boa
+      responses:
+        '201':
+          description: Conta criada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaDeSessao' }
+        '400':
+          $ref: '#/components/responses/EntradaInvalida'
+        '409':
+          description: 'Já existe conta com este email (`codigo: EMAIL_EM_USO`)'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+              example:
+                erro:
+                  codigo: EMAIL_EM_USO
+                  mensagem: Ja existe uma conta com este email.
+
+  /auth/login:
+    post:
+      tags: [Autenticação]
+      summary: Entra com email e senha
+      description: |
+        Credencial errada devolve sempre a mesma resposta, seja a senha
+        incorreta ou o email inexistente — a tela de login não pode virar um
+        verificador de quem tem conta no jogo.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, senha]
+              additionalProperties: false
+              properties:
+                email: { type: string, format: email, maxLength: 255 }
+                senha: { type: string, maxLength: 72 }
+      responses:
+        '200':
+          description: Autenticado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaDeSessao' }
+        '400':
+          $ref: '#/components/responses/EntradaInvalida'
+        '401':
+          description: Email ou senha incorretos
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+              example:
+                erro:
+                  codigo: NAO_AUTENTICADO
+                  mensagem: Email ou senha incorretos.
+
+  /auth/eu:
+    get:
+      tags: [Autenticação]
+      summary: Dados do usuário logado
+      description: |
+        Lê o banco em vez de devolver o conteúdo do token: o nome pode ter
+        mudado depois que o token foi emitido.
+      responses:
+        '200':
+          description: Usuário do token
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [usuario]
+                properties:
+                  usuario: { $ref: '#/components/schemas/Usuario' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          description: Token válido de uma conta que não existe mais
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+components:
+  securitySchemes:
+    tokenJwt:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Usuario:
+      type: object
+      description: |
+        O usuário como sai da API. **Nunca inclui `senha` nem `senha_hash`** —
+        há teste de integração fixando isso.
+      required: [id, nome, email, criadoEm]
+      properties:
+        id: { type: string, format: uuid }
+        nome: { type: string, example: Andreza Oliveira }
+        email: { type: string, format: email, example: andreza@diagrameria.dev }
+        criadoEm: { type: string, format: date-time }
+
+    RespostaDeSessao:
+      type: object
+      required: [usuario, token]
+      properties:
+        usuario: { $ref: '#/components/schemas/Usuario' }
+        token:
+          type: string
+          description: 'JWT para o header `Authorization: Bearer <token>`.'
+
+    Erro:
+      type: object
+      required: [erro]
+      properties:
+        erro:
+          type: object
+          required: [codigo, mensagem]
+          properties:
+            codigo:
+              type: string
+              description: Identificador estável. É por aqui que o frontend ramifica.
+              enum:
+                - ENTRADA_INVALIDA
+                - JSON_INVALIDO
+                - NAO_AUTENTICADO
+                - NAO_ENCONTRADO
+                - ROTA_NAO_ENCONTRADA
+                - EMAIL_EM_USO
+                - CONFLITO
+                - ERRO_INTERNO
+            mensagem:
+              type: string
+              description: Texto em português, exibível para o jogador.
+            detalhes:
+              type: array
+              description: Só em erro de validação — um item por campo recusado.
+              items:
+                type: object
+                required: [campo, mensagem]
+                properties:
+                  campo: { type: string, example: senha }
+                  mensagem: { type: string, example: must NOT have fewer than 8 characters }
+
+  responses:
+    EntradaInvalida:
+      description: |
+        O corpo não passou na validação. Campo desconhecido também cai aqui: o
+        schema é fechado (`additionalProperties: false`), pela mesma razão do
+        schema do diagrama — erro de digitação falha na hora em vez de virar
+        dado silenciosamente ignorado.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example:
+            erro:
+              codigo: ENTRADA_INVALIDA
+              mensagem: Os dados enviados nao passaram na validacao.
+              detalhes:
+                - campo: senha
+                  mensagem: must NOT have fewer than 8 characters
+
+    NaoAutenticado:
+      description: Token ausente, inválido ou expirado
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example:
+            erro:
+              codigo: NAO_AUTENTICADO
+              mensagem: Sessao expirada. Faca login de novo.
+
+security:
+  - tokenJwt: []
