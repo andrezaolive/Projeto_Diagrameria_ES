@@ -1,0 +1,92 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+# Um push novo na mesma branch cancela a execucao anterior, que ja nao interessa.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualidade:
+    name: Lint e formatacao
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: ESLint
+        run: npm run lint
+
+      - name: Prettier
+        # --check em vez de --write: a CI aponta o arquivo torto, quem corrige e
+        # a pessoa, rodando `npm run formatar` localmente.
+        run: npx prettier --check .
+
+  testes:
+    name: Testes
+    runs-on: ubuntu-latest
+
+    # Mesma imagem do docker-compose.yml. Nao da para reusar o compose aqui: o
+    # job precisa do Postgres como service para o healthcheck segurar os testes
+    # ate o banco aceitar conexao.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: diagrameria
+          POSTGRES_PASSWORD: diagrameria
+          POSTGRES_DB: diagrameria
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U diagrameria"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      NODE_ENV: test
+      DB_HOST: localhost
+      DB_PORTA: 5432
+      DB_USUARIO: diagrameria
+      DB_SENHA: diagrameria
+      DB_NOME: diagrameria
+      DB_NOME_TESTE: diagrameria_teste
+      # Segredo de brinquedo, valido so dentro do runner: nenhum token assinado
+      # aqui sai deste job. O segredo de producao vem de GitHub Secrets.
+      JWT_SEGREDO: segredo-de-ci-nao-usar-em-producao
+      JWT_EXPIRACAO: 1h
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      # O db/init/ do compose nao roda aqui (services nao montam volume), entao
+      # o banco de teste e criado na mao.
+      - name: Cria o banco de testes
+        run: |
+          PGPASSWORD=diagrameria psql -h localhost -U diagrameria -d diagrameria \
+            -c 'CREATE DATABASE diagrameria_teste OWNER diagrameria'
+
+      - name: Migrations
+        run: npm run migrate
+
+      - name: Suite completa
+        run: npm test
