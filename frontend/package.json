@@ -1,0 +1,9 @@
+{
+  "name": "diagrameria-frontend",
+  "version": "1.0.0",
+  "description": "Frontend em React",
+  "scripts": {
+    "test": "echo 'Testes do React pendentes' && exit 0",
+    "lint": "echo 'Linter pendente' && exit 0"
+  }
+}
