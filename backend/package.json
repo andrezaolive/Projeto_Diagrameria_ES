@@ -1,0 +1,9 @@
+{
+  "name": "diagrameria-backend",
+  "version": "1.0.0",
+  "description": "Backend do simulador web",
+  "scripts": {
+    "test": "echo 'Testes do Jest pendentes' && exit 0",
+    "lint": "echo 'Linter pendente' && exit 0"
+  }
+}
