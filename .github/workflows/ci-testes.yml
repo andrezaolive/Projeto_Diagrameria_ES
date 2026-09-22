@@ -1,10 +1,10 @@
-name: CI
+name: Diagrameria CI - Lint e Testes
 
 on:
   push:
-    branches: [main, develop]
+    branches: [ "main", "develop" ]
   pull_request:
-    branches: [main, develop]
+    branches: [ "main", "develop" ]
 
 # Um push novo na mesma branch cancela a execucao anterior, que ja nao interessa.
 concurrency:
@@ -12,41 +12,46 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  qualidade:
-    name: Lint e formatacao
+  backend-qualidade:
+    name: Backend - lint e formatacao
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: ./backend
     steps:
-      - uses: actions/checkout@v4
+      - name: Clonar o repositório
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - run: npm ci
+      # npm ci em vez de npm install: instala exatamente o package-lock.json e
+      # falha se ele estiver desatualizado em relacao ao package.json.
+      - name: Instalar dependências
+        run: npm ci
 
-      - name: ESLint
+      - name: Executar Linter
         run: npm run lint
 
-      - name: Prettier
+      - name: Conferir formatacao
         # --check em vez de --write: a CI aponta o arquivo torto, quem corrige e
         # a pessoa, rodando `npm run formatar` localmente.
         run: npx prettier --check .
 
-  testes:
-    name: Testes
+  backend-testes:
+    name: Backend - testes
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend
+        working-directory: ./backend
 
-    # Mesma imagem do docker-compose.yml. Nao da para reusar o compose aqui: o
-    # job precisa do Postgres como service para o healthcheck segurar os testes
-    # ate o banco aceitar conexao.
+    # Mesma imagem do backend/docker-compose.yml. Nao da para reusar o compose
+    # aqui: o job precisa do Postgres como service para o healthcheck segurar os
+    # testes ate o banco aceitar conexao.
     services:
       postgres:
         image: postgres:16-alpine
@@ -76,25 +81,51 @@ jobs:
       JWT_EXPIRACAO: 1h
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Clonar o repositório
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - run: npm ci
+      - name: Instalar dependências
+        run: npm ci
 
       # O db/init/ do compose nao roda aqui (services nao montam volume), entao
       # o banco de teste e criado na mao.
-      - name: Cria o banco de testes
+      - name: Criar o banco de testes
         run: |
           PGPASSWORD=diagrameria psql -h localhost -U diagrameria -d diagrameria \
             -c 'CREATE DATABASE diagrameria_teste OWNER diagrameria'
 
-      - name: Migrations
+      - name: Aplicar migrations
         run: npm run migrate
 
-      - name: Suite completa
+      - name: Executar Testes
+        run: npm test
+
+  validar-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Clonar o repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Instalar dependências
+        run: npm install
+
+      - name: Executar Linter
+        run: npm run lint
+
+      - name: Executar Testes
         run: npm test

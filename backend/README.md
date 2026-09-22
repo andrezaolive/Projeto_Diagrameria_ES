@@ -5,15 +5,23 @@ agência de diagramação sob demanda. O jogador atende clientes no balcão e mo
 arrastando blocos UML no canvas; o servidor compara o diagrama entregue com o gabarito e calcula
 pontuação, gorjeta e punição conforme acerto e tempo.
 
-Este repositório é o **backend**: API REST em Node.js + PostgreSQL. O frontend (React) vive em
-outro repositório e consome os contratos documentados em [`docs/api/`](docs/api/).
+Esta pasta é o **backend**: API REST em Node.js + PostgreSQL. O frontend (React) fica em
+[`../frontend/`](../frontend/), no mesmo repositório, e consome os contratos documentados em
+[`docs/api/`](docs/api/) e [`docs/schemas/`](docs/schemas/).
 
 ## Como rodar localmente
 
 Pré-requisitos: **Node.js 20+** e **Docker** (o Postgres sobe em container, não precisa instalar
-Postgres na máquina).
+Postgres na máquina). Sem Docker, um Postgres instalado à mão também serve, inclusive no Ubuntu do
+WSL, desde que responda em `localhost:5432` com o usuário `diagrameria` (senha `diagrameria`) e os
+bancos `diagrameria` e `diagrameria_teste`.
+
+Todos os comandos abaixo rodam **dentro de `backend/`**.
 
 ```bash
+# 0. Entre na pasta
+cd backend
+
 # 1. Dependências
 npm install
 
@@ -128,7 +136,7 @@ O token vai em `Authorization: Bearer <token>`. Todo erro sai no mesmo formato �
 - [x] Contratos de API (OpenAPI) — [`docs/api/openapi.yaml`](docs/api/openapi.yaml)
 - [x] Cadastro e login (bcrypt + JWT) — `POST /api/auth/cadastro`, `POST /api/auth/login`,
       `GET /api/auth/eu`
-- [x] Pipeline de CI — [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
+- [x] Pipeline de CI — [`.github/workflows/ci-testes.yml`](../.github/workflows/ci-testes.yml)
 
 As migrations criam duas tabelas: `usuarios` e `gabaritos`. As de partida, pedido e entrega ficam
 para a Sprint 2, junto com as máquinas de estado que definem as colunas de status e prazo — modelar
