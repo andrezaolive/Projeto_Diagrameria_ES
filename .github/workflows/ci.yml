@@ -15,6 +15,9 @@ jobs:
   qualidade:
     name: Lint e formatacao
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
@@ -22,6 +25,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
+          cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
 
@@ -36,6 +40,9 @@ jobs:
   testes:
     name: Testes
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
 
     # Mesma imagem do docker-compose.yml. Nao da para reusar o compose aqui: o
     # job precisa do Postgres como service para o healthcheck segurar os testes
@@ -75,6 +82,7 @@ jobs:
         with:
           node-version: '20'
           cache: npm
+          cache-dependency-path: backend/package-lock.json
 
       - run: npm ci
 
