@@ -1,14 +1,18 @@
 require('dotenv').config();
 
 /**
- * Le e valida as variaveis de ambiente uma unica vez, na subida do processo.
+ * Le e valida as variaveis de ambiente do processo e do banco, uma unica vez,
+ * na subida do processo.
  *
- * A regra e falhar cedo e alto: e melhor o servidor se recusar a subir com uma
- * mensagem clara do que subir com JWT_SEGREDO indefinido e assinar tokens que
- * qualquer um consegue forjar.
+ * A regra e falhar cedo e alto: e melhor se recusar a subir com uma mensagem
+ * clara do que subir apontando para o banco errado.
+ *
+ * O segredo do JWT NAO mora aqui: o knexfile importa este arquivo, e a CLI de
+ * migration nao tem por que exigir segredo de token. Ele fica em
+ * src/config/autenticacao.js, carregado so por quem assina ou verifica token.
  */
 
-const PLACEHOLDER_SEGREDO = 'troque-este-valor-antes-de-rodar';
+const AMBIENTES_VALIDOS = ['development', 'test', 'production'];
 
 function obrigatoria(nome) {
   const valor = process.env[nome];
@@ -25,19 +29,21 @@ function opcional(nome, padrao) {
   return valor === undefined || valor.trim() === '' ? padrao : valor;
 }
 
-const ehTeste = process.env.NODE_ENV === 'test';
-
-const segredoJwt = obrigatoria('JWT_SEGREDO');
-if (segredoJwt === PLACEHOLDER_SEGREDO) {
+// Um NODE_ENV desconhecido ("prod", "staging") cairia na config de
+// desenvolvimento sem ninguem perceber. Melhor recusar.
+const nomeDoAmbiente = opcional('NODE_ENV', 'development');
+if (!AMBIENTES_VALIDOS.includes(nomeDoAmbiente)) {
   throw new Error(
-    'JWT_SEGREDO ainda esta com o valor de exemplo. Gere um valor real com:\n' +
-      "  node -e \"console.log(require('crypto').randomBytes(48).toString('hex'))\""
+    `NODE_ENV="${nomeDoAmbiente}" nao e reconhecido. Use um de: ${AMBIENTES_VALIDOS.join(', ')}.`
   );
 }
 
+const ehTeste = nomeDoAmbiente === 'test';
+
 const ambiente = {
-  ambiente: opcional('NODE_ENV', 'development'),
+  ambiente: nomeDoAmbiente,
   ehTeste,
+  ehProducao: nomeDoAmbiente === 'production',
   porta: Number(opcional('PORTA', '3000')),
   origemPermitida: opcional('ORIGEM_PERMITIDA', 'http://localhost:5173'),
 
@@ -50,15 +56,6 @@ const ambiente = {
     // banco de desenvolvimento aqui apagaria os gabaritos do time.
     nome: ehTeste ? obrigatoria('DB_NOME_TESTE') : obrigatoria('DB_NOME'),
   },
-
-  jwt: {
-    segredo: segredoJwt,
-    expiracao: opcional('JWT_EXPIRACAO', '24h'),
-  },
-
-  // Custo do bcrypt. Baixo nos testes porque 12 rounds por usuario criado deixa
-  // a suite de integracao lenta demais para rodar a cada salvamento.
-  custoBcrypt: ehTeste ? 4 : 12,
 };
 
 module.exports = ambiente;

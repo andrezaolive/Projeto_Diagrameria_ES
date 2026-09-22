@@ -7,7 +7,10 @@ const ambiente = require('./ambiente');
  *
  * Isto e a unica coisa no projeto que abre conexao com o Postgres. Repositorio
  * importa daqui; servico e dominio nunca tocam neste modulo.
+ *
+ * Sem fallback para a config de desenvolvimento: ambiente.js ja recusa
+ * NODE_ENV desconhecido, e o knexfile tem uma entrada para cada valor aceito.
  */
-const bancoDeDados = knex(configuracoes[ambiente.ambiente] ?? configuracoes.development);
+const bancoDeDados = knex(configuracoes[ambiente.ambiente]);
 
 module.exports = bancoDeDados;

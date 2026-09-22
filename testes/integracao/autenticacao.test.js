@@ -1,6 +1,7 @@
 const request = require('supertest');
 const { criarApp } = require('../../src/app');
 const { bancoDeDados, prepararBanco, limparTabelas, encerrarBanco } = require('./ajuda/banco');
+const repositorio = require('../../src/repositorios/usuarios.repositorio');
 
 /**
  * Cadastro e login de ponta a ponta: requisicao HTTP real contra o Postgres de
@@ -109,17 +110,69 @@ describe('POST /api/auth/cadastro', () => {
     expect(resposta.status).toBe(400);
   });
 
-  it('recusa campo desconhecido no corpo', async () => {
+  it('recusa campo desconhecido no corpo e diz qual', async () => {
     const resposta = await request(app)
       .post('/api/auth/cadastro')
       .send({ ...NOVO_USUARIO, admin: true });
 
     expect(resposta.status).toBe(400);
+    expect(resposta.body.erro.detalhes).toEqual([{ campo: 'admin', mensagem: expect.any(String) }]);
   });
 
   it('recusa corpo vazio', async () => {
     const resposta = await request(app).post('/api/auth/cadastro').send({});
     expect(resposta.status).toBe(400);
+  });
+
+  // Recusa em vez de aparar, pelo mesmo motivo do email: aparar depois de
+  // validar deixaria "  a" passar no minLength 2 e ser gravado como "a".
+  it('recusa nome com espacos nas pontas', async () => {
+    const resposta = await request(app)
+      .post('/api/auth/cadastro')
+      .send({ ...NOVO_USUARIO, nome: '  a' });
+
+    expect(resposta.status).toBe(400);
+    expect(resposta.body.erro.detalhes).toEqual([
+      { campo: 'nome', mensagem: 'nao pode comecar nem terminar com espaco' },
+    ]);
+  });
+
+  // 40 caracteres, 80 bytes: passa no maxLength 72, mas o bcrypt ignoraria
+  // tudo depois do byte 72 — duas senhas diferentes virariam a mesma.
+  it('recusa senha que passa de 72 bytes, mesmo com menos de 72 caracteres', async () => {
+    const resposta = await request(app)
+      .post('/api/auth/cadastro')
+      .send({ ...NOVO_USUARIO, senha: 'é'.repeat(40) });
+
+    expect(resposta.status).toBe(400);
+    expect(resposta.body.erro.detalhes).toEqual([
+      { campo: 'senha', mensagem: expect.stringContaining('72 bytes') },
+    ]);
+  });
+
+  it('descreve o erro de validacao em portugues', async () => {
+    const resposta = await request(app)
+      .post('/api/auth/cadastro')
+      .send({ ...NOVO_USUARIO, senha: 'curta' });
+
+    const [detalhe] = resposta.body.erro.detalhes;
+    expect(detalhe.campo).toBe('senha');
+    expect(detalhe.mensagem).toMatch(/caracteres/);
+  });
+});
+
+describe('repositorio de usuarios', () => {
+  // A checagem "email ja existe" do servico pode ser vencida por dois cadastros
+  // simultaneos; quem segura e o indice UNIQUE. O repositorio traduz a violacao
+  // para o mesmo erro de negocio, e o servico nao precisa saber de Postgres.
+  it('traduz email duplicado no INSERT para ErroDeConflito', async () => {
+    const dados = { nome: 'Ana', email: 'ana@diagrameria.dev', senhaHash: 'x'.repeat(60) };
+    await repositorio.inserir(dados);
+
+    await expect(repositorio.inserir(dados)).rejects.toMatchObject({
+      name: 'ErroDeConflito',
+      codigo: 'EMAIL_EM_USO',
+    });
   });
 });
 

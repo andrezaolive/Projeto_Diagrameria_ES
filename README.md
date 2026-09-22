@@ -37,7 +37,9 @@ npm run dev
 ```
 
 A aplicação se recusa a subir se `JWT_SEGREDO` estiver ausente ou ainda com o valor de exemplo —
-subir assinando token com segredo previsível é pior do que não subir.
+subir assinando token com segredo previsível é pior do que não subir. As migrations e o seed não
+dependem dele. `NODE_ENV` precisa ser `development`, `test` ou `production`; qualquer outro valor
+também impede a subida.
 
 No Windows (PowerShell), troque o `cp` do passo 3 por `Copy-Item .env.example .env`.
 
@@ -55,7 +57,7 @@ começar do zero: `docker compose down -v`.
 | `npm run test:unitarios`   | Só os testes unitários (não precisam de banco) |
 | `npm run migrate`          | Aplica as migrations                           |
 | `npm run migrate:rollback` | Desfaz a última leva de migrations             |
-| `npm run seed`             | Popula o banco com gabaritos de exemplo        |
+| `npm run seed`             | Cria/atualiza os gabaritos de exemplo          |
 | `npm run lint`             | ESLint                                         |
 | `npm run formatar`         | Prettier                                       |
 
@@ -65,14 +67,14 @@ começar do zero: `docker compose down -v`.
 docs/schemas/    Formato JSON do diagrama UML — o contrato entre Canvas, gabarito e validador
 docs/api/        Contratos das rotas (OpenAPI)
 db/migrations/   Schema do banco, versionado
-db/seeds/        Gabaritos de exemplo para jogar localmente
-src/config/      Variáveis de ambiente validadas e a instância do Knex
+db/seeds/        Gabaritos de exemplo para jogar localmente (upsert por título; não roda em produção)
+src/config/      Variáveis de ambiente validadas (ambiente.js; o JWT fica em autenticacao.js) e o Knex
 src/rotas/       Definição das rotas
 src/controladores/  Camada HTTP: lê a requisição, chama o serviço, responde
 src/servicos/    Regra de negócio
 src/repositorios/   Único lugar que fala com o banco; SQL explícito
-src/dominio/     Funções puras (validador, pontuação) — sem banco, sem relógio
-src/middlewares/ Autenticação, tratamento de erro, validação de entrada
+src/dominio/     Funções puras (erros, validação de diagrama, pontuação) — sem banco, sem relógio
+src/middlewares/ Autenticação, limite de tentativas, tratamento de erro, validação de entrada
 testes/          Unitários e de integração
 ```
 
@@ -81,7 +83,12 @@ integração passarem o app direto para o supertest, sem ocupar porta.
 
 A pasta `src/dominio/` é a única com uma regra rígida: **nada lá dentro acessa banco ou lê o
 relógio**. Tudo chega por parâmetro. É o que torna o validador e a calculadora de pontuação
-testáveis sem infraestrutura.
+testáveis sem infraestrutura. Os erros de negócio (`dominio/erros.js`) também não sabem de HTTP: o
+status de cada um é decidido só em `middlewares/tratadorDeErros.js`.
+
+Todo diagrama que entra no sistema passa por `validarDiagrama()` (`src/dominio/diagrama/`). Ele
+roda primeiro o JSON Schema de `docs/schemas/` e depois a integridade (ids únicos, relacionamento
+apontando para classe que existe).
 
 ## API
 

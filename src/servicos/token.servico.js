@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const ambiente = require('../config/ambiente');
+const { jwt: configuracao } = require('../config/autenticacao');
 
 /**
  * Emissao e verificacao do JWT, num lugar so.
@@ -14,9 +14,10 @@ const ambiente = require('../config/ambiente');
  * @returns {string} JWT assinado.
  */
 function gerar(usuario) {
-  return jwt.sign({ email: usuario.email }, ambiente.jwt.segredo, {
+  return jwt.sign({ email: usuario.email }, configuracao.segredo, {
     subject: usuario.id,
-    expiresIn: ambiente.jwt.expiracao,
+    expiresIn: configuracao.expiracao,
+    algorithm: configuracao.algoritmo,
   });
 }
 
@@ -26,7 +27,7 @@ function gerar(usuario) {
  * @throws {Error} erro do jsonwebtoken (TokenExpiredError, JsonWebTokenError).
  */
 function verificar(token) {
-  return jwt.verify(token, ambiente.jwt.segredo);
+  return jwt.verify(token, configuracao.segredo, { algorithms: [configuracao.algoritmo] });
 }
 
 module.exports = { gerar, verificar };

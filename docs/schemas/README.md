@@ -126,8 +126,14 @@ diagrama é coerente**:
 1. relacionamento apontando para um `id` que não existe;
 2. duas classes com o mesmo `id`.
 
-As duas são verificadas em código, junto com o `ValidadorUML` na Sprint 2. Há testes em
-`testes/unitarios/diagrama.schema.test.js` documentando exatamente essa limitação.
+As duas são verificadas em código, em `src/dominio/diagrama/integridade.js`, logo depois do schema.
+Isso é validação de **entrada**, separada do `ValidadorUML`: um id solto é um bug do Canvas (ou um
+gabarito gravado errado), não um erro de UML do jogador, e volta como `400 ENTRADA_INVALIDA` com o
+campo apontado (`relacionamentos/0/destino`). Os ids de relacionamento, quando enviados, também
+precisam ser únicos.
+
+Do lado de vocês, o Ajv só pega o que está no schema. Se quiserem pegar ids soltos antes de enviar,
+repliquem as duas regras. Elas cabem em poucas linhas; veja o arquivo acima.
 
 ## Como validar um diagrama do lado de vocês
 

@@ -14,11 +14,22 @@ async function prepararBanco() {
 }
 
 /**
- * Esvazia as tabelas de dados entre os testes, sem tocar em knex_migrations —
- * apagar o controle de migration faria a proxima suite tentar recriar tudo.
+ * Esvazia todas as tabelas de dados entre os testes.
+ *
+ * A lista sai do proprio Postgres, para tabela nova entrar sem ninguem lembrar
+ * de editar este arquivo. As do Knex (knex_migrations e knex_migrations_lock)
+ * ficam de fora: apagar o controle de migration faria a proxima suite tentar
+ * recriar tudo.
  */
 async function limparTabelas() {
-  await bancoDeDados.raw('TRUNCATE TABLE usuarios, gabaritos RESTART IDENTITY CASCADE');
+  const { rows } = await bancoDeDados.raw(`
+    SELECT tablename FROM pg_tables
+    WHERE schemaname = 'public' AND tablename NOT LIKE 'knex\\_%'
+  `);
+  if (rows.length === 0) return;
+
+  const tabelas = rows.map(({ tablename }) => `"${tablename}"`).join(', ');
+  await bancoDeDados.raw(`TRUNCATE TABLE ${tabelas} RESTART IDENTITY CASCADE`);
 }
 
 /** Fecha o pool. Sem isso o processo do Jest fica aberto depois dos testes. */

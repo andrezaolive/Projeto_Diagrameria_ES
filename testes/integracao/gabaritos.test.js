@@ -1,27 +1,17 @@
-const fs = require('fs');
 const path = require('path');
-const Ajv = require('ajv/dist/2020');
-const addFormats = require('ajv-formats');
+const { validarDiagrama } = require('../../src/dominio/diagrama');
 const { bancoDeDados, prepararBanco, limparTabelas, encerrarBanco } = require('./ajuda/banco');
 
 /**
  * O seed e a tabela `gabaritos`.
  *
- * O teste que importa aqui e o ultimo: o diagrama que sai do banco tem que
- * passar no mesmo schema que o Canvas usa. Se um dia alguem gravar um gabarito
- * a mao com o formato errado, o ValidadorUML da Sprint 2 comparia contra lixo —
- * e falharia culpando o jogador.
+ * O teste que mais importa aqui: o diagrama que sai do banco tem que passar no
+ * mesmo validador que a entrega do Canvas vai passar. Se um dia alguem gravar um
+ * gabarito com o formato errado, o ValidadorUML da Sprint 2 compararia contra
+ * lixo — e falharia culpando o jogador.
  */
 
 const RAIZ = path.resolve(__dirname, '..', '..');
-const schema = JSON.parse(
-  fs.readFileSync(path.join(RAIZ, 'docs', 'schemas', 'diagrama.schema.json'), 'utf8')
-);
-
-const ajv = new Ajv({ allErrors: true, strict: true });
-addFormats(ajv);
-const validarDiagrama = ajv.compile(schema);
-
 const seed = require(path.join(RAIZ, 'db', 'seeds', '01_gabaritos.js'));
 
 beforeAll(async () => {
@@ -50,15 +40,34 @@ describe('seed de gabaritos', () => {
     expect(linhas).toHaveLength(3);
   });
 
-  it('todo diagrama gravado passa no schema do Canvas', async () => {
+  // Apagar e recriar trocaria o id — e partida que aponta para o gabarito
+  // antigo quebraria (ou sumiria junto, com CASCADE).
+  it('rodar de novo atualiza no lugar, mantendo o id', async () => {
+    const antes = await bancoDeDados('gabaritos').select('id', 'titulo').orderBy('titulo');
+
+    await seed.seed(bancoDeDados);
+
+    const depois = await bancoDeDados('gabaritos').select('id', 'titulo').orderBy('titulo');
+    expect(depois).toEqual(antes);
+  });
+
+  it('nao reativa um gabarito aposentado', async () => {
+    await bancoDeDados('gabaritos').where({ titulo: 'Pedido e Item' }).update({ ativo: false });
+
+    await seed.seed(bancoDeDados);
+
+    const linha = await bancoDeDados('gabaritos').where({ titulo: 'Pedido e Item' }).first();
+    expect(linha.ativo).toBe(false);
+  });
+
+  it('todo diagrama gravado passa no validador do Canvas', async () => {
     const linhas = await bancoDeDados('gabaritos').select('titulo', 'diagrama');
 
     for (const linha of linhas) {
-      validarDiagrama(linha.diagrama);
-      // Mostra o erro do Ajv e de qual gabarito, em vez de um "false !== true" mudo.
-      expect({ titulo: linha.titulo, erros: validarDiagrama.errors ?? [] }).toEqual({
+      // Mostra os problemas e de qual gabarito, em vez de um "false !== true" mudo.
+      expect({ titulo: linha.titulo, problemas: validarDiagrama(linha.diagrama) }).toEqual({
         titulo: linha.titulo,
-        erros: [],
+        problemas: [],
       });
     }
   });
@@ -88,11 +97,33 @@ describe('restricoes da tabela gabaritos', () => {
     ).rejects.toThrow();
   });
 
+  it('recusa titulo repetido', async () => {
+    await expect(
+      bancoDeDados('gabaritos').insert({ ...base, titulo: 'Pedido e Item' })
+    ).rejects.toThrow();
+  });
+
   it('preenche id, ativo e criado_em sozinho', async () => {
     const [linha] = await bancoDeDados('gabaritos').insert(base).returning('*');
 
     expect(linha.id).toEqual(expect.any(String));
     expect(linha.ativo).toBe(true);
     expect(linha.criado_em).toBeInstanceOf(Date);
+  });
+
+  it('atualizado_em avanca no UPDATE e criado_em fica', async () => {
+    const [criada] = await bancoDeDados('gabaritos').insert(base).returning('*');
+
+    // now() do Postgres e o inicio da transacao: sem esta pausa, INSERT e
+    // UPDATE seguidos podem cair no mesmo milissegundo.
+    await new Promise((resolve) => setTimeout(resolve, 20));
+
+    const [atualizada] = await bancoDeDados('gabaritos')
+      .where({ id: criada.id })
+      .update({ dificuldade: 2 })
+      .returning('*');
+
+    expect(atualizada.atualizado_em.getTime()).toBeGreaterThan(criada.atualizado_em.getTime());
+    expect(atualizada.criado_em).toEqual(criada.criado_em);
   });
 });

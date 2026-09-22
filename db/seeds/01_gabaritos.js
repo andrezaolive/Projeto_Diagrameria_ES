@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const ambiente = require('../../src/config/ambiente');
+const { validarDiagrama } = require('../../src/dominio/diagrama');
 
 /**
  * Gabaritos de exemplo para dar para jogar localmente sem inventar diagrama.
@@ -50,7 +52,27 @@ const GABARITOS = [
 ];
 
 exports.seed = async function seed(knex) {
-  // Recomeca do zero: rodar o seed duas vezes nao deve gerar gabarito duplicado.
-  await knex('gabaritos').del();
-  await knex('gabaritos').insert(GABARITOS);
+  // Seed e dado de brincadeira para jogar localmente. Em producao, gabarito
+  // entra por um caminho revisado, nao por `npm run seed` rodado por engano.
+  if (ambiente.ehProducao) {
+    throw new Error('O seed de gabaritos nao roda em producao.');
+  }
+
+  // Mesmo portao por onde qualquer diagrama entra no sistema: um exemplo
+  // quebrado falha aqui, com o campo, em vez de virar gabarito que reprova
+  // todo jogador.
+  for (const gabarito of GABARITOS) {
+    const problemas = validarDiagrama(gabarito.diagrama);
+    if (problemas.length > 0) {
+      throw new Error(
+        `Gabarito "${gabarito.titulo}" invalido:\n` +
+          problemas.map((p) => `  ${p.campo}: ${p.mensagem}`).join('\n')
+      );
+    }
+  }
+
+  // Upsert por titulo, sem apagar nada: gabarito ja usado em partida continua
+  // existindo, e rodar o seed duas vezes nao duplica. `ativo` nao entra no
+  // merge, entao um gabarito aposentado a mao continua aposentado.
+  await knex('gabaritos').insert(GABARITOS).onConflict('titulo').merge();
 };

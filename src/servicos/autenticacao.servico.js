@@ -1,7 +1,7 @@
 const bcrypt = require('bcrypt');
 const repositorio = require('../repositorios/usuarios.repositorio');
 const token = require('./token.servico');
-const ambiente = require('../config/ambiente');
+const { custoBcrypt } = require('../config/autenticacao');
 const { ErroDeConflito, ErroDeAutenticacao, ErroNaoEncontrado } = require('../dominio/erros');
 
 /**
@@ -20,7 +20,7 @@ const { ErroDeConflito, ErroDeAutenticacao, ErroNaoEncontrado } = require('../do
  */
 
 // Hash de uma senha que ninguem usa, so para o compare falso ter contra o que rodar.
-const HASH_DESCARTAVEL = bcrypt.hashSync('senha-que-nao-e-de-ninguem', ambiente.custoBcrypt);
+const HASH_DESCARTAVEL = bcrypt.hashSync('senha-que-nao-e-de-ninguem', custoBcrypt);
 
 /** Formato do usuario que sai daqui para o mundo: sem senha_hash, em camelCase. */
 function paraResposta(linha) {
@@ -42,20 +42,12 @@ async function cadastrar({ nome, email, senha }) {
     throw new ErroDeConflito('Ja existe uma conta com este email.', 'EMAIL_EM_USO');
   }
 
-  const senhaHash = await bcrypt.hash(senha, ambiente.custoBcrypt);
+  const senhaHash = await bcrypt.hash(senha, custoBcrypt);
 
-  let usuario;
-  try {
-    usuario = await repositorio.inserir({ nome, email, senhaHash });
-  } catch (erro) {
-    // 23505 = unique_violation. Acontece se dois cadastros do mesmo email
-    // passarem pela checagem acima ao mesmo tempo — a checagem e conveniencia,
-    // o indice UNIQUE e a garantia.
-    if (erro.code === '23505') {
-      throw new ErroDeConflito('Ja existe uma conta com este email.', 'EMAIL_EM_USO');
-    }
-    throw erro;
-  }
+  // A checagem acima e conveniencia; a garantia e o indice UNIQUE. Se dois
+  // cadastros do mesmo email passarem por ela ao mesmo tempo, o repositorio
+  // lanca o mesmo ErroDeConflito.
+  const usuario = await repositorio.inserir({ nome, email, senhaHash });
 
   return { usuario: paraResposta(usuario), token: token.gerar(usuario) };
 }

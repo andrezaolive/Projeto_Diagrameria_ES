@@ -1,5 +1,32 @@
-const { ErroDaAplicacao } = require('../dominio/erros');
+const {
+  ErroDaAplicacao,
+  ErroDeValidacao,
+  ErroDeAutenticacao,
+  ErroDeConflito,
+  ErroNaoEncontrado,
+  ErroDeLimite,
+} = require('../dominio/erros');
 const ambiente = require('../config/ambiente');
+
+/**
+ * Traducao de erro de negocio para status HTTP. Mora aqui, e nao no dominio,
+ * porque status e detalhe de protocolo. Ordem importa so se um dia houver
+ * subclasse de subclasse: a primeira que casar no instanceof vence.
+ */
+const STATUS_POR_ERRO = [
+  [ErroDeValidacao, 400],
+  [ErroDeAutenticacao, 401],
+  [ErroNaoEncontrado, 404],
+  [ErroDeConflito, 409],
+  [ErroDeLimite, 429],
+];
+
+function statusDe(erro) {
+  const par = STATUS_POR_ERRO.find(([Classe]) => erro instanceof Classe);
+  // Erro de negocio sem status mapeado e esquecimento de quem criou a classe:
+  // 400 e mais honesto que 500, porque a requisicao foi recusada de proposito.
+  return par ? par[1] : 400;
+}
 
 /** 404 para rota que nao existe. Vem antes do tratador, no fim da cadeia. */
 function rotaNaoEncontrada(req, res) {
@@ -26,7 +53,7 @@ function rotaNaoEncontrada(req, res) {
 // A assinatura de 4 argumentos e o que faz o Express reconhecer o tratador de erro.
 function tratadorDeErros(erro, req, res, _proximo) {
   if (erro instanceof ErroDaAplicacao) {
-    return res.status(erro.status).json({
+    return res.status(statusDe(erro)).json({
       erro: {
         codigo: erro.codigo,
         mensagem: erro.message,

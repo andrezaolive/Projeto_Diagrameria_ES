@@ -77,7 +77,14 @@ paths:
               required: [nome, email, senha]
               additionalProperties: false
               properties:
-                nome: { type: string, minLength: 2, maxLength: 80, example: Andreza Oliveira }
+                nome:
+                  type: string
+                  minLength: 2
+                  maxLength: 80
+                  description: |
+                    Não pode começar nem terminar com espaço — é recusado, não
+                    aparado. Apare no formulário antes de enviar.
+                  example: Andreza Oliveira
                 email:
                   type: string
                   format: email
@@ -89,7 +96,10 @@ paths:
                   minLength: 8
                   maxLength: 72
                   description: |
-                    O limite de 72 é do bcrypt, que ignora bytes além disso.
+                    Até 72 **bytes** em UTF-8, não 72 caracteres: o bcrypt ignora
+                    o que passa disso. Letra acentuada ocupa 2 bytes e emoji 4,
+                    então uma senha com acentos pode ser recusada com menos de 72
+                    caracteres.
                   example: uma-senha-boa
       responses:
         '201':
@@ -99,6 +109,8 @@ paths:
               schema: { $ref: '#/components/schemas/RespostaDeSessao' }
         '400':
           $ref: '#/components/responses/EntradaInvalida'
+        '429':
+          $ref: '#/components/responses/MuitasTentativas'
         '409':
           description: 'Já existe conta com este email (`codigo: EMAIL_EM_USO`)'
           content:
@@ -128,7 +140,10 @@ paths:
               additionalProperties: false
               properties:
                 email: { type: string, format: email, maxLength: 255 }
-                senha: { type: string, maxLength: 72 }
+                senha:
+                  type: string
+                  maxLength: 72
+                  description: Até 72 bytes em UTF-8, como no cadastro.
       responses:
         '200':
           description: Autenticado
@@ -137,6 +152,8 @@ paths:
               schema: { $ref: '#/components/schemas/RespostaDeSessao' }
         '400':
           $ref: '#/components/responses/EntradaInvalida'
+        '429':
+          $ref: '#/components/responses/MuitasTentativas'
         '401':
           description: Email ou senha incorretos
           content:
@@ -220,6 +237,7 @@ components:
                 - ROTA_NAO_ENCONTRADA
                 - EMAIL_EM_USO
                 - CONFLITO
+                - MUITAS_TENTATIVAS
                 - ERRO_INTERNO
             mensagem:
               type: string
@@ -231,8 +249,17 @@ components:
                 type: object
                 required: [campo, mensagem]
                 properties:
-                  campo: { type: string, example: senha }
-                  mensagem: { type: string, example: must NOT have fewer than 8 characters }
+                  campo:
+                    type: string
+                    description: |
+                      Caminho do campo, separado por `/` (`senha`,
+                      `classes/2/nome`). `(corpo)` quando o problema é o corpo
+                      inteiro.
+                    example: senha
+                  mensagem:
+                    type: string
+                    description: Em português, exibível ao lado do campo.
+                    example: não deve ser mais curta que 8 caracteres
 
   responses:
     EntradaInvalida:
@@ -250,7 +277,21 @@ components:
               mensagem: Os dados enviados nao passaram na validacao.
               detalhes:
                 - campo: senha
-                  mensagem: must NOT have fewer than 8 characters
+                  mensagem: não deve ser mais curta que 8 caracteres
+
+    MuitasTentativas:
+      description: |
+        Limite de tentativas estourado. No login o limite é de 10 tentativas por
+        IP + email a cada 15 minutos; no cadastro, 60 por IP por hora. Os
+        cabeçalhos `RateLimit` e `RateLimit-Policy` dizem quanto falta para
+        liberar.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example:
+            erro:
+              codigo: MUITAS_TENTATIVAS
+              mensagem: Muitas tentativas. Espere um pouco e tente de novo.
 
     NaoAutenticado:
       description: Token ausente, inválido ou expirado
