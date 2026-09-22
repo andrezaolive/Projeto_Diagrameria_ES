@@ -1,0 +1,55 @@
+{
+  "versao": "1.0",
+  "classes": [
+    {
+      "id": "c1",
+      "nome": "Pessoa",
+      "estereotipo": "abstrata",
+      "atributos": [
+        { "nome": "nome", "tipo": "String", "visibilidade": "protegido" },
+        { "nome": "cpf", "tipo": "String", "visibilidade": "protegido" }
+      ],
+      "posicao": { "x": 300, "y": 20 }
+    },
+    {
+      "id": "c2",
+      "nome": "Paciente",
+      "atributos": [{ "nome": "convenio", "tipo": "String", "visibilidade": "privado" }],
+      "posicao": { "x": 120, "y": 220 }
+    },
+    {
+      "id": "c3",
+      "nome": "Medico",
+      "atributos": [{ "nome": "crm", "tipo": "String", "visibilidade": "privado" }],
+      "metodos": [{ "nome": "atender", "retorno": "void", "visibilidade": "publico" }],
+      "posicao": { "x": 480, "y": 220 }
+    },
+    {
+      "id": "c4",
+      "nome": "Consulta",
+      "atributos": [
+        { "nome": "data", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "horario", "tipo": "String", "visibilidade": "privado" }
+      ],
+      "posicao": { "x": 300, "y": 420 }
+    }
+  ],
+  "relacionamentos": [
+    { "tipo": "heranca", "origem": "c2", "destino": "c1" },
+    { "tipo": "heranca", "origem": "c3", "destino": "c1" },
+    {
+      "tipo": "associacao",
+      "origem": "c2",
+      "destino": "c4",
+      "multiplicidadeOrigem": "1",
+      "multiplicidadeDestino": "0..*"
+    },
+    {
+      "tipo": "associacao",
+      "origem": "c3",
+      "destino": "c4",
+      "multiplicidadeOrigem": "1",
+      "multiplicidadeDestino": "0..*"
+    }
+  ]
+}

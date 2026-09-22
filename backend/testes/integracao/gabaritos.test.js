@@ -1,5 +1,8 @@
+const fs = require('fs');
 const path = require('path');
 const { validarDiagrama } = require('../../src/dominio/diagrama');
+const { normalizarNome } = require('../../src/dominio/diagrama/validadorUML');
+const { clientesPorFase } = require('../../src/dominio/jogo/regras');
 const { bancoDeDados, prepararBanco, limparTabelas, encerrarBanco } = require('./ajuda/banco');
 
 /**
@@ -13,6 +16,11 @@ const { bancoDeDados, prepararBanco, limparTabelas, encerrarBanco } = require('.
 
 const RAIZ = path.resolve(__dirname, '..', '..');
 const seed = require(path.join(RAIZ, 'db', 'seeds', '01_gabaritos.js'));
+
+// Cada exemplo de docs/schemas/exemplos/ vira um gabarito no seed.
+const TOTAL_DE_EXEMPLOS = fs
+  .readdirSync(path.join(RAIZ, 'docs', 'schemas', 'exemplos'))
+  .filter((arquivo) => arquivo.endsWith('.json')).length;
 
 beforeAll(async () => {
   await prepararBanco();
@@ -28,16 +36,16 @@ afterAll(async () => {
 });
 
 describe('seed de gabaritos', () => {
-  it('insere os tres gabaritos de exemplo', async () => {
+  it('insere um gabarito por exemplo', async () => {
     const linhas = await bancoDeDados('gabaritos').select('*');
-    expect(linhas).toHaveLength(3);
+    expect(linhas).toHaveLength(TOTAL_DE_EXEMPLOS);
   });
 
   it('rodar duas vezes nao duplica', async () => {
     await seed.seed(bancoDeDados);
 
     const linhas = await bancoDeDados('gabaritos').select('*');
-    expect(linhas).toHaveLength(3);
+    expect(linhas).toHaveLength(TOTAL_DE_EXEMPLOS);
   });
 
   // Apagar e recriar trocaria o id — e partida que aponta para o gabarito
@@ -70,6 +78,30 @@ describe('seed de gabaritos', () => {
         problemas: [],
       });
     }
+  });
+
+  // O enunciado e o ticket que o jogador le (RF03). Classe que o gabarito cobra
+  // e o enunciado nao cita e impossivel de acertar.
+  it('todo enunciado cita todas as classes do gabarito', async () => {
+    const linhas = await bancoDeDados('gabaritos').select('titulo', 'enunciado', 'diagrama');
+
+    for (const linha of linhas) {
+      const texto = normalizarNome(linha.enunciado);
+      const naoCitadas = linha.diagrama.classes
+        .map((classe) => classe.nome)
+        .filter((nome) => !texto.includes(normalizarNome(nome)));
+      expect({ titulo: linha.titulo, naoCitadas }).toEqual({
+        titulo: linha.titulo,
+        naoCitadas: [],
+      });
+    }
+  });
+
+  it('a fase 1 tem gabaritos de dificuldade 1 para todos os clientes do dia', async () => {
+    const [{ total }] = await bancoDeDados('gabaritos')
+      .where({ ativo: true, dificuldade: 1 })
+      .count({ total: '*' });
+    expect(Number(total)).toBeGreaterThanOrEqual(clientesPorFase(1));
   });
 
   it('o JSONB volta como objeto, nao como string', async () => {

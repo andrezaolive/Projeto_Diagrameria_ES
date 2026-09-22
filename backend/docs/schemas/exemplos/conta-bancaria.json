@@ -1,0 +1,37 @@
+{
+  "versao": "1.0",
+  "classes": [
+    {
+      "id": "c1",
+      "nome": "Cliente",
+      "atributos": [
+        { "nome": "nome", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "cpf", "tipo": "String", "visibilidade": "privado" }
+      ],
+      "posicao": { "x": 80, "y": 100 }
+    },
+    {
+      "id": "c2",
+      "nome": "Conta",
+      "atributos": [
+        { "nome": "numero", "tipo": "int", "visibilidade": "privado" },
+        { "nome": "saldo", "tipo": "double", "visibilidade": "privado" }
+      ],
+      "metodos": [
+        { "nome": "depositar", "retorno": "void", "visibilidade": "publico" },
+        { "nome": "sacar", "retorno": "boolean", "visibilidade": "publico" }
+      ],
+      "posicao": { "x": 400, "y": 100 }
+    }
+  ],
+  "relacionamentos": [
+    {
+      "tipo": "associacao",
+      "origem": "c1",
+      "destino": "c2",
+      "multiplicidadeOrigem": "1",
+      "multiplicidadeDestino": "1..*",
+      "rotulo": "possui"
+    }
+  ]
+}

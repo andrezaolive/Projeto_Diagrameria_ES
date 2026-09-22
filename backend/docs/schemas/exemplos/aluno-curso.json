@@ -1,0 +1,35 @@
+{
+  "versao": "1.0",
+  "classes": [
+    {
+      "id": "c1",
+      "nome": "Aluno",
+      "atributos": [
+        { "nome": "matricula", "tipo": "int", "visibilidade": "privado" },
+        { "nome": "nome", "tipo": "String", "visibilidade": "privado" }
+      ],
+      "metodos": [{ "nome": "matricular", "retorno": "void", "visibilidade": "publico" }],
+      "posicao": { "x": 80, "y": 100 }
+    },
+    {
+      "id": "c2",
+      "nome": "Curso",
+      "atributos": [
+        { "nome": "codigo", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "nome", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "cargaHoraria", "tipo": "int", "visibilidade": "privado" }
+      ],
+      "posicao": { "x": 400, "y": 100 }
+    }
+  ],
+  "relacionamentos": [
+    {
+      "tipo": "associacao",
+      "origem": "c1",
+      "destino": "c2",
+      "multiplicidadeOrigem": "0..*",
+      "multiplicidadeDestino": "1..*",
+      "rotulo": "cursa"
+    }
+  ]
+}

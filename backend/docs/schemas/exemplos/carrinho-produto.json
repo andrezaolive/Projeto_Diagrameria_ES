@@ -1,0 +1,47 @@
+{
+  "versao": "1.0",
+  "classes": [
+    {
+      "id": "c1",
+      "nome": "Carrinho",
+      "atributos": [{ "nome": "total", "tipo": "double", "visibilidade": "privado" }],
+      "metodos": [
+        { "nome": "adicionar", "retorno": "void", "visibilidade": "publico" },
+        { "nome": "calcularTotal", "retorno": "double", "visibilidade": "publico" }
+      ],
+      "posicao": { "x": 60, "y": 100 }
+    },
+    {
+      "id": "c2",
+      "nome": "ItemCarrinho",
+      "atributos": [{ "nome": "quantidade", "tipo": "int", "visibilidade": "privado" }],
+      "metodos": [{ "nome": "subtotal", "retorno": "double", "visibilidade": "publico" }],
+      "posicao": { "x": 320, "y": 100 }
+    },
+    {
+      "id": "c3",
+      "nome": "Produto",
+      "atributos": [
+        { "nome": "nome", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "preco", "tipo": "double", "visibilidade": "privado" }
+      ],
+      "posicao": { "x": 580, "y": 100 }
+    }
+  ],
+  "relacionamentos": [
+    {
+      "tipo": "composicao",
+      "origem": "c1",
+      "destino": "c2",
+      "multiplicidadeOrigem": "1",
+      "multiplicidadeDestino": "0..*"
+    },
+    {
+      "tipo": "associacao",
+      "origem": "c2",
+      "destino": "c3",
+      "multiplicidadeOrigem": "0..*",
+      "multiplicidadeDestino": "1"
+    }
+  ]
+}
