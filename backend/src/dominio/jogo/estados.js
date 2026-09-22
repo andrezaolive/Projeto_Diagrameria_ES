@@ -68,4 +68,16 @@ function transicionarPedido(estadoDerivado, evento) {
 
 const DIA_ENCERRADO = new Set(['concluido', 'game_over']);
 
-module.exports = { transicionarDia, transicionarPedido, DIA_ENCERRADO };
+/**
+ * Aceitar e entregar pedido so valem com o dia correndo: pausado, a area de
+ * montagem fica escondida (RF29); encerrado, nao ha mais cliente.
+ *
+ * @throws {ErroDeConflito} DIA_PAUSADO ou DIA_ENCERRADO.
+ */
+function exigirDiaEmAndamento(estado) {
+  if (estado === 'em_andamento') return;
+  const recusa = RECUSAS_DO_DIA[estado];
+  throw new ErroDeConflito(recusa.mensagem, recusa.codigo);
+}
+
+module.exports = { transicionarDia, transicionarPedido, exigirDiaEmAndamento, DIA_ENCERRADO };

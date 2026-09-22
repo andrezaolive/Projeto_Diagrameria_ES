@@ -1,5 +1,6 @@
 const { Router } = require('express');
 const rotasDeAutenticacao = require('./autenticacao.rotas');
+const rotasDoJogo = require('./jogo.rotas');
 
 /** Monta todas as rotas da API sob um unico router. */
 const rotas = Router();
@@ -11,5 +12,6 @@ rotas.get('/saude', (_req, res) => {
 });
 
 rotas.use('/auth', rotasDeAutenticacao);
+rotas.use(rotasDoJogo);
 
 module.exports = rotas;

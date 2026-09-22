@@ -26,19 +26,38 @@ function chavePorIpEEmail(req) {
 }
 
 /**
+ * Chave pelo jogador logado, para rotas autenticadas: o limite acompanha a
+ * conta, nao a rede. Tem que vir depois de exigeAutenticacao.
+ */
+function chavePorUsuario(req) {
+  return `usuario|${req.usuario.id}`;
+}
+
+/**
  * @param {object} opcoes
  * @param {number} opcoes.limite  Requisicoes aceitas por janela.
  * @param {number} opcoes.janelaMs  Tamanho da janela.
  * @param {boolean} [opcoes.porEmail]  Conta por IP + email em vez de so por IP.
+ * @param {boolean} [opcoes.porUsuario]  Conta pelo jogador logado (req.usuario).
  * @param {boolean} [opcoes.ativo]  false desliga o limite (usado na suite de integracao).
  * @returns {Function} middleware Express.
  */
-function limitaTentativas({ limite, janelaMs, porEmail = false, ativo = true }) {
+function limitaTentativas({
+  limite,
+  janelaMs,
+  porEmail = false,
+  porUsuario = false,
+  ativo = true,
+}) {
+  let keyGenerator;
+  if (porUsuario) keyGenerator = chavePorUsuario;
+  else if (porEmail) keyGenerator = chavePorIpEEmail;
+
   return rateLimit({
     limit: limite,
     windowMs: janelaMs,
     skip: () => !ativo,
-    ...(porEmail ? { keyGenerator: chavePorIpEEmail } : {}),
+    ...(keyGenerator ? { keyGenerator } : {}),
     // Cabecalhos RateLimit-* padronizados (draft-8), para o frontend saber
     // quanto falta sem ter que adivinhar.
     standardHeaders: 'draft-8',

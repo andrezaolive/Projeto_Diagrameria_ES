@@ -22,8 +22,24 @@ async function buscarPorEmail(email) {
     .first();
 }
 
-async function buscarPorId(id) {
-  return bancoDeDados(TABELA).where({ id }).first();
+async function buscarPorId(id, trx = bancoDeDados) {
+  return trx(TABELA).where({ id }).first();
+}
+
+/** RF21: credito de moedas em caixa. Incremento no banco, sem ler-e-somar. */
+async function creditarMoedas(id, valor, trx) {
+  if (valor === 0) return;
+  await trx(TABELA).where({ id }).increment('moedas', valor);
+}
+
+/**
+ * RF17: avanca a fase ao fim de um dia sem Game Over. So avanca se o jogador
+ * ainda estiver na fase do dia: encerrar o mesmo dia duas vezes nao pula fase.
+ */
+async function avancarFase(id, faseDoDia, trx) {
+  await trx(TABELA)
+    .where({ id, fase_atual: faseDoDia })
+    .update({ fase_atual: faseDoDia + 1 });
 }
 
 /** Codigo SQLSTATE do Postgres para violacao de indice UNIQUE. */
@@ -55,4 +71,11 @@ async function inserir({ nome, email, senhaHash }) {
   }
 }
 
-module.exports = { buscarPorEmail, buscarPorId, inserir, normalizarEmail };
+module.exports = {
+  buscarPorEmail,
+  buscarPorId,
+  inserir,
+  normalizarEmail,
+  creditarMoedas,
+  avancarFase,
+};
