@@ -102,12 +102,20 @@ apontando para classe que existe).
 
 Contrato completo em [`docs/api/openapi.yaml`](docs/api/openapi.yaml). Tudo sob `/api`.
 
-| Rota                  | Auth | O que faz                         |
-| --------------------- | ---- | --------------------------------- |
-| `GET /saude`          | não  | Diz se o processo está de pé      |
-| `POST /auth/cadastro` | não  | Cria a conta e já devolve o token |
-| `POST /auth/login`    | não  | Autentica e devolve o token       |
-| `GET /auth/eu`        | sim  | Dados do usuário logado           |
+| Rota                        | Auth | O que faz                                                  |
+| --------------------------- | ---- | ---------------------------------------------------------- |
+| `GET /saude`                | não  | Diz se o processo está de pé                               |
+| `POST /auth/cadastro`       | não  | Cria a conta e já devolve o token                          |
+| `POST /auth/login`          | não  | Autentica e devolve o token                                |
+| `GET /auth/eu`              | sim  | Dados do usuário logado                                    |
+| `GET /progresso`            | sim  | Fase atual e moedas em caixa                               |
+| `POST /dias`                | sim  | Abre o dia de trabalho da fase atual                       |
+| `GET /dias/atual`           | sim  | Estado do dia aberto (clientes que chegaram, cronômetros)  |
+| `GET /dias/:id`             | sim  | Um dia do jogador, com o resumo se já encerrou             |
+| `POST /dias/:id/pausar`     | sim  | Pausa: congela a paciência (até 3 por dia)                 |
+| `POST /dias/:id/retomar`    | sim  | Retoma                                                     |
+| `POST /pedidos/:id/aceitar` | sim  | Aceita o pedido (vai para o mural)                         |
+| `POST /pedidos/:id/entrega` | sim  | Entrega o diagrama: nota, moedas, diff e diagrama esperado |
 
 O token vai em `Authorization: Bearer <token>`. Todo erro sai no mesmo formato — ramifique pelo
 `codigo`, exiba a `mensagem`:
@@ -116,34 +124,73 @@ O token vai em `Authorization: Bearer <token>`. Todo erro sai no mesmo formato �
 { "erro": { "codigo": "EMAIL_EM_USO", "mensagem": "Ja existe uma conta com este email." } }
 ```
 
+## Como uma partida funciona
+
+Uma partida é um **dia de trabalho** numa fase. A fase 1 tem 3 clientes, e a cada 10 fases entra
+mais 1. Os clientes chegam em intervalos de 45 a 90 s, cada um com um pedido em texto, que é o
+enunciado de um gabarito, e uma paciência de 2 a 5 minutos.
+
+1. **Aceitar:** o pedido vai para o mural. A paciência continua correndo.
+2. **Entregar:** a entrega é uma só e final. O servidor compara o diagrama com o gabarito e calcula
+   a nota.
+   - A nota é proporcional ao que o jogador acertou, com desconto pelo que inventou.
+   - Com nota de 50% ou mais, o jogador recebe moedas e uma gorjeta proporcional ao tempo que
+     sobrou.
+   - Com nota abaixo disso, o cliente recusa a entrega.
+3. **Cliente perdido:** paciência esgotada ou entrega recusada custam pontos.
+4. **Fim do dia:** quando todos os clientes foram atendidos ou foram embora, o dia fecha com um
+   resumo.
+   - Desempenho abaixo do limiar da fase é **Game Over**, e a fase se repete.
+   - Senão, o jogador avança de fase.
+
+Todos os números (pesos, valores, limiares) estão em
+[`src/dominio/jogo/regras.js`](src/dominio/jogo/regras.js). São valores **propostos** e ainda
+passam pela validação da PO. Cada um cita o requisito de onde saiu, no
+[documento de engenharia](../docs/).
+
 ## Decisões de arquitetura
 
-1. **Só REST, sem WebSocket.** Os cronômetros de paciência rodam no frontend apenas para exibição.
-   O servidor grava `criado_em` e `prazo_em` de cada pedido e recalcula a pontuação no momento do
-   envio, comparando timestamps. **O servidor é a autoridade**: o cliente nunca envia pontuação
-   nem tempo decorrido.
-2. **O gabarito é JSON em coluna `JSONB`**, no mesmo formato que o Canvas produz.
-3. **O validador retorna um diff, não um booleano.** A pontuação é parcial e depende de saber _o
-   que_ errou — classe faltando, multiplicidade incorreta, herança invertida.
-4. **Validador e calculadora de pontuação são funções puras.**
-5. **Migrations e queries explícitas** (Knex como query builder e ferramenta de migration, não
+1. **Só REST, sem WebSocket. O servidor é a autoridade:** o cliente nunca envia pontuação nem tempo
+   decorrido. Dentro do dia, tudo é medido em **tempo de jogo**, um relógio que para durante a
+   pausa: `agora − iniciado_em − tempo pausado`. Cada pedido guarda quando o cliente chega e
+   quanto dura a paciência, nesse relógio. O relógio vem do `now()` do Postgres.
+2. **Nada de cron.** O estado de cada pedido (a caminho, aguardando, expirado) é derivado do
+   relógio a cada leitura. O dia se encerra sozinho na primeira leitura ou ação em que todos os
+   pedidos já estão resolvidos (`sincronizar()` em `src/servicos/dia.servico.js`).
+3. **O gabarito é JSON em coluna `JSONB`**, no mesmo formato que o Canvas produz. Ele só sai do
+   servidor na resposta da entrega.
+4. **O validador retorna um diff, não um booleano.** A pontuação é parcial e depende de saber _o
+   que_ errou: classe faltando, multiplicidade incorreta, herança invertida.
+5. **Validador, pontuação, relógio e máquinas de estado são funções puras** (`src/dominio/`).
+6. **Toda ação de um jogador trava a linha do dia** (`FOR UPDATE`). As ações ficam em fila, e duas
+   abas não conseguem entregar o mesmo pedido. Os índices únicos (um dia aberto por jogador, uma
+   entrega por pedido) são a garantia final.
+7. **Migrations e queries explícitas** (Knex como query builder e ferramenta de migration, não
    como ORM). O schema fica visível.
 
-## Estado atual (Sprint 1)
+## Estado atual (Sprint 2)
+
+**Sprint 1**
 
 - [x] Formato JSON do diagrama UML + exemplos — [`docs/schemas/`](docs/schemas/)
-- [x] Modelo de dados e migrations — [`db/migrations/`](db/migrations/)
+- [x] Cadastro e login (bcrypt + JWT), com limite de tentativas
 - [x] Contratos de API (OpenAPI) — [`docs/api/openapi.yaml`](docs/api/openapi.yaml)
-- [x] Cadastro e login (bcrypt + JWT) — `POST /api/auth/cadastro`, `POST /api/auth/login`,
-      `GET /api/auth/eu`
 - [x] Pipeline de CI — [`.github/workflows/ci-testes.yml`](../.github/workflows/ci-testes.yml)
 
-As migrations criam duas tabelas: `usuarios` e `gabaritos`. As de partida, pedido e entrega ficam
-para a Sprint 2, junto com as máquinas de estado que definem as colunas de status e prazo — modelar
-isso agora seria chutar o desenho da sprint seguinte.
+**Sprint 2**
 
-Fora do escopo da Sprint 1: `ValidadorUML`, máquinas de estado de partida/pedido/cliente, cálculo
-de pontuação e gorjeta (Sprint 2); fechamento de caixa, loja e inventário (Sprint 3).
+- [x] `ValidadorUML` com diff por categoria (RF13, RF25)
+- [x] Nota, moedas, gorjeta e punição (RF05, RF14, RF18, RF21, RF26)
+- [x] Dia de trabalho: clientes escalonados, pedidos, pausa, resumo e Game Over (RF01–RF04, RF17,
+      RF19, RF20, RF23, RF24, RF29)
+- [x] Entrega com o diagrama esperado e a comparação (RF12, RF15, RF22)
+- [x] 8 gabaritos de exemplo (4 de dificuldade 1)
+
+**Fora do escopo, por enquanto**
+
+- Diagramas de estados e de casos de uso. O schema já tem o campo `tipo` para eles.
+- Fechamento de caixa, loja, inventário e o painel de dicas, que compra gabaritos com moedas
+  (Sprint 3).
 
 ## Contribuindo
 

@@ -2,14 +2,21 @@ openapi: 3.1.0
 
 info:
   title: Diagrameria — API
-  version: 0.1.0
+  version: 0.2.0
   description: |
     Backend do Diagrameria. Esta é a fonte de verdade dos contratos consumidos
     pelo frontend React.
 
-    **Escopo desta versão (Sprint 1):** apenas conta de usuário. As rotas de
-    partida, pedido e entrega de diagrama entram na Sprint 2, junto com o
-    `ValidadorUML`.
+    **Escopo desta versão (Sprint 2):** conta de usuário e o jogo — dia de
+    trabalho, clientes, pedidos, entrega com nota e moedas, pausa e Game Over.
+    Só diagrama de classes.
+
+    ## Tempo
+
+    O servidor é a autoridade do tempo. Todo tempo dentro do dia é **tempo de
+    jogo**: um relógio que para durante a pausa. O cronômetro do frontend é só
+    visual — desenhe-o a partir de `pacienciaRestanteMs` e reconsulte o dia; o
+    que vale é o que o servidor devolve.
 
     ## Autenticação
 
@@ -27,7 +34,8 @@ info:
     ```
 
     Ramifique pelo `codigo` (estável) e exiba a `mensagem` (pode mudar de texto).
-    `detalhes` só aparece em erro de validação.
+    `detalhes` aparece em erro de validação (lista de campos) e em
+    `DIA_EM_ANDAMENTO` (`{ diaId }`).
   license:
     name: MIT
 
@@ -40,6 +48,8 @@ tags:
     description: Verificação de que o processo está de pé
   - name: Autenticação
     description: Cadastro, login e perfil do jogador
+  - name: Jogo
+    description: Progresso, dia de trabalho, pedidos e entrega
 
 paths:
   /saude:
@@ -189,12 +199,230 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/Erro' }
 
+  /progresso:
+    get:
+      tags: [Jogo]
+      summary: Fase atual e moedas em caixa
+      responses:
+        '200':
+          description: Progresso salvo do jogador (RF17, RF21)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [fase, moedas]
+                properties:
+                  fase: { type: integer, minimum: 1, example: 1 }
+                  moedas: { type: integer, minimum: 0, example: 35 }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+
+  /dias:
+    post:
+      tags: [Jogo]
+      summary: Abre o dia de trabalho da fase atual
+      description: |
+        Sorteia de uma vez os clientes do dia (3 na fase 1, mais 1 a cada 10
+        fases), o horário de chegada de cada um e o gabarito de cada pedido. Só
+        os clientes que já chegaram aparecem em `pedidos`.
+
+        Se houver um dia aberto que na verdade já terminou (todos os clientes
+        atendidos ou expirados), ele é encerrado antes e o novo abre.
+      responses:
+        '201':
+          description: Dia aberto
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dia' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '409':
+          description: |
+            `DIA_EM_ANDAMENTO`: já existe um dia aberto (o id vem em
+            `detalhes.diaId`, para retomar). `SEM_GABARITOS`: não há gabarito
+            ativo para montar o dia.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+              example:
+                erro:
+                  codigo: DIA_EM_ANDAMENTO
+                  mensagem: Ja existe um dia de trabalho em andamento.
+                  detalhes: { diaId: 5f0c1c2e-2b7a-4c1e-9a55-1d2f3e4a5b6c }
+
+  /dias/atual:
+    get:
+      tags: [Jogo]
+      summary: Estado do dia aberto
+      description: |
+        É a rota que o frontend consulta durante o dia. Não há WebSocket: use
+        `proximaChegadaEmMs` para saber quando consultar de novo, e
+        `pacienciaRestanteMs` de cada pedido para desenhar o cronômetro.
+
+        Se todos os pedidos já estiverem resolvidos, o dia se encerra nesta
+        chamada e volta com `status` `concluido` ou `game_over` e o `resumo`
+        (RF23). Depois disso, esta rota responde 404 até um novo dia abrir.
+      responses:
+        '200':
+          description: Dia atual
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dia' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+
+  /dias/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdDoDia'
+    get:
+      tags: [Jogo]
+      summary: Um dia do jogador — em andamento ou encerrado, com o resumo
+      responses:
+        '200':
+          description: Dia
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dia' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+
+  /dias/{id}/pausar:
+    parameters:
+      - $ref: '#/components/parameters/IdDoDia'
+    post:
+      tags: [Jogo]
+      summary: Pausa o dia (RF29)
+      description: |
+        Congela o relógio: enquanto pausado, nenhum cliente chega e nenhuma
+        paciência corre. Aceitar e entregar ficam bloqueados. Até 3 pausas por
+        dia.
+      responses:
+        '200':
+          description: Dia pausado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dia' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: '`DIA_PAUSADO`, `DIA_ENCERRADO` ou `LIMITE_DE_PAUSAS`'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /dias/{id}/retomar:
+    parameters:
+      - $ref: '#/components/parameters/IdDoDia'
+    post:
+      tags: [Jogo]
+      summary: Retoma o dia pausado
+      responses:
+        '200':
+          description: Dia retomado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Dia' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          description: '`DIA_NAO_PAUSADO` ou `DIA_ENCERRADO`'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+
+  /pedidos/{id}/aceitar:
+    parameters:
+      - $ref: '#/components/parameters/IdDoPedido'
+    post:
+      tags: [Jogo]
+      summary: Aceita o pedido e o leva para o mural (RF04)
+      description: Aceitar não para a paciência do cliente — ela corre até a entrega.
+      responses:
+        '200':
+          description: Pedido aceito
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Pedido' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/PedidoIndisponivel'
+
+  /pedidos/{id}/entrega:
+    parameters:
+      - $ref: '#/components/parameters/IdDoPedido'
+    post:
+      tags: [Jogo]
+      summary: Entrega o diagrama do pedido (RF12–RF15, RF21, RF22, RF26)
+      description: |
+        A entrega é **uma só e final**. O pedido precisa estar aceito.
+
+        Diagrama malformado (fora do schema de `docs/schemas/`, ou com id de
+        classe repetido ou relacionamento apontando para classe que não existe)
+        volta 400 e **não gasta o pedido**: dá para corrigir e reenviar.
+
+        A resposta traz a nota, o pagamento, o diff por categoria e o diagrama
+        esperado, para a tela de comparação. Se era o último pedido pendente, o
+        dia se encerra aqui e `dia.resumo` vem preenchido.
+
+        Limite: 30 entregas por minuto por jogador.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [diagrama]
+              additionalProperties: false
+              properties:
+                diagrama:
+                  type: object
+                  description: 'Diagrama no formato de `docs/schemas/diagrama.schema.json`.'
+      responses:
+        '201':
+          description: Entrega registrada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ResultadoDaEntrega' }
+        '400':
+          $ref: '#/components/responses/EntradaInvalida'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          $ref: '#/components/responses/NaoEncontrado'
+        '409':
+          $ref: '#/components/responses/PedidoIndisponivel'
+        '429':
+          $ref: '#/components/responses/MuitasTentativas'
+
 components:
   securitySchemes:
     tokenJwt:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
+  parameters:
+    IdDoDia:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    IdDoPedido:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
 
   schemas:
     Usuario:
@@ -238,29 +466,277 @@ components:
                 - EMAIL_EM_USO
                 - CONFLITO
                 - MUITAS_TENTATIVAS
+                - DIA_EM_ANDAMENTO
+                - DIA_PAUSADO
+                - DIA_NAO_PAUSADO
+                - DIA_ENCERRADO
+                - LIMITE_DE_PAUSAS
+                - SEM_GABARITOS
+                - PEDIDO_NAO_CHEGOU
+                - PEDIDO_NAO_ACEITO
+                - PEDIDO_JA_ACEITO
+                - PEDIDO_JA_ENTREGUE
+                - PEDIDO_EXPIRADO
                 - ERRO_INTERNO
             mensagem:
               type: string
               description: Texto em português, exibível para o jogador.
             detalhes:
-              type: array
-              description: Só em erro de validação — um item por campo recusado.
-              items:
-                type: object
-                required: [campo, mensagem]
-                properties:
-                  campo:
-                    type: string
-                    description: |
-                      Caminho do campo, separado por `/` (`senha`,
-                      `classes/2/nome`). `(corpo)` quando o problema é o corpo
-                      inteiro.
-                    example: senha
-                  mensagem:
-                    type: string
-                    description: Em português, exibível ao lado do campo.
-                    example: não deve ser mais curta que 8 caracteres
+              oneOf:
+                - $ref: '#/components/schemas/DetalhesDeValidacao'
+                - type: object
+                  description: Em DIA_EM_ANDAMENTO, o dia que está aberto.
+                  properties:
+                    diaId: { type: string, format: uuid }
 
+    DetalhesDeValidacao:
+      type: array
+      description: Em erro de validação — um item por campo recusado.
+      items:
+        type: object
+        required: [campo, mensagem]
+        properties:
+          campo:
+            type: string
+            description: |
+              Caminho do campo, separado por `/` (`senha`, `classes/2/nome`,
+              `diagrama/relacionamentos/0/destino`). `(corpo)` quando o problema
+              é o corpo inteiro.
+            example: senha
+          mensagem:
+            type: string
+            description: Em português, exibível ao lado do campo.
+            example: não deve ser mais curta que 8 caracteres
+
+    Pedido:
+      type: object
+      description: |
+        Um cliente do dia. **Nunca inclui o diagrama do gabarito** — ele só sai
+        na resposta da entrega.
+      required:
+        - id
+        - ordem
+        - titulo
+        - enunciado
+        - dificuldade
+        - status
+        - pacienciaMs
+        - pacienciaRestanteMs
+        - resultado
+      properties:
+        id: { type: string, format: uuid }
+        ordem: { type: integer, description: Ordem de chegada no dia, a partir de 1 }
+        titulo: { type: string, example: Matricula em cursos }
+        enunciado:
+          type: string
+          description: O ticket que o cliente escreve (RF03). Cita tudo o que o gabarito cobra.
+        dificuldade: { type: integer, minimum: 1, maximum: 5 }
+        status:
+          type: string
+          enum: [aguardando, aceito, entregue, expirado]
+          description: |
+            `expirado`: a paciência acabou e o cliente foi embora. Entrega com
+            nota abaixo de 50% fica `entregue` com `resultado.aceita: false`.
+        pacienciaMs: { type: integer, description: 'Paciência total, 2 a 5 minutos (RF20)' }
+        pacienciaRestanteMs:
+          type: integer
+          description: Para o cronômetro. Zero quando o pedido já foi resolvido.
+        resultado:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/Pagamento'
+
+    Dia:
+      type: object
+      required:
+        - id
+        - fase
+        - status
+        - tempoDeJogoMs
+        - pausasRestantes
+        - clientesNoDia
+        - proximaChegadaEmMs
+        - pedidos
+        - resumo
+      properties:
+        id: { type: string, format: uuid }
+        fase: { type: integer, minimum: 1 }
+        status: { type: string, enum: [em_andamento, pausado, concluido, game_over] }
+        tempoDeJogoMs:
+          type: integer
+          description: Relógio do dia. Não anda durante a pausa.
+        pausasRestantes: { type: integer }
+        clientesNoDia:
+          type: integer
+          description: Total do dia, inclusive os que ainda não chegaram
+        proximaChegadaEmMs:
+          type: [integer, 'null']
+          description: |
+            Quanto falta, em tempo de jogo, para o próximo cliente chegar. `null`
+            quando todos já chegaram. Use para agendar a próxima consulta.
+        pedidos:
+          type: array
+          description: Só os clientes que já chegaram (todos, se o dia encerrou).
+          items: { $ref: '#/components/schemas/Pedido' }
+        resumo:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ResumoDoDia'
+
+    Pagamento:
+      type: object
+      required: [nota, aceita, moedas, gorjeta, pontos]
+      properties:
+        nota: { type: number, minimum: 0, maximum: 1, example: 0.8667 }
+        aceita:
+          type: boolean
+          description: false quando a nota fica abaixo de 50% — o cliente recusa e não paga.
+        moedas: { type: integer, description: 'Valor base (10 × dificuldade) × nota' }
+        gorjeta:
+          type: integer
+          description: Proporcional à nota e à paciência que sobrou (RF26)
+        pontos: { type: integer, description: '100 × nota + gorjeta; −50 se recusada' }
+
+    ResultadoDaEntrega:
+      type: object
+      required: [resultado, detalheDaNota, diff, esperado, dia]
+      properties:
+        resultado: { $ref: '#/components/schemas/Pagamento' }
+        detalheDaNota:
+          type: object
+          description: 'nota = max(0, (ganho − desconto) / maximo), com os pesos da fase (RF18)'
+          properties:
+            ganho: { type: number }
+            desconto: { type: number }
+            maximo: { type: number }
+        diff: { $ref: '#/components/schemas/Diff' }
+        esperado:
+          type: object
+          description: O diagrama do gabarito (RF15), no formato de `docs/schemas/`.
+        dia: { $ref: '#/components/schemas/Dia' }
+
+    Diff:
+      type: object
+      description: |
+        O que o ValidadorUML encontrou, por categoria. Nomes de classe vêm como
+        estão no gabarito; extras vêm como o jogador escreveu.
+      properties:
+        classes:
+          type: object
+          properties:
+            corretas: { type: array, items: { type: string } }
+            faltando: { type: array, items: { type: string } }
+            extras: { type: array, items: { type: string } }
+        estereotipos:
+          type: object
+          description: '`indevidos`: estereótipo marcado numa classe que o gabarito tem como comum.'
+          properties:
+            corretos: { type: array, items: { $ref: '#/components/schemas/ItemDeEstereotipo' } }
+            errados: { type: array, items: { $ref: '#/components/schemas/ItemDeEstereotipo' } }
+            indevidos: { type: array, items: { $ref: '#/components/schemas/ItemDeEstereotipo' } }
+        atributos: { $ref: '#/components/schemas/DiffDeMembros' }
+        metodos: { $ref: '#/components/schemas/DiffDeMembros' }
+        relacionamentos:
+          type: object
+          properties:
+            corretos: { type: array, items: { $ref: '#/components/schemas/Ligacao' } }
+            faltando: { type: array, items: { $ref: '#/components/schemas/Ligacao' } }
+            extras: { type: array, items: { $ref: '#/components/schemas/Ligacao' } }
+            invertidos:
+              type: array
+              description: Tipo certo, direção trocada (herança ao contrário).
+              items: { $ref: '#/components/schemas/LigacaoComparada' }
+            tipoErrado:
+              type: array
+              description: Mesmo par de classes, tipo diferente.
+              items: { $ref: '#/components/schemas/LigacaoComparada' }
+        multiplicidades:
+          type: object
+          description: |
+            Só as pontas que o gabarito define. `semRelacionamento`: pontas de
+            ligação que não casou exata — não avaliadas, mas contam no máximo.
+          properties:
+            corretas: { type: array, items: { $ref: '#/components/schemas/Ponta' } }
+            erradas: { type: array, items: { $ref: '#/components/schemas/Ponta' } }
+            semRelacionamento: { type: array, items: { $ref: '#/components/schemas/Ponta' } }
+
+    DiffDeMembros:
+      type: object
+      properties:
+        corretos: { type: array, items: { $ref: '#/components/schemas/Membro' } }
+        comDetalheErrado:
+          type: array
+          description: Nome certo, tipo/retorno ou visibilidade errados — vale metade.
+          items:
+            allOf:
+              - $ref: '#/components/schemas/Membro'
+              - type: object
+                properties:
+                  erros:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        campo: { type: string, enum: [tipo, retorno, visibilidade] }
+                        esperado: { type: string }
+                        entregue: { type: string }
+        faltando: { type: array, items: { $ref: '#/components/schemas/Membro' } }
+        extras: { type: array, items: { $ref: '#/components/schemas/Membro' } }
+
+    Membro:
+      type: object
+      properties:
+        classe: { type: string }
+        nome: { type: string }
+
+    ItemDeEstereotipo:
+      type: object
+      properties:
+        classe: { type: string }
+        esperado: { type: string }
+        entregue: { type: string }
+
+    Ligacao:
+      type: object
+      properties:
+        tipo: { type: string }
+        origem: { type: string, description: Nome da classe }
+        destino: { type: string, description: Nome da classe }
+
+    LigacaoComparada:
+      type: object
+      properties:
+        esperado: { $ref: '#/components/schemas/Ligacao' }
+        entregue: { $ref: '#/components/schemas/Ligacao' }
+
+    Ponta:
+      type: object
+      properties:
+        relacionamento: { $ref: '#/components/schemas/Ligacao' }
+        ponta: { type: string, enum: [origem, destino] }
+        esperado: { type: string }
+        entregue: { type: [string, 'null'] }
+
+    ResumoDoDia:
+      type: object
+      description: Consolidação do dia (RF23) e decisão de Game Over (RF24).
+      properties:
+        fase: { type: integer }
+        clientes: { type: integer }
+        aceitas: { type: integer }
+        recusadas: { type: integer, description: Entregas com nota abaixo de 50% }
+        expirados: { type: integer }
+        clientesPerdidos: { type: integer, description: recusadas + expirados }
+        pontos: { type: integer, description: 'Soma dos pontos; −50 por cliente perdido (RF05)' }
+        pontosMaximos: { type: integer }
+        desempenho: { type: number, description: pontos / pontosMaximos }
+        limiar:
+          type: number
+          description: Desempenho mínimo da fase para não dar Game Over
+        moedas: { type: integer, description: Total creditado no dia (valor + gorjeta) }
+        gorjetas: { type: integer }
+        gameOver: { type: boolean }
+        proximaFase: { type: integer, description: A mesma fase se deu Game Over }
   responses:
     EntradaInvalida:
       description: |
@@ -292,6 +768,31 @@ components:
             erro:
               codigo: MUITAS_TENTATIVAS
               mensagem: Muitas tentativas. Espere um pouco e tente de novo.
+
+    NaoEncontrado:
+      description: |
+        Não existe — ou é de outro jogador: a API não revela que o id existe.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example:
+            erro:
+              codigo: NAO_ENCONTRADO
+              mensagem: Pedido nao encontrado.
+
+    PedidoIndisponivel:
+      description: |
+        O pedido não aceita esta ação agora. Ramifique pelo código:
+        `PEDIDO_NAO_CHEGOU`, `PEDIDO_NAO_ACEITO` (entregar antes de aceitar),
+        `PEDIDO_JA_ACEITO`, `PEDIDO_JA_ENTREGUE`, `PEDIDO_EXPIRADO` (o cliente
+        foi embora), `DIA_PAUSADO`, `DIA_ENCERRADO`.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Erro' }
+          example:
+            erro:
+              codigo: PEDIDO_EXPIRADO
+              mensagem: A paciencia do cliente acabou e ele foi embora.
 
     NaoAutenticado:
       description: Token ausente, inválido ou expirado

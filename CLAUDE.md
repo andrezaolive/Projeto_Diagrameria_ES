@@ -87,8 +87,34 @@ same DB. When `NODE_ENV=test`, the DB name switches to `DB_NOME_TESTE` and bcryp
 
 ## Game design constraints
 
-- **Server is the authority**: REST only, no WebSocket. Client never sends score or elapsed time;
-  the server stores timestamps (`criado_em`, `prazo_em`) and computes scoring at submission.
+- **Server is the authority**: REST only, no WebSocket. Client never sends score or elapsed time.
+- **Game time, not wall time.** Everything inside a day is measured with the game clock:
+  `agora - dias.iniciado_em - tempo_pausado_ms - (paused ? agora - pausado_em : 0)`
+  (`src/dominio/jogo/relogio.js`).
+  - Pedidos store `chegada_ms` and `paciencia_ms` on that clock, so pause (RF29) never rewrites
+    deadlines.
+  - `agora` always comes from Postgres `now()`, via `repositorios/transacao.js`.
+  - Domain code never reads a clock.
+- **No cron.** A pedido's state (`a_caminho` / `aguardando` / `aceito` / `entregue` /
+  `expirado`) is *derived* at read time by `relogio.estadoDoPedido`, with a 2 s latency tolerance.
+  The stored `status` can lag behind.
+  - `sincronizar()` in `src/servicos/dia.servico.js` runs on every read and every action. It
+    closes the day (resumo, Game Over, fase+1) as soon as every pedido is resolved.
+  - Any new day/pedido operation must go through it, inside `emTransacao`, with the day row locked
+    (`dias.buscar*` use `FOR UPDATE`).
+  - Check pedido state before day state, so an expired pedido reports `PEDIDO_EXPIRADO`, not
+    `DIA_ENCERRADO`.
+  - An error thrown after `sincronizar` rolls back its close; that is fine, because it is
+    idempotent and re-runs on the next read.
+- **All tunable numbers live in `src/dominio/jogo/regras.js`**: pesos, moedas, gorjeta, punição,
+  Game Over thresholds, clients per phase, pauses, patience range. They are *proposed* values
+  pending PO validation; each cites the RF from `docs/Projeto Engenharia de Software.pdf` (repo
+  root). Keep logic out of that file and keep numbers out of the logic.
+- **The gabarito diagram never leaves the server before delivery.** `pedidos.repositorio` never
+  selects `gabaritos.diagrama`, and the only response containing it is the entrega (`esperado`,
+  RF15/RF22). There is a test asserting this.
+- Every diagram entering the system (seed, entrega) goes through `validarDiagrama()` before
+  `compararDiagramas()`. Malformed diagram → 400, and the pedido is not consumed.
 - JWT carries only identity (`sub` = user id, `email`) — never game state.
 - The diagram JSON format (`docs/schemas/diagrama.schema.json`, explained in
   `docs/schemas/README.md`) is shared by the Canvas, the `gabaritos.diagrama` JSONB column and the
@@ -97,6 +123,15 @@ same DB. When `NODE_ENV=test`, the DB name switches to `DB_NOME_TESTE` and bcryp
   `id`/`posicao`/`rotulo`/order are ignored; the validator returns a **diff**, not a boolean;
   `heranca` origin is the subclass; `heranca`/`dependencia` must not have multiplicity; `"*"` ≡
   `"0..*"`.
+  - `associacao` is undirected.
+  - Relationships are matched in three passes: exact, then inverted, then wrong type.
+  - Only multiplicity ends defined by the gabarito score.
+  - Estereótipo only scores when the gabarito declares a non-`classe` one.
+  - Optional top-level `tipo` (only `"classes"` today) reserves room for state and use-case
+    diagrams.
+- Seed enunciados are the ticket the player reads (RF03). An integration test requires every
+  enunciado to mention every class of its gabarito, and phase 1 needs ≥ 3 active difficulty-1
+  gabaritos. New examples in `docs/schemas/exemplos/` must be added to the seed.
 
 ## Database
 
@@ -116,16 +151,24 @@ same DB. When `NODE_ENV=test`, the DB name switches to `DB_NOME_TESTE` and bcryp
   migrations), `limparTabelas()` in `beforeEach`, `encerrarBanco()` in `afterAll`.
 - `limparTabelas()` truncates every `public` table except `knex_*`, read from `pg_tables`, so new
   tables are covered automatically.
-- CI (`.github/workflows/ci-testes.yml`, at the repo root) creates `diagrameria_teste` manually and runs migrations before
-  `npm test`.
+- CI (`.github/workflows/ci-testes.yml`, at the repo root) creates `diagrameria_teste` manually
+  and runs migrations before `npm test`.
+- Game integration tests (`testes/integracao/jogo.test.js`) simulate time with `passarTempo()`:
+  it shifts `iniciado_em` *and* `pausado_em` back (wall clock passing), so pauses still freeze
+  game time. Arrivals and gabarito draws are random, so tests must not depend on a specific order.
+- Rate limiters are disabled when `ehTeste`; their behavior is covered in
+  `testes/unitarios/limitaTentativas.test.js`.
 
 ## Scope / roadmap
 
-Sprint 1 (done): diagram schema, `usuarios` and `gabaritos` migrations, OpenAPI, auth
-(bcrypt + JWT), CI. Sprint 2: `ValidadorUML`, match/order/customer state machines, scoring and tips
-(tables for partida/pedido/entrega come with it). Sprint 3: cash closing, shop, inventory.
+- **Sprint 1 (done):** diagram schema, auth, OpenAPI, CI.
+- **Sprint 2 (done):** ValidadorUML; scoring and coins; tables `dias`/`pedidos`/`entregas` and
+  `usuarios.fase_atual`/`moedas`; day/pedido state machines; pause; Game Over; 8 routes under
+  `/api` (see `backend/docs/api/openapi.yaml`). Class diagrams only.
+- **Later:** state and use-case diagrams; Sprint 3 (cash closing, shop, inventory, the hints panel
+  that buys gabaritos with coins).
 
 ## Git
 
-Work on `develop`; `main` is protected. Conventional Commits in Portuguese, e.g.
+Work on `develop` (feature branches + PR for large changes); `main` is protected. Conventional Commits in Portuguese, e.g.
 `feat(auth): implementa cadastro e login com bcrypt e jwt`.

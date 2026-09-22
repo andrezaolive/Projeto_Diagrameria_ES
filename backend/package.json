@@ -1,6 +1,6 @@
 {
   "name": "diagrameria-backend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Backend do jogo Diagrameria - montagem de diagramas UML sob pressao de tempo",
   "main": "src/server.js",
   "engines": {

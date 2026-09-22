@@ -30,6 +30,10 @@ diagrama silenciosamente errado.
 Os três campos são obrigatórios. `classes` e `relacionamentos` podem vir como listas vazias — um
 canvas em branco é uma entrega ruim, não uma requisição malformada.
 
+Há também um campo opcional `tipo`, o tipo de diagrama. Hoje o único valor é `"classes"`, que é
+também o padrão quando o campo não vem. Diagramas de estados e de casos de uso vão entrar como
+novos valores desse campo, sem invalidar os diagramas de classe já gravados.
+
 ### Classe
 
 ```json
@@ -107,16 +111,43 @@ O enum de tipos é fechado nos cinco tipos acima. Então "classe implementa inte
 representado como **`heranca` apontando para uma classe de `estereotipo: "interface"`**. O Canvas
 pode desenhar a linha tracejada ao perceber que o destino é uma interface.
 
-## Como o gabarito é comparado (resumo)
+## Como o gabarito é comparado
 
-O `ValidadorUML` entra na Sprint 2, mas as regras de comparação já estão fixadas porque afetam o
-que vocês enviam:
+O comparador fica em `src/dominio/diagrama/validadorUML.js`. A nota é calculada a partir dele em
+`src/dominio/jogo/pontuacao.js`, com os pesos de `src/dominio/jogo/regras.js`.
+
+**Como as coisas casam**
 
 - **Classes casam por `nome` normalizado**: sem espaços nas pontas, sem diferença de
-  maiúscula/minúscula, sem acento. `"pedido "` casa com `"Pedido"`.
-- **Relacionamentos casam pela tripla** (nome da origem, nome do destino, tipo).
-- **Ignorados na comparação**: `id`, `posicao`, `rotulo`, e a ordem dos itens em qualquer lista.
-- A resposta é um **diff**, não um sim/não: a pontuação é parcial e o jogador vê o que faltou.
+  maiúscula/minúscula, sem acento, com espaços internos colapsados. `"pedido "` casa com
+  `"Pedido"`.
+- **Atributos e métodos casam por nome dentro da classe que casou.** Se o tipo (ou o retorno) ou a
+  visibilidade estiverem errados, o item vale metade do peso.
+- **Relacionamentos casam pela tripla** (nome da origem, nome do destino, tipo), em três passadas:
+  1. **exato**;
+  2. **invertido**: mesmo tipo, com origem e destino trocados, como uma herança ao contrário;
+  3. **tipo errado**: o mesmo par de classes, com outro tipo.
+
+  Uma passada só usa o que sobrou da anterior. Assim, um relacionamento invertido não "rouba" o
+  par de um exato.
+
+- **`associacao` não tem direção.** Desenhar `Aluno → Curso` ou `Curso → Aluno` dá no mesmo, e as
+  multiplicidades acompanham as pontas. Os outros tipos têm direção (veja a tabela acima).
+- **Multiplicidade só pontua nas pontas que o gabarito define.** Pôr multiplicidade numa ponta que
+  o gabarito não tem não custa nada. Se o relacionamento em si estiver errado, as pontas dele
+  contam como perdidas.
+- **Estereótipo só pontua** quando o gabarito declara `abstrata`, `interface` ou `enum`. Marcar
+  estereótipo numa classe que o gabarito tem como comum desconta.
+
+**O que fica de fora da comparação:** `id`, `posicao`, `rotulo` e a ordem dos itens em qualquer
+lista.
+
+**O que desconta:** classe, atributo, método ou relacionamento inventado, ou seja, algo que não
+está no gabarito. Sem esse desconto, desenhar "de tudo" tiraria 100%.
+
+A resposta da entrega traz o **diff por categoria**, a nota, o pagamento e o diagrama esperado,
+para a tela de comparação (RF15/RF22). O formato completo está no schema `Diff` do
+[`openapi.yaml`](../api/openapi.yaml).
 
 ## Duas coisas que o schema _não_ pega
 
@@ -157,11 +188,20 @@ Validar antes de enviar economiza um round-trip e dá erro imediato no canvas.
 
 Em [`exemplos/`](exemplos/), todos válidos e cobertos por teste automatizado:
 
-| Arquivo            | O que exercita                                                             |
-| ------------------ | -------------------------------------------------------------------------- |
-| `pedido-item.json` | composição `1 → 1..*`, atributos e métodos                                 |
-| `biblioteca.json`  | herança (duas subclasses) + associações com multiplicidade nas duas pontas |
-| `veiculos.json`    | interface, classe abstrata, enum, agregação e dependência                  |
+| Arquivo                 | O que exercita                                                             |
+| ----------------------- | -------------------------------------------------------------------------- |
+| `pedido-item.json`      | composição `1 → 1..*`, atributos e métodos                                 |
+| `biblioteca.json`       | herança (duas subclasses) + associações com multiplicidade nas duas pontas |
+| `veiculos.json`         | interface, classe abstrata, enum, agregação e dependência                  |
+| `aluno-curso.json`      | associação muitos-para-muitos (`0..*` ↔ `1..*`)                            |
+| `playlist-musica.json`  | agregação                                                                  |
+| `conta-bancaria.json`   | associação `1 → 1..*`, métodos com retorno `boolean`                       |
+| `carrinho-produto.json` | composição e associação encadeadas (três classes)                          |
+| `consulta-medica.json`  | classe abstrata com atributos `protegido`, duas heranças, associações      |
+
+Cada exemplo também é um gabarito do jogo: o seed (`db/seeds/01_gabaritos.js`) grava cada um com um
+enunciado, uma dificuldade e uma paciência. Um teste de integração garante que cada enunciado cite
+todas as classes do seu gabarito.
 
 ## Versionamento
 
