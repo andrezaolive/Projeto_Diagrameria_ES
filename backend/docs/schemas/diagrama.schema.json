@@ -12,6 +12,12 @@
       "type": "string",
       "const": "1.0"
     },
+    "tipo": {
+      "description": "Tipo de diagrama. Opcional; ausente equivale a 'classes'. Hoje so existe diagrama de classes: estados e casos de uso entram como novos valores deste enum, sem invalidar os diagramas ja gravados.",
+      "type": "string",
+      "enum": ["classes"],
+      "default": "classes"
+    },
     "classes": {
       "description": "Blocos do diagrama. Pode vir vazio: um canvas em branco e uma entrega ruim, nao uma requisicao invalida.",
       "type": "array",

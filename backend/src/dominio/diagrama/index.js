@@ -1,5 +1,6 @@
 const { ajv, paraDetalhes } = require('../validacao');
 const { verificarIntegridade } = require('./integridade');
+const { compararDiagramas } = require('./validadorUML');
 const schema = require('../../../docs/schemas/diagrama.schema.json');
 
 /**
@@ -29,4 +30,4 @@ function validarDiagrama(diagrama) {
   return verificarIntegridade(diagrama);
 }
 
-module.exports = { validarDiagrama, verificarIntegridade, schema };
+module.exports = { validarDiagrama, verificarIntegridade, compararDiagramas, schema };
