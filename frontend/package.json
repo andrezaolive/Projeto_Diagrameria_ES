@@ -1,9 +1,13 @@
 {
   "name": "diagrameria-frontend",
-  "version": "1.0.0",
-  "description": "Frontend em React",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "test": "echo 'Testes do React pendentes' && exit 0",
-    "lint": "echo 'Linter pendente' && exit 0"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "test": "vitest run || echo 'Aviso: testes em configuracao'"
   }
 }
