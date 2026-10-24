@@ -1,0 +1,123 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=VT323&display=swap');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: #140c18;
+  color: #f4f0ea;
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+button {
+  font-family: 'Pixelify Sans', 'Courier New', monospace;
+}
+button:not(:disabled) {
+  cursor: pointer;
+}
+button:not(:disabled):hover {
+  filter: brightness(1.15);
+}
+button:not(:disabled):active {
+  transform: translate(2px, 2px);
+}
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+input,
+select,
+textarea {
+  font-family: 'VT323', 'Courier New', monospace;
+  font-size: 20px;
+}
+
+:focus-visible {
+  outline: 3px dashed #f7cf5a;
+  outline-offset: 2px;
+}
+
+::selection {
+  background: #e56a9a;
+  color: #1a1020;
+}
+
+/* Barras de rolagem no tema */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c8323c #1a1020;
+}
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1020;
+}
+::-webkit-scrollbar-thumb {
+  background: #c8323c;
+  border: 2px solid #1a1020;
+}
+
+/* Configuração "Suavizar pixels" desligada = pixels bem duros */
+html[data-suave='nao'] body {
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+html[data-suave='nao'] img,
+html[data-suave='nao'] canvas {
+  image-rendering: pixelated;
+}
+
+/* Papel de parede do escritório (bolinhas) */
+.dg-papel-parede {
+  background-color: #43244a;
+  background-image: radial-gradient(rgba(224, 96, 58, 0.35) 2.5px, transparent 3px);
+  background-size: 14px 14px;
+}
+
+/* Efeito CRT (scanlines + vinheta) */
+.dg-crt {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 300;
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.14) 0 2px, transparent 2px 4px);
+  box-shadow: inset 0 0 140px rgba(0, 0, 0, 0.5);
+}
+
+@keyframes dgspin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes dgpiscar {
+  50% {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 860px) {
+  .dg-login-arte {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dg-raios {
+    animation: none !important;
+  }
+}
