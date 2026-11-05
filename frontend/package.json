@@ -2,8 +2,23 @@
   "name": "diagrameria-frontend",
   "version": "1.0.0",
   "description": "Frontend em React",
+  "private": true,
+  "type": "module",
   "scripts": {
-    "test": "echo 'Testes do React pendentes' && exit 0",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "assets": "node scripts/gen-assets.mjs",
+    "test": "vitest run",
     "lint": "echo 'Linter pendente' && exit 0"
+  },
+  "dependencies": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "4.3.4",
+    "vite": "6.0.7",
+    "vitest": "2.1.8"
   }
 }

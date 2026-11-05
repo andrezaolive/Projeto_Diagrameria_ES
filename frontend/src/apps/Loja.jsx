@@ -1,0 +1,93 @@
+import { useState } from 'react';
+import { Botao, Dinheiro } from '../components/ui.jsx';
+import { ITENS_LOJA } from '../data/loja.js';
+import { useGame } from '../state/GameContext.jsx';
+import { sfx } from '../lib/sfx.js';
+import './apps.css';
+
+const ABAS = [
+  { id: 'fundo', nome: 'Fundos' },
+  { id: 'mesa', nome: 'Mesa' },
+  { id: 'parede', nome: 'Parede' },
+];
+
+// Miniatura do objeto ampliada por um fator inteiro (pixel art sem borrar)
+function Miniatura({ item }) {
+  if (item.categoria === 'fundo') return <img src={item.img} alt={item.nome} className="pixel" />;
+  return <img src={item.img} alt={item.nome} className="pixel sprite" onLoad={(e) => {
+    const { naturalWidth: w, naturalHeight: h } = e.currentTarget;
+    // zoom inteiro quando cabe; sprites altos usam o maior zoom possível
+    const k = Math.max(1, Math.min(6, 232 / w, 128 / h));
+    const inteiro = Math.floor(k);
+    const z = inteiro >= 2 ? inteiro : k;
+    e.currentTarget.style.width = `${w * z}px`;
+    e.currentTarget.style.height = `${h * z}px`;
+  }} />;
+}
+
+export default function Loja() {
+  const { state, dispatch } = useGame();
+  const [aba, setAba] = useState('fundo');
+  const { possui, fundo, moveis } = state.loja;
+
+  const comprar = (item) => {
+    if (state.dinheiro < item.preco) return sfx.erro();
+    sfx.moeda();
+    dispatch({ type: 'COMPRAR', id: item.id, preco: item.preco });
+    if (item.categoria === 'fundo') dispatch({ type: 'USAR_FUNDO', id: item.id });
+    else dispatch({ type: 'ALTERNAR_MOVEL', id: item.id });
+  };
+
+  return (
+    <div className="loja">
+      <div className="loja-topo">
+        {ABAS.map((a) => (
+          <Botao key={a.id} tamanho="pequeno" variante={aba === a.id ? 'ativo' : 'claro'} onClick={() => setAba(a.id)}>
+            {a.nome}
+          </Botao>
+        ))}
+        <span style={{ flex: 1 }} />
+        {aba !== 'fundo' && (
+          <span className="com-dica">
+            <Botao tamanho="pequeno" variante="claro" onClick={() => dispatch({ type: 'ARRUMAR_ESCRITORIO' })} aria-describedby="dica-arrumar">
+              Arrumar
+            </Botao>
+            <span className="dica-hover" id="dica-arrumar" role="tooltip">
+              Devolve todos os objetos do escritório ao lugar original. O que está guardado no baú continua no inventário.
+            </span>
+          </span>
+        )}
+        <Dinheiro valor={state.dinheiro} />
+      </div>
+      <div className="loja-grade rolagem">
+        {ITENS_LOJA.filter((i) => i.categoria === aba).map((item) => {
+          const tem = possui.includes(item.id);
+          const emUso = item.categoria === 'fundo' ? fundo === item.id : moveis.includes(item.id);
+          return (
+            <div key={item.id} className={`loja-item ${emUso ? 'em-uso' : ''}`}>
+              <div className={`miniatura ${item.categoria === 'fundo' ? '' : 'objeto-loja'}`}>
+                <Miniatura item={item} />
+              </div>
+              <strong>{item.nome}</strong>
+              {!tem && (
+                <Botao tamanho="pequeno" variante="rosa" disabled={state.dinheiro < item.preco} onClick={() => comprar(item)} som="">
+                  R$ {item.preco}
+                </Botao>
+              )}
+              {tem && item.categoria === 'fundo' && (
+                <Botao tamanho="pequeno" variante={emUso ? 'ativo' : 'claro'} disabled={emUso} onClick={() => dispatch({ type: 'USAR_FUNDO', id: item.id })}>
+                  {emUso ? 'Em uso' : 'Usar'}
+                </Botao>
+              )}
+              {tem && item.categoria !== 'fundo' && (
+                <Botao tamanho="pequeno" variante={emUso ? 'ativo' : 'claro'} onClick={() => dispatch({ type: 'ALTERNAR_MOVEL', id: item.id })}>
+                  {emUso ? 'Guardar' : 'Colocar'}
+                </Botao>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 Thumbs.db
 .idea/
 .vscode/
+
+# Áudio original (master WAV); o jogo usa o MP3 em frontend/src/assets/audio/
+/audio/
