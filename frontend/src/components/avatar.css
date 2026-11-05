@@ -1,0 +1,29 @@
+.avatar { display: block; background: var(--c-lilac); }
+
+.editor-avatar { display: flex; gap: 28px; align-items: flex-start; }
+.editor-avatar .retrato {
+  padding: 8px;
+  background: var(--c-lavender);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-lilac), 8px 8px 0 var(--c-ink);
+}
+.editor-avatar .retrato .avatar { border: var(--px) solid var(--c-ink); }
+.editor-avatar .seletores { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.seletor { display: grid; grid-template-columns: 150px 32px 170px 32px; align-items: center; font-size: 22px; }
+.seletor .rotulo { color: var(--c-grape); }
+.seletor .valor { text-align: center; }
+.seletor .seta {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  font-family: var(--f-titulo);
+  font-size: 14px;
+  background: var(--c-violet);
+  color: var(--c-cream);
+  border: 3px solid var(--c-ink);
+  box-shadow: inset 3px 3px 0 var(--c-orchid);
+  cursor: pointer;
+}
+.seletor .seta:hover { background: var(--c-orchid); }
+.seletor .seta:active { transform: translateY(2px); }
+.editor-avatar .px-btn { margin-top: 8px; }

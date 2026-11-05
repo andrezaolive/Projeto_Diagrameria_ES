@@ -1,0 +1,51 @@
+.grafico { margin: 0; display: flex; flex-direction: column; gap: 8px; }
+.grafico figcaption { font-family: var(--f-titulo); font-size: 11px; line-height: 1.4; color: var(--c-plum); }
+.grafico svg { display: block; background: var(--c-cream); border: 3px solid var(--c-ink); font-family: var(--f-texto); }
+.grafico-vazio {
+  margin: 0;
+  height: 230px;
+  display: grid;
+  place-items: center;
+  padding: 0 24px;
+  text-align: center;
+  font-size: 22px;
+  color: var(--c-grape);
+  background: var(--c-mist);
+  border: 3px dashed var(--c-violet);
+}
+
+.grafico .eixos text { font-size: 16px; fill: var(--c-violet); }
+.grafico .eixos .grade { stroke: var(--c-lilac); stroke-width: 1; }
+.grafico .eixos .base { stroke: var(--c-ink); stroke-width: 2; }
+.grafico .rotulo { font-size: 17px; fill: var(--c-plum); }
+.grafico .valor { font-size: 18px; fill: var(--c-ink); }
+
+.grafico .alvo { fill: transparent; cursor: crosshair; }
+.grafico .barra { fill: var(--c-violet); }
+.grafico .barra.destaque { fill: var(--c-grape); }
+.grafico .barra.foco { fill: var(--c-orchid); }
+
+.grafico .linha { fill: none; stroke: var(--c-violet); stroke-width: 2; }
+.grafico .ponto { fill: var(--c-violet); stroke: var(--c-cream); stroke-width: 2; pointer-events: none; }
+.grafico .ponto.destaque { fill: var(--c-butter); stroke: var(--c-ink); }
+.grafico .ponto.foco { fill: var(--c-orchid); stroke: var(--c-ink); }
+.grafico .mira { stroke: var(--c-lavender); stroke-width: 2; pointer-events: none; }
+.grafico .referencia line { stroke: var(--c-rose); stroke-width: 2; stroke-dasharray: 6 4; }
+.grafico .referencia text { font-size: 16px; fill: var(--c-plum); }
+
+.grafico .dica rect { fill: var(--c-ink); }
+.grafico .dica text { font-size: 17px; fill: var(--c-cream); }
+
+/* calendário: uma cor, do claro (nota baixa) ao escuro (nota alta) */
+.grafico .cel rect { stroke: var(--c-ink); stroke-width: 2; }
+.grafico .cel text { font-size: 17px; fill: var(--c-ink); }
+.grafico .cel .media { font-size: 15px; }
+.grafico .cel.pendente rect { fill: var(--c-mist); stroke: var(--c-lavender); }
+.grafico .cel.pendente text { fill: var(--c-orchid); }
+.grafico .cel.f1 rect { fill: var(--c-lilac); }
+.grafico .cel.f2 rect { fill: var(--c-orchid); }
+.grafico .cel.f3 rect { fill: var(--c-violet); }
+.grafico .cel.f3 text, .grafico .cel.f4 text { fill: var(--c-cream); }
+.grafico .cel.f4 rect { fill: var(--c-grape); }
+.grafico .legenda-dias text { font-size: 15px; fill: var(--c-plum); }
+.grafico .legenda-dias .cel text { fill: var(--c-plum); }

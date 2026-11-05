@@ -1,0 +1,369 @@
+/* --------------------------------------------------------------- escritório */
+.camada-escritorio {
+  position: absolute;
+  inset: 0;
+  /* centro da tela do monitor: (160, 74) px de arte × 4 */
+  transform-origin: 640px 296px;
+  transition: transform 0.75s cubic-bezier(0.6, 0, 0.4, 1), filter 0.75s;
+}
+.camada-escritorio.zoom { transform: translate(0, 64px) scale(5); filter: brightness(1.4); }
+.escritorio { position: absolute; inset: 0; }
+.tela-brilho {
+  position: absolute;
+  left: 40%;
+  top: 27.7%;
+  width: 20%;
+  height: 26.7%;
+  background: var(--c-cream);
+  opacity: 0;
+  pointer-events: none;
+  animation: brilho-crt 3s steps(3) infinite;
+}
+@keyframes brilho-crt { 0%, 100% { opacity: 0; } 50% { opacity: 0.12; } }
+
+.monitor-hotspot {
+  position: absolute;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.monitor-hotspot:hover:not(:disabled),
+.monitor-hotspot:focus-visible {
+  outline: var(--px) solid var(--c-butter);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 12px rgba(242, 230, 160, 0.25);
+}
+.monitor-hotspot:disabled { cursor: default; }
+.dica-monitor-camada { position: absolute; z-index: 7; height: 0; pointer-events: none; }
+.dica-monitor {
+  position: absolute;
+  left: 50%;
+  top: -56px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--f-titulo);
+  font-size: 12px;
+  color: var(--c-ink);
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  padding: 8px 10px 6px;
+  opacity: 0;
+  transition: opacity 0.1s steps(1);
+}
+.monitor-hotspot:hover:not(:disabled) ~ .dica-monitor-camada .dica-monitor,
+.monitor-hotspot:focus-visible ~ .dica-monitor-camada .dica-monitor { opacity: 1; }
+.badge-email {
+  position: absolute;
+  right: -14px;
+  top: -14px;
+  min-width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  font-family: var(--f-titulo);
+  font-size: 14px;
+  color: var(--c-cream);
+  background: var(--c-rose);
+  border: var(--px) solid var(--c-ink);
+  animation: flutuar 0.6s steps(2) infinite alternate;
+}
+
+.hud {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  z-index: 10;
+  pointer-events: none;
+}
+.hud > * { pointer-events: auto; }
+.hud .espaco { flex: 1; }
+.hud-aviso {
+  position: absolute;
+  bottom: 8px;
+  margin: 0;
+  padding: 8px 12px 6px;
+  white-space: nowrap;
+  background: rgba(30, 26, 46, 0.72);
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: var(--f-titulo);
+  font-size: 14px;
+  color: var(--c-cream);
+  text-shadow: 3px 3px 0 var(--sombra-texto);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------- computador */
+.computador {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  animation: ligar-crt 0.45s steps(6) both;
+}
+@keyframes ligar-crt {
+  0% { transform: scaleY(0.01) scaleX(0.6); filter: brightness(3); }
+  60% { transform: scaleY(1) scaleX(1); filter: brightness(1.6); }
+  100% { transform: none; filter: none; }
+}
+.computador.desligando { animation: desligar-crt 0.3s steps(5) both; }
+@keyframes desligar-crt {
+  0% { transform: none; }
+  70% { transform: scaleY(0.01) scaleX(1); filter: brightness(3); }
+  100% { transform: scaleY(0.01) scaleX(0); filter: brightness(3); }
+}
+.wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.icones {
+  position: absolute;
+  left: 20px;
+  top: 20px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(5, 116px);
+  gap: 8px;
+}
+.icone {
+  position: relative;
+  width: 124px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  background: transparent;
+  border: var(--px) solid transparent;
+  cursor: pointer;
+}
+.icone:hover, .icone:focus-visible { background: rgba(212, 196, 236, 0.35); border-color: var(--c-mist); outline: none; }
+.icone img { width: 64px; height: 64px; filter: drop-shadow(4px 4px 0 rgba(30, 26, 46, 0.6)); }
+.icone span {
+  font-size: 21px;
+  line-height: 0.9;
+  color: var(--c-cream);
+  text-align: center;
+  text-shadow: 2px 2px 0 var(--c-ink);
+  padding: 2px 4px 0;
+  background: rgba(30, 26, 46, 0.55);
+}
+.icone .badge-email { right: 18px; top: 0; animation: none; }
+
+.barra-tarefas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  background: var(--c-lavender);
+  border-top: var(--px) solid var(--c-ink);
+  box-shadow: inset 0 var(--px) 0 var(--c-mist);
+  z-index: 700;
+}
+.barra-tarefas .espaco { flex: 1; }
+.tarefa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 22px;
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset 2px 2px 0 var(--c-mist);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tarefa.foco { background: var(--c-mist); box-shadow: inset 2px 2px 0 var(--c-lavender); }
+.tarefa img { width: 16px; height: 16px; }
+.relogio-pedido { font-family: var(--f-titulo); font-size: 12px; }
+.relogio-pedido.urgente { background: var(--c-rose); color: var(--c-cream); }
+
+.toast {
+  position: absolute;
+  right: 16px;
+  bottom: 68px;
+  z-index: 750;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 24px;
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 6px 6px 0 var(--c-ink);
+  animation: toast 3.2s steps(8) both;
+}
+.toast img { width: 32px; height: 32px; }
+@keyframes toast {
+  0% { transform: translateY(24px); opacity: 0; }
+  10%, 85% { transform: none; opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* --------------------------------------------------------------- modais do jogo */
+.pausa { height: 100%; display: flex; flex-direction: column; }
+.pausa .config { flex: 1; height: auto; min-height: 0; padding-top: 12px; }
+.pausa-titulo { display: flex; align-items: center; justify-content: center; gap: 14px; padding-top: 18px; font-family: var(--f-titulo); font-size: 28px; }
+.fim-dia { padding: 26px 32px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; font-size: 28px; }
+.fim-dia h3 { margin: 0; font-family: var(--f-titulo); font-size: 22px; }
+.fim-dia .valor { font-family: var(--f-titulo); font-size: 20px; color: var(--c-grape); }
+
+/* --------------------------------------------------------------- objetos arrastáveis */
+.objeto { position: absolute; pointer-events: none; }
+.objeto.realce {
+  filter: drop-shadow(4px 0 0 var(--c-butter)) drop-shadow(-4px 0 0 var(--c-butter))
+    drop-shadow(0 4px 0 var(--c-butter)) drop-shadow(0 -4px 0 var(--c-butter));
+}
+.objeto.levantado {
+  z-index: 5;
+  transform: translateY(-8px);
+  filter: drop-shadow(0 12px 0 rgba(30, 26, 46, 0.45));
+}
+.escritorio.sobre-objeto, .escritorio.sobre-objeto * { cursor: grab !important; }
+.escritorio.arrastando, .escritorio.arrastando * { cursor: grabbing !important; }
+
+/* ---------------------------------------------------------- objeto na mão */
+.objeto.fantasma { opacity: 0.35; }
+.objeto.levantado { z-index: 6; }
+.objeto.indo-pro-bau { opacity: 0.6; transform: translateY(-8px) scale(0.7); }
+
+/* ---------------------------------------------------------- inventário (baú) */
+.inventario { position: absolute; right: 16px; bottom: 16px; z-index: 8; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.bau-btn {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-mist), inset -4px -4px 0 var(--c-lavender), 4px 4px 0 var(--sombra-texto);
+  cursor: pointer;
+}
+.bau-btn img { width: 48px; height: 48px; }
+.bau-btn:hover:not(:disabled), .bau-btn.aberto { background: var(--c-mist); }
+.bau-btn .contagem {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  min-width: 28px;
+  padding: 4px 4px 2px;
+  font-family: var(--f-titulo);
+  font-size: 11px;
+  background: var(--c-butter);
+  border: 3px solid var(--c-ink);
+}
+/* com algo na mão, o baú vira alvo; em cima dele, brilha */
+.bau-btn.alvo { box-shadow: inset var(--px) var(--px) 0 var(--c-mist), inset -4px -4px 0 var(--c-lavender), 0 0 0 4px var(--c-lavender); }
+.bau-btn.brilho {
+  background: var(--c-butter);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-cream), inset -4px -4px 0 var(--c-peach), 0 0 0 4px var(--c-butter), 0 0 0 10px rgba(242, 230, 160, 0.35);
+  animation: bau-brilho 0.5s steps(2) infinite;
+  transform: translateY(-4px);
+}
+@keyframes bau-brilho { 50% { box-shadow: inset var(--px) var(--px) 0 var(--c-cream), inset -4px -4px 0 var(--c-peach), 0 0 0 4px var(--c-butter), 0 0 0 16px rgba(242, 230, 160, 0.2); } }
+.bau-dica {
+  position: relative;
+  padding: 4px 8px 2px;
+  font-size: 20px;
+  white-space: nowrap;
+  background: var(--c-ink);
+  color: var(--c-cream);
+  margin-right: 4px;
+}
+.bau-dica::after {
+  content: '';
+  position: absolute;
+  right: 28px;
+  bottom: -12px;
+  border: 6px solid transparent;
+  border-top-color: var(--c-ink);
+}
+
+.inventario-painel {
+  width: 380px;
+  max-height: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-mist), 8px 8px 0 var(--sombra-texto);
+}
+.inventario-painel .titulo { font-family: var(--f-titulo); font-size: 14px; color: var(--c-grape); }
+.inventario-painel ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; }
+.inventario-painel li button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 4px;
+  background: var(--c-mist);
+  border: 3px solid var(--c-ink);
+  cursor: pointer;
+}
+.inventario-painel li button:hover { background: var(--c-butter); }
+.inventario-painel .miniatura { width: 48px; height: 48px; display: grid; place-items: center; }
+.inventario-painel .nome { font-size: 18px; line-height: 1; text-align: center; }
+.inventario-painel .vazio, .inventario-painel .dica { margin: 0; font-size: 20px; color: var(--c-grape); line-height: 1.1; }
+.inventario-painel .dica { font-size: 18px; }
+
+/* aviso de cliente que foi embora: no topo, para não cobrir o baú nem a barra de tarefas */
+.toast.toast-saiu { top: 64px; bottom: auto; right: 16px; z-index: 950; background: var(--c-blush); pointer-events: none; }
+
+/* ------------------------------------------------ pop-ups de clientes impacientes */
+/* empilhados no canto inferior direito, acima do baú e do aviso de "novo pedido" */
+.alertas {
+  position: absolute;
+  right: 16px;
+  bottom: 140px;
+  z-index: 850;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.alerta {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 8px;
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  border-left-width: 10px;
+  border-left-color: var(--c-peach);
+  box-shadow: 6px 6px 0 var(--sombra-texto);
+  pointer-events: auto;
+  animation: alerta-entra 0.35s steps(5) both;
+}
+.alerta.saiu { background: var(--c-rose); border-left-color: var(--c-ink); }
+@keyframes alerta-entra { from { transform: translateX(380px); } to { transform: none; } }
+.alerta-topo { display: flex; align-items: center; gap: 8px; }
+.alerta-topo img { width: 24px; height: 24px; }
+.alerta-topo strong { flex: 1; font-family: var(--f-titulo); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alerta-fechar { padding: 0 6px; font-size: 24px; line-height: 1; background: none; border: none; cursor: pointer; color: var(--c-ink); }
+.alerta-fechar:hover { color: var(--c-grape); }
+.alerta-assunto { font-size: 18px; color: var(--c-plum); }
+.alerta.saiu .alerta-assunto { color: var(--c-ink); }
+.alerta-frase { margin: 2px 0; font-size: 24px; line-height: 1.05; }
+.alerta-rodape { font-size: 18px; color: var(--c-plum); }
+.alerta.saiu .alerta-rodape { color: var(--c-ink); font-weight: bold; }
+.alerta.atencao .alerta-rodape { animation: paciencia-pisca 0.8s steps(1) infinite; }
+@keyframes paciencia-pisca { 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .alerta { animation: none; } .alerta.atencao .alerta-rodape { animation: none; } }

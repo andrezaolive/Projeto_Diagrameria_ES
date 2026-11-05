@@ -1,0 +1,124 @@
+/* Tela de nome, aba de perfil e telas de conta */
+
+.px-campo {
+  font-family: var(--f-texto);
+  font-size: 26px;
+  color: var(--c-ink);
+  background: var(--c-mist);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-lavender);
+  padding: 6px 12px 4px;
+  outline: none;
+  user-select: text;
+}
+.px-campo:focus { background: var(--c-cream); box-shadow: inset var(--px) var(--px) 0 var(--c-lavender), 0 0 0 var(--px) var(--c-sky); }
+.px-campo::placeholder { color: var(--c-orchid); }
+
+.link-px {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 22px;
+  color: var(--c-grape);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.link-px:hover { color: var(--c-ink); }
+
+/* tela de nome */
+.tela-nome { height: 100%; padding: 24px 40px; display: flex; flex-direction: column; gap: 18px; }
+.tela-nome h2 { margin: 0; font-size: 22px; color: var(--c-grape); }
+.tela-nome .dica { margin: -8px 0 0; font-size: 24px; color: var(--c-plum); }
+.tela-nome .linha-nome { margin-top: auto; display: flex; align-items: center; gap: 14px; font-size: 26px; }
+.tela-nome .linha-nome input { flex: 1; }
+
+/* aba de perfil (modal do menu) */
+.perfil { height: 100%; padding: 20px 28px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.perfil-avatar {
+  position: relative;
+  padding: 6px;
+  background: var(--c-lavender);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 8px 8px 0 var(--c-ink);
+  cursor: pointer;
+}
+.perfil-avatar:hover { background: var(--c-butter); }
+.perfil-avatar .lapis {
+  position: absolute;
+  right: -14px;
+  bottom: -12px;
+  font-family: var(--f-titulo);
+  font-size: 10px;
+  padding: 6px 6px 4px;
+  background: var(--c-butter);
+  border: 3px solid var(--c-ink);
+}
+.perfil-nome { margin-top: 6px; font-family: var(--f-titulo); font-size: 20px; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.perfil-email { display: flex; align-items: center; gap: 12px; font-size: 24px; max-width: 100%; }
+.perfil-email > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 4px 10px 2px; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.perfil-acoes { display: flex; gap: 14px; }
+.perfil-fechar { margin-top: auto; align-self: flex-end; }
+
+.perfil-registro { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.tooltip {
+  position: relative;
+  max-width: 300px;
+  padding: 8px 12px 6px;
+  font-size: 20px;
+  line-height: 1.1;
+  text-align: center;
+  background: var(--c-butter);
+  border: 3px solid var(--c-ink);
+  box-shadow: 4px 4px 0 var(--c-ink);
+}
+/* setinha apontando para o botão */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: -12px;
+  margin-left: -6px;
+  border: 6px solid transparent;
+  border-bottom-color: var(--c-ink);
+}
+
+.estatisticas { height: 100%; padding: 18px 24px; display: flex; flex-direction: column; gap: 12px; }
+.estatisticas h3 { margin: 0; font-size: 18px; }
+.estatisticas-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 446px; gap: 20px; align-items: start; }
+.estatisticas-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.estatisticas-lista button {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 10px 2px;
+  font-size: 21px;
+  text-align: left;
+  background: var(--c-mist);
+  border: 3px solid var(--c-ink);
+  cursor: pointer;
+}
+/* zebrado só nas linhas não selecionadas (senão o fundo creme cobre o violeta da ativa e o texto some) */
+.estatisticas-lista li:nth-child(odd) button:not(.ativo) { background: var(--c-cream); }
+.estatisticas-lista button span { color: var(--c-plum); }
+.estatisticas-lista button:hover:not(.ativo) { background: var(--c-butter); }
+.estatisticas-lista button.ativo { background: var(--c-violet); box-shadow: inset 3px 3px 0 var(--c-orchid); }
+.estatisticas-lista button.ativo, .estatisticas-lista button.ativo span { color: var(--c-cream); }
+.estatisticas-rodape { display: flex; align-items: center; justify-content: space-between; }
+.estatisticas-rodape .dica-clique { font-size: 20px; color: var(--c-grape); }
+
+/* registro / login / alterar */
+.conta { height: 100%; padding: 24px 48px; display: flex; flex-direction: column; gap: 14px; }
+.conta h2 { margin: 0 0 6px; font-size: 22px; color: var(--c-grape); }
+.conta label { display: grid; grid-template-columns: 200px 1fr; align-items: center; gap: 12px; font-size: 24px; }
+.conta .msg { margin: 0; font-size: 22px; padding: 4px 10px 2px; border: 3px solid var(--c-ink); }
+.conta .msg.erro { background: var(--c-rose); }
+.conta .msg.ok { background: var(--c-mint); }
+.conta .rodape { margin-top: auto; display: flex; align-items: center; gap: 14px; }
+.conta .espaco { flex: 1; }
+
+/* reset de dados */
+.confirmar-reset { padding: 24px 32px; display: flex; flex-direction: column; gap: 18px; font-size: 24px; height: 100%; }
+.confirmar-reset strong { color: var(--c-rose); font-family: var(--f-titulo); font-size: 16px; }
+.confirmar-reset .rodape { margin-top: auto; display: flex; justify-content: flex-end; gap: 14px; }
