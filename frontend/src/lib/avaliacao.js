@@ -1,6 +1,27 @@
 // Compara o diagrama do jogador com o gabarito do pedido.
 import { normalizarMult } from './multiplicidade.js';
-export const TIPOS_AVALIADOS = ['ator', 'casoDeUso', 'classe'];
+import { foraDoLugar } from './grid.js';
+// O sistema (fronteira) conta como elemento: tipo e nome (o e-mail diz como ele se chama)
+export const TIPOS_AVALIADOS = ['ator', 'casoDeUso', 'classe', 'sistema', 'estadoInicial', 'estado', 'estadoFinal'];
+
+// Transição (diagrama de estados): vale com o evento certo; associação não tem sentido
+export const chaveRelacao = (tipo, a, b, evento) => {
+  if (tipo === 'associacao') return `${tipo}|${[a, b].sort().join('|')}`;
+  if (tipo === 'transicao') return `${tipo}|${a}|${b}|${normalizar(evento)}`;
+  return `${tipo}|${a}|${b}`;
+};
+
+// Fronteira do sistema (só em pedidos cujo gabarito tem sistema): fração dos casos de uso do jogador
+// que estão dentro de um sistema + atores que estão fora. null = o pedido não cobra fronteira.
+export function avaliarFronteira(jogador, esperado) {
+  if (!esperado.nodes.some((n) => n.tipo === 'sistema')) return null;
+  const conferidos = jogador.nodes.filter((n) => n.tipo === 'casoDeUso' || n.tipo === 'ator');
+  if (!conferidos.length) return 0;
+  const temSistema = jogador.nodes.some((n) => n.tipo === 'sistema');
+  // sem sistema nenhum: os casos de uso estão todos fora (atores, por definição, também estão fora)
+  const errados = temSistema ? foraDoLugar(jogador.nodes).length : conferidos.filter((n) => n.tipo === 'casoDeUso').length;
+  return (conferidos.length - errados) / conferidos.length;
+}
 
 export const normalizar = (s = '') =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -43,11 +64,7 @@ export function avaliar(jogador, esperado) {
 
   // Relações: mesmo tipo e mesmas pontas (pelos rótulos); associação vale nos dois sentidos
   const rot = (nodes, id) => normalizar(nodes.find((x) => x.id === id)?.rotulo);
-  const chave = (nodes, ed) => {
-    const a = rot(nodes, ed.de), b = rot(nodes, ed.para);
-    const [p, q] = ed.tipo === 'associacao' ? [a, b].sort() : [a, b];
-    return `${ed.tipo}|${p}|${q}`;
-  };
+  const chave = (nodes, ed) => chaveRelacao(ed.tipo, rot(nodes, ed.de), rot(nodes, ed.para), ed.rotulo);
   const restantes = jogador.edges.map((ed) => ({ ed, k: chave(jogador.nodes, ed) }));
   let relOk = 0;
   // Multiplicidades: cada ponta pedida no gabarito vale um ponto, conferida só nas relações certas
@@ -68,11 +85,14 @@ export function avaliar(jogador, esperado) {
   // null = o pedido não cobra multiplicidade (a nota segue a fórmula de sempre)
   const multiplicidades = multTotal ? multOk / multTotal : null;
 
-  const nota =
-    multiplicidades == null
-      ? Math.round(100 * (0.4 * estrutura + 0.3 * rotulos + 0.3 * relacoes))
-      : Math.round(100 * (0.35 * estrutura + 0.25 * rotulos + 0.25 * relacoes + 0.15 * multiplicidades));
-  return { nota, estrutura, rotulos, relacoes, multiplicidades };
+  const fronteira = avaliarFronteira(jogador, esperado);
+
+  // Sem extras: 40/30/30. Com multiplicidade e/ou fronteira: 35/25/25 + 15 (média dos extras cobrados)
+  const extras = [multiplicidades, fronteira].filter((v) => v != null);
+  const nota = !extras.length
+    ? Math.round(100 * (0.4 * estrutura + 0.3 * rotulos + 0.3 * relacoes))
+    : Math.round(100 * (0.35 * estrutura + 0.25 * rotulos + 0.25 * relacoes + (0.15 * extras.reduce((a, b) => a + b, 0)) / extras.length));
+  return { nota, estrutura, rotulos, relacoes, multiplicidades, fronteira };
 }
 
 export function pagamento(recompensa, nota, atrasado) {

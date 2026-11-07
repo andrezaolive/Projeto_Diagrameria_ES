@@ -14,7 +14,68 @@ export const TAMANHOS = {
   classe: { w: 160, h: 100 },
   nota: { w: 140, h: 80 },
   sistema: { w: 360, h: 400 },
+  // diagrama de estados
+  estadoInicial: { w: 40, h: 40 },
+  estado: { w: 160, h: 60 },
+  estadoFinal: { w: 40, h: 40 },
 };
+
+// Formas arredondadas: a seta para na borda da elipse/círculo, não no retângulo em volta
+const ELIPTICOS = ['casoDeUso', 'estadoInicial', 'estadoFinal'];
+
+// Só o sistema (fronteira do caso de uso) pode ser redimensionado: guarda `w`/`h` no próprio nó.
+export const REDIMENSIONAVEIS = ['sistema'];
+export const TAMANHO_MINIMO = { sistema: { w: 200, h: 160 } };
+
+// Tamanho de um nó: o próprio (se redimensionado) ou o padrão do tipo
+export const tamanho = (node) => {
+  const p = TAMANHOS[node.tipo];
+  return { w: node.w ?? p.w, h: node.h ?? p.h };
+};
+export const retangulo = (node) => ({ x: node.x, y: node.y, ...tamanho(node) });
+
+// `a` inteiro dentro de `b`
+export const contido = (a, b) => {
+  const r = retangulo(a), s = retangulo(b);
+  return r.x >= s.x && r.y >= s.y && r.x + r.w <= s.x + s.w && r.y + r.h <= s.y + s.h;
+};
+// `a` e `b` se encostam (área em comum)
+export const sobrepoe = (a, b) => {
+  const r = retangulo(a), s = retangulo(b);
+  return r.x < s.x + s.w && s.x < r.x + r.w && r.y < s.y + s.h && s.y < r.y + r.h;
+};
+
+// Regras da fronteira do sistema: caso de uso dentro de um sistema; ator fora de todos.
+// Devolve os nós fora do lugar ({ id, tipo, rotulo, problema: 'foraDoSistema' | 'atorNoSistema' }).
+// Sem nenhum sistema no diagrama não há o que conferir.
+export function foraDoLugar(nodes) {
+  const sistemas = nodes.filter((n) => n.tipo === 'sistema');
+  if (!sistemas.length) return [];
+  const out = [];
+  for (const n of nodes) {
+    if (n.tipo === 'casoDeUso' && !sistemas.some((s) => contido(n, s))) out.push({ ...n, problema: 'foraDoSistema' });
+    if (n.tipo === 'ator' && sistemas.some((s) => sobrepoe(n, s))) out.push({ ...n, problema: 'atorNoSistema' });
+  }
+  return out;
+}
+
+// Redimensiona um retângulo puxando o meio de um lado ('n' | 's' | 'l' | 'o'), no grid e com tamanho mínimo
+export function redimensionar(base, lado, dx, dy, minimo) {
+  let { x, y, w, h } = base;
+  if (lado === 'l') w = Math.max(minimo.w, snap(base.w + dx));
+  if (lado === 's') h = Math.max(minimo.h, snap(base.h + dy));
+  if (lado === 'o') {
+    const nx = Math.min(snap(base.x + dx), base.x + base.w - minimo.w);
+    w = base.x + base.w - nx;
+    x = nx;
+  }
+  if (lado === 'n') {
+    const ny = Math.min(snap(base.y + dy), base.y + base.h - minimo.h);
+    h = base.y + base.h - ny;
+    y = ny;
+  }
+  return { x, y, w, h };
+}
 
 // Posição (canto superior esquerdo, já no grid) para soltar um elemento centrado no ponto do mundo
 export function posicaoAoSoltar(tipo, wx, wy) {
@@ -32,17 +93,17 @@ export function zoomEm(view, fator, sx, sy) {
 export const telaParaMundo = (view, sx, sy) => ({ x: (sx - view.x) / view.zoom, y: (sy - view.y) / view.zoom });
 
 export const centro = (node) => {
-  const { w, h } = TAMANHOS[node.tipo];
+  const { w, h } = tamanho(node);
   return { x: node.x + w / 2, y: node.y + h / 2 };
 };
 
 // Ponto na borda do elemento na direção de (tx, ty), para as setas não entrarem nas formas
 export function pontoNaBorda(node, tx, ty) {
-  const { w, h } = TAMANHOS[node.tipo];
+  const { w, h } = tamanho(node);
   const c = centro(node);
   const dx = tx - c.x, dy = ty - c.y;
   if (dx === 0 && dy === 0) return c;
-  if (node.tipo === 'casoDeUso') {
+  if (ELIPTICOS.includes(node.tipo)) {
     const t = 1 / Math.sqrt((dx / (w / 2)) ** 2 + (dy / (h / 2)) ** 2);
     return { x: c.x + dx * t, y: c.y + dy * t };
   }

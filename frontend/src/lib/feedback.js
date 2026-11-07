@@ -1,8 +1,9 @@
 // Feedback da entrega: explica o que o jogador errou, comparando com o gabarito.
 // Segue as mesmas regras da nota (lib/avaliacao.js): nomes sem diferenciar acento/maiúscula,
 // associação sem sentido, include/extend/herança/dependência com sentido.
-import { TIPOS_AVALIADOS, normalizar } from './avaliacao.js';
+import { TIPOS_AVALIADOS, chaveRelacao, normalizar } from './avaliacao.js';
 import { multIgual, normalizarMult } from './multiplicidade.js';
+import { foraDoLugar } from './grid.js';
 
 export const NOME_TIPO = {
   ator: 'ator',
@@ -10,6 +11,10 @@ export const NOME_TIPO = {
   classe: 'classe',
   nota: 'nota',
   sistema: 'sistema',
+  estadoInicial: 'estado inicial',
+  estado: 'estado',
+  estadoFinal: 'estado final',
+  transicao: 'transição',
   associacao: 'associação',
   include: 'include',
   extend: 'extend',
@@ -30,6 +35,13 @@ export const CONCEITOS = {
     titulo: 'Caso de uso',
     texto: 'Uma ação que o sistema oferece a um ator. Fica numa elipse e o nome começa com um verbo.',
     exemplo: '"Emprestar livro", "Fazer pedido".',
+  },
+  sistema: {
+    titulo: 'Sistema (fronteira)',
+    texto:
+      'Retângulo com o nome do sistema. Tudo o que o sistema FAZ (os casos de uso) fica DENTRO dele; quem USA o sistema (os atores) fica FORA. ' +
+      'As associações atravessam a borda, ligando o ator de fora ao caso de uso de dentro. Puxe as setinhas no meio de cada lado para aumentar o retângulo.',
+    exemplo: 'Ator "Cliente" fora do retângulo "App da Pizzaria", que contém "Fazer pedido" e "Pagar".',
   },
   classe: {
     titulo: 'Classe',
@@ -66,6 +78,26 @@ export const CONCEITOS = {
     texto: 'O "todo" é feito das partes, e elas não existem sem ele: se o todo some, as partes somem junto. Linha cheia com losango CHEIO do lado do todo.',
     exemplo: 'Pedido ◆— Item: sem o pedido, os itens não existem.',
   },
+  estado: {
+    titulo: 'Estado',
+    texto: 'Uma situação em que o objeto fica até algo acontecer. Retângulo de cantos arredondados com um nome (substantivo ou adjetivo, sem verbo).',
+    exemplo: '"Em preparo", "Pausado", "Travada".',
+  },
+  estadoInicial: {
+    titulo: 'Estado inicial',
+    texto: 'Bolinha preta cheia: onde o diagrama começa. Tem só uma, e dela sai uma transição sem evento para o primeiro estado.',
+    exemplo: '● → "Recebido".',
+  },
+  estadoFinal: {
+    titulo: 'Estado final',
+    texto: 'Bolinha preta dentro de um anel: onde o ciclo de vida termina. Só chegam setas nele, nenhuma sai.',
+    exemplo: '"Entregue" → ◉.',
+  },
+  transicao: {
+    titulo: 'Transição',
+    texto: 'Seta de um estado para o próximo, com o EVENTO que provoca a mudança escrito sobre ela. Selecione a seta no editor para escrever o evento.',
+    exemplo: '"Tocando" —pause→ "Pausado".',
+  },
   multiplicidade: {
     titulo: 'Multiplicidade (1, 0..1, 1..*, 0..*)',
     texto:
@@ -76,8 +108,10 @@ export const CONCEITOS = {
   },
   dependencia: {
     titulo: 'Dependência',
-    texto: 'Uma classe usa outra de forma passageira (por exemplo, recebe como parâmetro). Linha tracejada com seta aberta, de quem usa para quem é usado.',
-    exemplo: 'Relatório ⇢ Impressora.',
+    texto:
+      'Um elemento precisa de outro para funcionar. Linha tracejada com seta aberta, saindo de quem depende e apontando para aquilo de que ele depende. ' +
+      'Entre classes: uma usa a outra de forma passageira. Entre casos de uso: um só pode acontecer se o outro já existir ou já tiver acontecido.',
+    exemplo: 'Classes: Relatório ⇢ Impressora. Casos de uso: "Fazer check-in" ⇢ "Reservar quarto".',
   },
 };
 
@@ -127,12 +161,13 @@ export function diferencas(escrito, correto) {
 }
 
 // ---------------------------------------------------------------- comparação
-const chaveRel = (tipo, a, b) => (tipo === 'associacao' ? `${tipo}|${[a, b].sort().join('|')}` : `${tipo}|${a}|${b}`);
+const chaveRel = chaveRelacao;
 const par = (a, b) => [a, b].sort().join('|');
 
 // Lista de problemas da entrega. Cada problema:
 //   { categoria: 'nome' | 'elemento' | 'relacao', tipo, conceitos: [...], ...dados para a tela }
-// tipos: grafia, tipoErrado, faltando, sobrando, sentidoInvertido, relacaoTipoErrado, relacaoFaltando, relacaoSobrando
+// tipos: grafia, tipoErrado, faltando, sobrando, foraDoSistema, atorNoSistema, sentidoInvertido, relacaoTipoErrado,
+//        relacaoFaltando, relacaoSobrando, multiplicidade
 export function gerarFeedback(jogador, esperado) {
   const problemas = [];
   const avaliado = (n) => TIPOS_AVALIADOS.includes(n.tipo);
@@ -177,6 +212,11 @@ export function gerarFeedback(jogador, esperado) {
   }
   for (const nj of livres) problemas.push({ categoria: 'elemento', tipo: 'sobrando', jogador: nj, conceitos: [nj.tipo] });
 
+  // fronteira do sistema (só se o pedido tem sistema e o jogador desenhou um; sem sistema, já é "faltando")
+  if (esperado.nodes.some((n) => n.tipo === 'sistema'))
+    for (const x of foraDoLugar(jogador.nodes))
+      problemas.push({ categoria: 'elemento', tipo: x.problema, rotulo: x.rotulo, conceitos: ['sistema', x.tipo] });
+
   // relações, pelos nomes canônicos
   const nomeJ = (id) => {
     const n = jogador.nodes.find((x) => x.id === id);
@@ -189,11 +229,11 @@ export function gerarFeedback(jogador, esperado) {
   let relJ = jogador.edges.map((ed) => {
     const a = nomeJ(ed.de), b = nomeJ(ed.para);
     const orig = (id) => jogador.nodes.find((x) => x.id === id)?.rotulo;
-    return { tipo: ed.tipo, a, b, ra: rotuloDe(a, orig(ed.de)), rb: rotuloDe(b, orig(ed.para)), ma: ed.multDe, mb: ed.multPara };
+    return { tipo: ed.tipo, a, b, ra: rotuloDe(a, orig(ed.de)), rb: rotuloDe(b, orig(ed.para)), ma: ed.multDe, mb: ed.multPara, ev: ed.rotulo ?? '' };
   });
   const relE = esperado.edges.map((ed) => {
     const a = nomeE(ed.de), b = nomeE(ed.para);
-    return { tipo: ed.tipo, a, b, ra: rotuloDe(a), rb: rotuloDe(b), ma: ed.multDe, mb: ed.multPara };
+    return { tipo: ed.tipo, a, b, ra: rotuloDe(a), rb: rotuloDe(b), ma: ed.multDe, mb: ed.multPara, ev: ed.rotulo ?? '' };
   });
 
   // relação certa: confere a multiplicidade de cada ponta pedida (alinhando associação desenhada ao contrário)
@@ -222,7 +262,7 @@ export function gerarFeedback(jogador, esperado) {
 
   const pendentes = [];
   for (const re of relE) {
-    const i = relJ.findIndex((rj) => chaveRel(rj.tipo, rj.a, rj.b) === chaveRel(re.tipo, re.a, re.b));
+    const i = relJ.findIndex((rj) => chaveRel(rj.tipo, rj.a, rj.b, rj.ev) === chaveRel(re.tipo, re.a, re.b, re.ev));
     if (i >= 0) {
       conferirMult(re, relJ[i]);
       relJ = relJ.filter((_, k) => k !== i);
@@ -234,7 +274,10 @@ export function gerarFeedback(jogador, esperado) {
     if (i >= 0) {
       const rj = relJ[i];
       relJ = relJ.filter((_, k) => k !== i);
-      if (rj.tipo === re.tipo) problemas.push({ categoria: 'relacao', tipo: 'sentidoInvertido', certa: re, conceitos: [re.tipo] });
+      // transição no sentido certo, mas com outro evento
+      if (rj.tipo === re.tipo && re.tipo === 'transicao' && rj.a === re.a)
+        problemas.push({ categoria: 'relacao', tipo: 'eventoErrado', certa: re, usado: rj.ev, conceitos: ['transicao'] });
+      else if (rj.tipo === re.tipo) problemas.push({ categoria: 'relacao', tipo: 'sentidoInvertido', certa: re, conceitos: [re.tipo] });
       else problemas.push({ categoria: 'relacao', tipo: 'relacaoTipoErrado', usada: rj, certa: re, conceitos: [rj.tipo, re.tipo] });
     } else {
       problemas.push({ categoria: 'relacao', tipo: 'relacaoFaltando', certa: re, conceitos: [re.tipo] });

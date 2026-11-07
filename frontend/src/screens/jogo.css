@@ -353,6 +353,11 @@
   animation: alerta-entra 0.35s steps(5) both;
 }
 .alerta.saiu { background: var(--c-rose); border-left-color: var(--c-ink); }
+/* pedido urgente: tons de vermelho, com selo e borda piscando */
+.alerta.urgente { background: var(--c-blush); border-color: var(--c-ink); border-left-color: var(--c-rose); animation: alerta-entra 0.35s steps(5) both, urgente-borda 0.6s steps(1) 0.35s 6; }
+.alerta-selo { align-self: flex-start; margin-bottom: 4px; padding: 3px 8px 1px; font-family: var(--f-titulo); font-size: 11px; color: var(--c-cream); background: var(--c-rose); border: var(--px) solid var(--c-ink); }
+.alerta.urgente .alerta-rodape { color: var(--c-ink); font-weight: bold; }
+@keyframes urgente-borda { 50% { border-left-color: var(--c-ink); } }
 @keyframes alerta-entra { from { transform: translateX(380px); } to { transform: none; } }
 .alerta-topo { display: flex; align-items: center; gap: 8px; }
 .alerta-topo img { width: 24px; height: 24px; }
@@ -367,3 +372,74 @@
 .alerta.atencao .alerta-rodape { animation: paciencia-pisca 0.8s steps(1) infinite; }
 @keyframes paciencia-pisca { 50% { opacity: 0.4; } }
 @media (prefers-reduced-motion: reduce) { .alerta { animation: none; } .alerta.atencao .alerta-rodape { animation: none; } }
+
+/* ---------------------------------------------------------- toca-fitas */
+.dica-objeto {
+  position: absolute;
+  z-index: 7;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--f-titulo);
+  font-size: 12px;
+  color: var(--c-ink);
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  padding: 8px 10px 6px;
+}
+/* faixa que começou a tocar (some sozinho) */
+.aviso-musica {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  z-index: 940;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-family: var(--f-titulo);
+  font-size: 14px;
+  color: var(--c-cream);
+  background: var(--c-plum);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 0 4px 0 var(--sombra-suave);
+  padding: 10px 14px 8px;
+  animation: aviso-musica 2.5s steps(10) forwards;
+}
+@keyframes aviso-musica {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  12%, 80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; }
+}
+
+/* fim do dia: aprovado (libera o próximo) ou reprovado (abaixo da média mínima) */
+.fim-dia .valor.reprovado { color: var(--c-rose); }
+.fim-dia .veredito { margin: 0; padding: 8px 14px 6px; border: var(--px) solid var(--c-ink); font-size: 24px; }
+.fim-dia .veredito.aprovado { background: var(--c-mint); }
+.fim-dia .veredito.reprovado { background: var(--c-blush); }
+.fim-dia .botoes-fim { display: flex; gap: 14px; }
+
+/* ---------------------------------------------------------- resumo do dia */
+.resumo-dia { height: 100%; display: flex; flex-direction: column; }
+.resumo-lista { flex: 1; min-height: 0; list-style: none; margin: 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.resumo-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'cliente ver' 'assunto ver' 'situacao ver';
+  align-items: center;
+  gap: 0 12px;
+  padding: 8px 14px 6px;
+  text-align: left;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-mist);
+  border: var(--px) solid var(--c-ink);
+  cursor: pointer;
+}
+.resumo-item:hover:not(:disabled) { background: var(--c-butter); }
+.resumo-item:disabled { cursor: not-allowed; }
+.resumo-item.urgente:not(.perdido) { border-left: 10px solid var(--c-rose); }
+.resumo-item .cliente { grid-area: cliente; font-size: 24px; font-weight: bold; }
+.resumo-item .assunto { grid-area: assunto; font-size: 19px; color: var(--c-plum); }
+.resumo-item .situacao { grid-area: situacao; font-size: 20px; }
+.resumo-item .ver { grid-area: ver; font-family: var(--f-titulo); font-size: 12px; color: var(--c-grape); }
+.resumo-rodape { display: flex; justify-content: flex-end; padding: 10px 16px; border-top: var(--px) solid var(--c-ink); }

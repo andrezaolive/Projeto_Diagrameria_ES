@@ -2,7 +2,7 @@ import cadeado from '../assets/ui/icon-cadeado-16.png';
 import { Botao, Dinheiro, formatarReais } from '../components/ui.jsx';
 import { FundoMenu } from './Menu.jsx';
 import { useGame } from '../state/GameContext.jsx';
-import { DIAS_CAMPANHA } from '../state/reducer.js';
+import { DIAS_CAMPANHA, MEDIA_MINIMA } from '../state/reducer.js';
 import { pedidosDoDia } from '../data/pedidos.js';
 import { sfx } from '../lib/sfx.js';
 
@@ -56,7 +56,7 @@ export default function Calendario({ onEscolher, onVoltar }) {
                   className={`dia ${liberado ? '' : 'bloqueado'} ${hoje ? 'hoje' : ''}`}
                   disabled={!liberado}
                   onClick={() => { sfx.clique(); onEscolher(c.campanha); }}
-                  title={liberado ? `Dia ${c.campanha}: ${qtd} pedido(s)` : 'Conclua o dia anterior'}
+                  title={liberado ? `Dia ${c.campanha}: ${qtd} pedido(s)` : `Conclua o dia anterior com ${MEDIA_MINIMA}% ou mais`}
                 >
                   {c.data}
                   {!liberado && <img src={cadeado} alt="bloqueado" className="pixel" />}

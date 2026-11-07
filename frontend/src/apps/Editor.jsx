@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Botao } from '../components/ui.jsx';
-import { Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES } from '../editor/Formas.jsx';
+import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES, secaoDoDiagrama } from '../editor/Formas.jsx';
 import { MULTIPLICIDADES, TEM_MULTIPLICIDADE } from '../lib/multiplicidade.js';
-import { TAMANHOS, centro, posicaoAoSoltar, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
+import { REDIMENSIONAVEIS, TAMANHOS, TAMANHO_MINIMO, centro, contido, foraDoLugar, posicaoAoSoltar, redimensionar, retangulo, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
 import { avaliar, pagamento } from '../lib/avaliacao.js';
 import { modeloPorId } from '../data/pedidos.js';
 import { useGame } from '../state/GameContext.jsx';
@@ -32,6 +32,19 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
   const [confirmarLimpar, setConfirmarLimpar] = useState(false);
   const arraste = useRef(null);
   const rotuloRef = useRef(null);
+  // Seção da paleta (casos de uso / classes / estados): abre na do pedido em andamento
+  const [secao, setSecao] = useState(() => secaoDoDiagrama(modelo?.esperado) ?? secaoDoDiagrama(diagrama) ?? 'casos');
+  useEffect(() => {
+    const s = secaoDoDiagrama(modelo?.esperado);
+    if (s) setSecao(s);
+  }, [modelo?.id]);
+  const secaoAtual = SECOES.find((s) => s.id === secao);
+  const trocarSecao = (id) => {
+    setSecao(id);
+    setFerramenta(null);
+    setOrigem(null);
+    setFantasma(null);
+  };
 
   // refs com o valor mais recente, para os listeners de janela
   const viewRef = useRef(view);
@@ -88,6 +101,16 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
   // ------------------------------------------------------------ ponteiro na área
   const onDown = (e) => {
     const w = mundo(e);
+    // alça do sistema selecionado: redimensiona (vem antes de tudo, as alças ficam por cima)
+    const alca = e.target.closest('[data-alca]')?.dataset.alca;
+    if (alca && e.button === 0) {
+      const n = diagrama.nodes.find((x) => x.id === sel?.id);
+      if (n && REDIMENSIONAVEIS.includes(n.tipo)) {
+        areaRef.current.setPointerCapture(e.pointerId);
+        arraste.current = { modo: 'redimensionar', id: n.id, lado: alca, wx: w.x, wy: w.y, base: retangulo(n) };
+        return;
+      }
+    }
     const alvoNode = e.target.closest('[data-node]')?.dataset.node;
     const alvoEdge = e.target.closest('[data-edge]')?.dataset.edge;
     const noSistema = diagrama.nodes.find((n) => n.id === alvoNode)?.tipo === 'sistema';
@@ -119,7 +142,10 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
     if (alvoNode) {
       const n = diagrama.nodes.find((x) => x.id === alvoNode);
       setSel({ tipo: 'node', id: alvoNode });
-      arraste.current = { modo: 'mover', id: alvoNode, wx: w.x, wy: w.y, ox: n.x, oy: n.y, base: diagrama };
+      // mover o sistema leva junto o que está dentro dele
+      const filhos =
+        n.tipo === 'sistema' ? diagrama.nodes.filter((x) => x.tipo !== 'sistema' && contido(x, n)).map((x) => ({ id: x.id, x: x.x, y: x.y })) : [];
+      arraste.current = { modo: 'mover', id: alvoNode, wx: w.x, wy: w.y, ox: n.x, oy: n.y, filhos };
       return;
     }
     if (alvoEdge) return setSel({ tipo: 'edge', id: alvoEdge });
@@ -141,13 +167,27 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
       const nx = snap(a.ox + (w.x - a.wx));
       const ny = snap(a.oy + (w.y - a.wy));
       const atual = diagRef.current.nodes.find((n) => n.id === a.id);
-      if (atual && (atual.x !== nx || atual.y !== ny))
-        salvar({ ...diagRef.current, nodes: diagRef.current.nodes.map((n) => (n.id === a.id ? { ...n, x: nx, y: ny } : n)) });
+      if (atual && (atual.x !== nx || atual.y !== ny)) {
+        const dx = nx - a.ox, dy = ny - a.oy;
+        const filho = Object.fromEntries(a.filhos.map((f) => [f.id, f]));
+        salvar({
+          ...diagRef.current,
+          nodes: diagRef.current.nodes.map((n) =>
+            n.id === a.id ? { ...n, x: nx, y: ny } : filho[n.id] ? { ...n, x: filho[n.id].x + dx, y: filho[n.id].y + dy } : n,
+          ),
+        });
+      }
+    } else if (a.modo === 'redimensionar') {
+      const atual = diagRef.current.nodes.find((n) => n.id === a.id);
+      if (!atual) return;
+      const r = redimensionar(a.base, a.lado, w.x - a.wx, w.y - a.wy, TAMANHO_MINIMO[atual.tipo]);
+      if (r.x !== atual.x || r.y !== atual.y || r.w !== retangulo(atual).w || r.h !== retangulo(atual).h)
+        salvar({ ...diagRef.current, nodes: diagRef.current.nodes.map((n) => (n.id === a.id ? { ...n, ...r } : n)) });
     }
   };
 
   const onUp = () => {
-    if (arraste.current?.modo === 'mover') sfx.soltar();
+    if (arraste.current?.modo === 'mover' || arraste.current?.modo === 'redimensionar') sfx.soltar();
     arraste.current = null;
   };
 
@@ -204,8 +244,9 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
     const el = areaRef.current;
     const { nodes } = diagRef.current;
     if (!nodes.length) return setView({ x: 40, y: 40, zoom: 1 });
-    const xs = nodes.flatMap((n) => [n.x, n.x + TAMANHOS[n.tipo].w]);
-    const ys = nodes.flatMap((n) => [n.y, n.y + TAMANHOS[n.tipo].h]);
+    const rs = nodes.map(retangulo);
+    const xs = rs.flatMap((r) => [r.x, r.x + r.w]);
+    const ys = rs.flatMap((r) => [r.y, r.y + r.h]);
     const minX = Math.min(...xs), minY = Math.min(...ys);
     const w = Math.max(...xs) - minX, h = Math.max(...ys) - minY;
     const zoom = Math.min(2, Math.max(0.25, Math.min((el.clientWidth - 80) / w, (el.clientHeight - 80) / h)));
@@ -238,17 +279,20 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
     const r = avaliar(diagrama, modelo.esperado);
     const atrasado = pedido.tempoRestante === 0;
     const valor = pagamento(pedido.recompensa, r.nota, atrasado);
-    sfx.moeda();
+    sfx.nota(r.nota); // Excellent / Great / Ok / Bad / Worst
     onEntregue({ ...r, valor, atrasado, pedido, diagrama, esperado: modelo.esperado });
-    dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, valor });
+    dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, valor, diagrama, atrasado, sorteio: Math.random() });
     setSel(null);
   };
 
   const selNode = sel?.tipo === 'node' ? diagrama.nodes.find((n) => n.id === sel.id) : null;
   const renomear = (rotulo) => salvar({ ...diagrama, nodes: diagrama.nodes.map((n) => (n.id === selNode.id ? { ...n, rotulo } : n)) });
+  const nomeFixo = selNode && ROTULO_FIXO[selNode.tipo]; // início/fim do diagrama de estados
   // relação selecionada que aceita multiplicidade (associação, agregação, composição)
   const selEdge = sel?.tipo === 'edge' ? diagrama.edges.find((x) => x.id === sel.id) : null;
   const comMult = selEdge && TEM_MULTIPLICIDADE.includes(selEdge.tipo) ? selEdge : null;
+  const transicao = selEdge?.tipo === 'transicao' ? selEdge : null;
+  const mudarEvento = (rotulo) => salvar({ ...diagrama, edges: diagrama.edges.map((x) => (x.id === transicao.id ? { ...x, rotulo } : x)) });
   const nomeNo = (id) => diagrama.nodes.find((n) => n.id === id)?.rotulo ?? '?';
   const mudarMult = (campo, valor) =>
     salvar({
@@ -262,9 +306,13 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
   const sistemas = diagrama.nodes.filter((n) => n.tipo === 'sistema');
   const outros = diagrama.nodes.filter((n) => n.tipo !== 'sistema');
   const noOrigem = origem && diagrama.nodes.find((n) => n.id === origem);
+  // caso de uso fora do sistema / ator dentro dele (só confere quando há um sistema desenhado)
+  const alertas = Object.fromEntries(foraDoLugar(diagrama.nodes).map((x) => [x.id, x.problema]));
 
   const nomeFerramenta = ferramenta && [...ELEMENTOS, ...RELACOES].find((x) => x.tipo === ferramenta.tipo).nome;
-  const ajuda = !ferramenta
+  const ajuda = !ferramenta && selNode?.tipo === 'sistema'
+    ? 'Sistema: puxe as setinhas no meio dos lados para redimensionar · casos de uso ficam dentro, atores fora · arrastar move tudo junto'
+    : !ferramenta
     ? 'Arraste um item da paleta para a área · arraste o fundo para mover · roda do mouse = zoom · Del apaga'
     : ferramenta.categoria === 'elemento'
       ? `Clique numa área vazia para colocar: ${nomeFerramenta} (Shift mantém a ferramenta · Esc cancela)`
@@ -275,11 +323,12 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
   return (
     <div className="editor">
       {/* ---------- requisitos */}
-      <aside className="editor-requisitos">
+      <aside className={`editor-requisitos ${pedido?.urgente ? 'pedido-urgente' : ''}`}>
         {pedido ? (
           <>
-            <div className={`etiqueta relogio-pedido ${pedido.tempoRestante <= 30 ? 'urgente' : ''}`}>
+            <div className={`etiqueta relogio-pedido ${pedido.tempoRestante <= 30 || pedido.urgente ? 'urgente' : ''}`}>
               <img src={iRelogio} alt="" className="pixel" /> {formatarTempo(pedido.tempoRestante)}
+              {pedido.urgente && <b className="tag-urgente">URGENTE</b>}
             </div>
             <h4>{pedido.cliente}</h4>
             <div className="assunto">{pedido.assunto}</div>
@@ -288,7 +337,7 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
             </div>
             {pedido.tempoRestante === 0 && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
             <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>
-            <Botao variante="rosa" onClick={entregar}>Entregar</Botao>
+            <Botao variante="rosa" som="" onClick={entregar}>Entregar</Botao>
           </>
         ) : (
           <>
@@ -302,7 +351,18 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
       {/* ---------- área de montagem */}
       <div className="editor-centro">
         <div className="editor-barra">
-          {comMult ? (
+          {transicao ? (
+            <label className="rotulo">
+              Evento
+              <input
+                value={transicao.rotulo ?? ''}
+                placeholder="ex.: pagar (vazio no início/fim)"
+                maxLength={28}
+                onChange={(e) => mudarEvento(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
+              />
+            </label>
+          ) : comMult ? (
             <div className="mult-editor" aria-label="Multiplicidade da relação">
               {[['multDe', comMult.de], ['multPara', comMult.para]].map(([campo, id]) => (
                 <label key={campo} title={`Multiplicidade do lado de ${nomeNo(id)}`}>
@@ -319,9 +379,9 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
             Rótulo
             <input
               ref={rotuloRef}
-              value={selNode?.rotulo ?? ''}
-              disabled={!selNode}
-              placeholder="selecione um elemento"
+              value={nomeFixo ? '' : selNode?.rotulo ?? ''}
+              disabled={!selNode || Boolean(nomeFixo)}
+              placeholder={nomeFixo ? `${nomeFixo}: sem nome` : 'selecione um elemento'}
               maxLength={28}
               onChange={(e) => renomear(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
@@ -365,7 +425,8 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
             <g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`}>
               {sistemas.map((n) => <Forma key={n.id} node={n} selecionado={sel?.id === n.id} destaque={origem === n.id} />)}
               {diagrama.edges.map((ed) => <Aresta key={ed.id} edge={ed} nodes={diagrama.nodes} selecionada={sel?.id === ed.id} prefixo="ed" />)}
-              {outros.map((n) => <Forma key={n.id} node={n} selecionado={sel?.id === n.id} destaque={origem === n.id} />)}
+              {outros.map((n) => <Forma key={n.id} node={n} selecionado={sel?.id === n.id} destaque={origem === n.id} alerta={alertas[n.id]} />)}
+              {selNode && REDIMENSIONAVEIS.includes(selNode.tipo) && !ferramenta && <Alcas node={selNode} zoom={view.zoom} />}
               {noOrigem && cursor && (
                 <line x1={centro(noOrigem).x} y1={centro(noOrigem).y} x2={cursor.x} y2={cursor.y} stroke="var(--c-sky)" strokeWidth={3} strokeDasharray="6 6" pointerEvents="none" />
               )}
@@ -392,8 +453,24 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
 
       {/* ---------- paleta */}
       <aside className="editor-paleta">
+        {/* tipo de diagrama: cada um mostra só os seus elementos e relações */}
+        <div className="secoes-paleta" role="tablist" aria-label="Tipo de diagrama">
+          {SECOES.map((s) => (
+            <button
+              key={s.id}
+              role="tab"
+              aria-selected={secao === s.id}
+              className={`secao-paleta ${secao === s.id ? 'ativa' : ''}`}
+              onClick={() => trocarSecao(s.id)}
+              title={`Diagrama de ${s.nome.toLowerCase()}`}
+            >
+              <IconePaleta tipo={s.icone} />
+              <span>{s.curto}</span>
+            </button>
+          ))}
+        </div>
         <h5>Elementos</h5>
-        {ELEMENTOS.map((el) => (
+        {secaoAtual.elementos.map((t) => ELEMENTOS.find((el) => el.tipo === t)).map((el) => (
           <button
             key={el.tipo}
             className={`item-paleta ${ferramenta?.tipo === el.tipo ? 'ativo' : ''}`}
@@ -405,7 +482,7 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
           </button>
         ))}
         <h5>Relações</h5>
-        {RELACOES.map((r) => (
+        {secaoAtual.relacoes.map((t) => RELACOES.find((r) => r.tipo === t)).map((r) => (
           <button
             key={r.tipo}
             className={`item-paleta ${ferramenta?.tipo === r.tipo ? 'ativo' : ''}`}

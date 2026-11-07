@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { estadoInicial, migrar, reducer } from './reducer.js';
+import { MEDIA_MINIMA, desempenhoDoDia, estadoInicial, migrar, reducer } from './reducer.js';
 import { avaliar } from '../lib/avaliacao.js';
 import { MODELOS, TOTAL_PEDACOS, modeloPorId, pedidosDoDia, precoPedaco } from '../data/pedidos.js';
 
@@ -41,6 +41,69 @@ describe('campanha', () => {
     expect(s.dinheiro).toBe(150);
     expect(s.campanha.desbloqueado).toBe(2);
     expect(s.campanha.concluidos[1]).toEqual({ ganho: 50, media: 80 });
+    expect(s.sessao.relatorio).toEqual({ media: 80, aprovado: true, ganho: 50 });
+  });
+
+  // entrega todos os pedidos do dia com as notas dadas (a última se repete) e recusa o resto
+  // Os pedidos chegam um de cada vez: terminar um faz o próximo chegar na hora.
+  const jogarDia = (s, dia, notas) => {
+    s = rodar(s, { type: 'INICIAR_SESSAO', modo: 'campanha', dia });
+    for (let i = 0; ; i++) {
+      const p = s.sessao.pedidos.find((x) => x.status === 'novo' && !x.urgente);
+      if (!p) break;
+      const nota = notas[Math.min(i, notas.length - 1)];
+      if (nota === null) s = rodar(s, { type: 'RECUSAR', id: p.id });
+      else s = rodar(s, { type: 'ACEITAR', id: p.id }, { type: 'ENTREGAR', id: p.id, nota, valor: nota });
+    }
+    return s;
+  };
+
+  it(`abaixo de ${MEDIA_MINIMA}% de média o próximo dia continua bloqueado, mas o dinheiro conta`, () => {
+    const s = jogarDia(estadoInicial(), 1, [59]);
+    expect(s.sessao.relatorio).toMatchObject({ media: 59, aprovado: false });
+    expect(s.campanha.desbloqueado).toBe(1);
+    expect(s.campanha.concluidos[1]).toBeUndefined();
+    expect(s.dinheiro).toBe(100 + 59 * s.sessao.pedidos.length);
+  });
+
+  it(`com ${MEDIA_MINIMA}% exatos libera`, () => {
+    const s = jogarDia(estadoInicial(), 5, [60]); // do dia 5 em diante há mais de um pedido
+    expect(s.sessao.pedidos.length).toBeGreaterThan(1);
+    expect(s.sessao.relatorio).toMatchObject({ media: 60, aprovado: true });
+    expect(s.campanha.desbloqueado).toBe(6);
+  });
+
+  it('recusado conta 10% na média do dia (e ainda multa)', () => {
+    const s = jogarDia(estadoInicial(), 5, [100, null]);
+    expect(s.sessao.relatorio).toMatchObject({ media: 55, aprovado: false }); // (100 + 10) / 2
+    const multas = s.sessao.pedidos.reduce((t, p) => t + (p.multa ?? 0), 0);
+    expect(multas).toBeGreaterThan(0);
+    expect(s.sessao.relatorio.ganho).toBe(100 - multas);
+  });
+
+  it('desempenho: entregue = nota, recusado = 10%, perdido = 0%, urgente não conta', () => {
+    const P = (status, extra = {}) => ({ status, ...extra });
+    expect(desempenhoDoDia([P('entregue', { nota: 90 }), P('recusado'), P('expirado')])).toBe(33); // (90+10+0)/3
+    expect(desempenhoDoDia([P('entregue', { nota: 80 }), P('expirado', { urgente: true }), P('entregue', { nota: 20, urgente: true })])).toBe(80);
+    expect(desempenhoDoDia([])).toBe(0);
+  });
+
+  it('o pedido entregue guarda o diagrama (para o resumo do dia); os perdidos não', () => {
+    let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'campanha', dia: 5 });
+    const [a] = s.sessao.pedidos;
+    const diagrama = { nodes: [{ id: 'x', tipo: 'ator', rotulo: 'Cliente', x: 0, y: 0 }], edges: [] };
+    s = rodar(s, { type: 'ACEITAR', id: a.id }, { type: 'ENTREGAR', id: a.id, nota: 70, valor: 7, diagrama, atrasado: true });
+    const b = s.sessao.pedidos[1]; // chegou assim que o primeiro foi entregue
+    s = rodar(s, { type: 'RECUSAR', id: b.id });
+    expect(s.sessao.pedidos[0]).toMatchObject({ status: 'entregue', diagrama, atrasado: true });
+    expect(s.sessao.pedidos[1].diagrama).toBeUndefined();
+  });
+
+  it('rejogar um dia concluído com nota pior mantém o melhor resultado', () => {
+    let s = jogarDia(estadoInicial(), 1, [90]);
+    s = jogarDia(s, 1, [40]);
+    expect(s.campanha.concluidos[1].media).toBe(90);
+    expect(s.campanha.desbloqueado).toBe(2);
   });
 
   it('só um pedido em andamento por vez', () => {

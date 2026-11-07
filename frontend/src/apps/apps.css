@@ -208,3 +208,48 @@
 .debug-refresh button:hover { background: var(--c-butter); }
 .debug-refresh span { font-size: 16px; color: var(--c-grape); }
 .debug-id { margin-right: 4px; font-family: var(--f-texto); color: var(--c-grape); }
+
+/* ---------------------------------------------------------- pedido urgente (tons de vermelho) */
+.tag-urgente {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px 0;
+  font-family: var(--f-titulo);
+  font-size: 10px;
+  font-weight: normal;
+  color: var(--c-cream);
+  background: var(--c-rose);
+  border: 2px solid var(--c-ink);
+  vertical-align: 2px;
+}
+.email-item.urgente { background: var(--c-blush); border-left: 8px solid var(--c-rose); }
+.email-item.urgente:hover { background: var(--c-butter); }
+.email-item.urgente.sel { background: var(--c-rose); }
+.email-item.urgente.sel .tag-urgente { background: var(--c-ink); }
+.email-item.urgente .assunto { color: var(--c-ink); }
+.email-leitura.urgente header { background: var(--c-blush); border-bottom-color: var(--c-rose); }
+.email-leitura.urgente .corpo { background: var(--c-mist); }
+.selo.selo-urgente { background: var(--c-rose); color: var(--c-cream); }
+.aviso-urgente { padding: 6px 10px 4px; color: var(--c-ink); background: var(--c-blush); border: var(--px) solid var(--c-rose); }
+.email-item.perdido.sel { box-shadow: inset 0 0 0 3px var(--c-cream); }
+/* pedido entregue: verde (qualquer nota), no fim da lista */
+.email-item.concluido,
+.email-item.concluido.urgente { background: var(--c-mint); border-left: var(--px) solid var(--c-ink); }
+.email-item.concluido:hover { background: var(--c-butter); }
+.email-item.concluido.sel { background: var(--c-mint); box-shadow: inset 0 0 0 4px var(--c-grape); }
+.email-item.concluido .assunto { color: var(--c-ink); }
+
+/* ---------------------------------------------------------- músicas (lojinha e toca-fitas) */
+.musica-item .disco-mini { display: grid; place-items: center; width: 100%; max-width: 256px; height: 128px; background: var(--c-plum); }
+.musica-item .disco-mini .disco { width: 96px; height: 96px; }
+.disco { image-rendering: pixelated; }
+.disco.girando { animation: disco-gira 1.2s steps(8) infinite; }
+@keyframes disco-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .disco.girando { animation: none; } }
+.musica-acoes { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.selo-comprada { padding: 4px 8px 2px; font-family: var(--f-titulo); font-size: 9px; background: var(--c-mint); border: 3px solid var(--c-ink); }
+.aviso-loja { margin: 0; padding: 10px 16px; font-size: 22px; text-align: center; color: var(--c-plum); background: var(--c-butter); border-top: var(--px) solid var(--c-ink); }
+.toca-fitas { height: 100%; display: flex; flex-direction: column; }
+.toca-fitas .loja-grade { grid-template-columns: repeat(3, 1fr); }
+.toca-fitas .loja-item .px-btn { white-space: nowrap; }
+.disco-mini .aleatoria { font-family: var(--f-titulo); font-size: 40px; color: var(--c-lavender); }

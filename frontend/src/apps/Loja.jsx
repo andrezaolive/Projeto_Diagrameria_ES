@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Botao, Dinheiro } from '../components/ui.jsx';
 import { ITENS_LOJA } from '../data/loja.js';
+import { FAIXAS_JOGO, temTocaFitas } from '../data/musicas.js';
+import { pararPrevia, tocarPrevia, PREVIA } from '../lib/musica.js';
+import Disco from '../components/Disco.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { sfx } from '../lib/sfx.js';
 import './apps.css';
@@ -9,6 +12,7 @@ const ABAS = [
   { id: 'fundo', nome: 'Fundos' },
   { id: 'mesa', nome: 'Mesa' },
   { id: 'parede', nome: 'Parede' },
+  { id: 'musicas', nome: 'Músicas' },
 ];
 
 // Miniatura do objeto ampliada por um fator inteiro (pixel art sem borrar)
@@ -23,6 +27,51 @@ function Miniatura({ item }) {
     e.currentTarget.style.width = `${w * z}px`;
     e.currentTarget.style.height = `${h * z}px`;
   }} />;
+}
+
+// Aba de músicas: disco, nome, prévia (5 s, pausando a música do jogo) e preço
+function Musicas({ possui, dinheiro, onComprar }) {
+  const [ouvindo, setOuvindo] = useState(null);
+  // saiu da aba/fechou a loja no meio da prévia: devolve a música do jogo
+  useEffect(() => () => pararPrevia(), []);
+  const previa = async (f) => {
+    if (ouvindo === f.id) return pararPrevia();
+    setOuvindo(f.id);
+    await tocarPrevia(f.url);
+    setOuvindo((x) => (x === f.id ? null : x));
+  };
+  return (
+    <>
+      <div className="loja-grade rolagem">
+        {FAIXAS_JOGO.map((f) => {
+          const tem = f.preco === 0 || possui.includes(f.id);
+          return (
+            <div key={f.id} className="loja-item musica-item">
+              <div className="miniatura disco-mini">
+                <Disco cor={f.cor} tamanho={80} girando={ouvindo === f.id} />
+              </div>
+              <strong>{f.nome}</strong>
+              <div className="musica-acoes">
+                <Botao tamanho="pequeno" variante={ouvindo === f.id ? 'ativo' : 'claro'} onClick={() => previa(f)} title={`Ouvir os ${PREVIA.segundos} primeiros segundos`}>
+                  {ouvindo === f.id ? '■ Parar' : '▶ Prévia'}
+                </Botao>
+                {tem ? (
+                  <span className="selo-comprada">{f.preco === 0 ? 'Já vem no jogo' : 'Comprada'}</span>
+                ) : (
+                  <Botao tamanho="pequeno" variante="rosa" disabled={dinheiro < f.preco} onClick={() => onComprar(f)} som="">
+                    R$ {f.preco}
+                  </Botao>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <p className="aviso-loja">
+        Mude a música usando o toca-fitas{temTocaFitas(possui) ? ' do escritório.' : ' (compre o toca-fitas na aba Mesa).'}
+      </p>
+    </>
+  );
 }
 
 export default function Loja() {
@@ -47,7 +96,7 @@ export default function Loja() {
           </Botao>
         ))}
         <span style={{ flex: 1 }} />
-        {aba !== 'fundo' && (
+        {(aba === 'mesa' || aba === 'parede') && (
           <span className="com-dica">
             <Botao tamanho="pequeno" variante="claro" onClick={() => dispatch({ type: 'ARRUMAR_ESCRITORIO' })} aria-describedby="dica-arrumar">
               Arrumar
@@ -59,6 +108,18 @@ export default function Loja() {
         )}
         <Dinheiro valor={state.dinheiro} />
       </div>
+      {aba === 'musicas' && (
+        <Musicas
+          possui={possui}
+          dinheiro={state.dinheiro}
+          onComprar={(f) => {
+            if (state.dinheiro < f.preco) return sfx.erro();
+            sfx.moeda();
+            dispatch({ type: 'COMPRAR', id: f.id, preco: f.preco });
+          }}
+        />
+      )}
+      {aba !== 'musicas' && (
       <div className="loja-grade rolagem">
         {ITENS_LOJA.filter((i) => i.categoria === aba).map((item) => {
           const tem = possui.includes(item.id);
@@ -88,6 +149,7 @@ export default function Loja() {
           );
         })}
       </div>
+      )}
     </div>
   );
 }

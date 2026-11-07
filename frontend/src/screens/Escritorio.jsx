@@ -40,7 +40,10 @@ function carregarMascara(nome, deitado) {
 //    e é solto no próximo clique (Esc devolve);
 //  - rodinha do mouse sobre um livro (ou com ele na mão): em pé ↔ deitado;
 //  - soltar sobre o baú guarda no inventário.
-export default function Escritorio({ onComputador, desativado }) {
+//  - toca-fitas: clicar (sem arrastar) troca a música; arrastar move como os outros.
+const TOCA_FITAS = 'radio';
+
+export default function Escritorio({ onComputador, onTocaFitas, desativado }) {
   const { state, dispatch } = useGame();
   const ref = useRef(null);
   const bauRef = useRef(null);
@@ -86,12 +89,11 @@ export default function Escritorio({ onComputador, desativado }) {
   };
 
   const soltar = (noBau) => {
+    sfx.clickSoltar(); // pegar usa o click normal; soltar, o mesmo bem baixinho
     if (noBau) {
       dispatch({ type: 'GUARDAR_OBJETO', objeto: mao.nome });
-      sfx.voltar?.();
     } else {
       dispatch({ type: 'MOVER_OBJETO', objeto: mao.nome, posicao: destino.entrada });
-      sfx.soltar?.();
     }
     setMao(null);
     setSobreBau(false);
@@ -142,7 +144,9 @@ export default function Escritorio({ onComputador, desativado }) {
     e.preventDefault();
     ref.current.setPointerCapture(e.pointerId);
     setPainel(false);
-    const empilhado = o.meta.zona === 'mesa' && estaEmPilha(o, cena);
+    sfx.click(); // só ao apertar: soltar o item não toca de novo
+    // o toca-fitas só sai do lugar se for arrastado (clique troca a música)
+    const empilhado = o.nome !== TOCA_FITAS && o.meta.zona === 'mesa' && estaEmPilha(o, cena);
     if (empilhado) dispatch({ type: 'PEGAR_OBJETO', objeto: o.nome }); // quem está em cima cai
     setMao({
       nome: o.nome,
@@ -177,6 +181,11 @@ export default function Escritorio({ onComputador, desativado }) {
       soltar(emCimaDoBau(e));
       return;
     }
+    if (mao.nome === TOCA_FITAS && mao.modo === 'arraste') {
+      setMao(null); // nem saiu do lugar (o click já tocou ao apertar)
+      onTocaFitas?.();
+      return;
+    }
     // clique sem arrastar (ou objeto tirado de uma pilha): continua na mão até o próximo clique
     if (mao.modo === 'arraste') dispatch({ type: 'PEGAR_OBJETO', objeto: mao.nome });
     setMao((m) => (m ? { ...m, modo: 'segurando', apertado: false } : m));
@@ -190,7 +199,7 @@ export default function Escritorio({ onComputador, desativado }) {
       if (!podeDeitar(mao.nome) || mao.deitado === deitar) return;
       const m = metaDe(mao.nome, deitar);
       setMao((x) => ({ ...x, deitado: deitar, ox: m.w / 2, oy: m.h / 2 }));
-      sfx.clique?.();
+      sfx.click();
       return;
     }
     const p = arte(e);
@@ -208,13 +217,14 @@ export default function Escritorio({ onComputador, desativado }) {
     const base = o.y + o.meta.h;
     const novo = pousar(o.nome, deitar, Math.round(centro - m.w / 2), base - m.h, cena.filter((x) => !acima.has(x.nome)));
     dispatch({ type: 'MOVER_OBJETO', objeto: o.nome, posicao: novo.entrada });
-    sfx.clique?.();
+    sfx.click();
   };
 
   const retirar = (nome, e) => {
     const p = arte(e);
     const m = metaDe(nome, false);
     dispatch({ type: 'RETIRAR_OBJETO', objeto: nome });
+    sfx.click();
     setPainel(false);
     setMao({ nome, deitado: false, ox: m.w / 2, oy: m.h / 2, px: p.x, py: p.y, sx: p.x, sy: p.y, modo: 'segurando', apertado: false, moveu: true, original: null, origem: 'inventario' });
   };
@@ -242,7 +252,10 @@ export default function Escritorio({ onComputador, desativado }) {
           width: pct(MONITOR.w, SCENE_W),
           height: pct(MONITOR.h, SCENE_H),
         }}
-        onClick={onComputador}
+        onClick={() => {
+          sfx.click();
+          onComputador();
+        }}
         disabled={desativado || Boolean(mao)}
         aria-label="Usar o computador"
       >
@@ -279,6 +292,16 @@ export default function Escritorio({ onComputador, desativado }) {
         <span className="dica-monitor">clique para usar</span>
       </div>
 
+      {/* toca-fitas: dica ao passar o mouse */}
+      {!mao && !desativado && sobre === TOCA_FITAS && (() => {
+        const o = objs.find((x) => x.nome === TOCA_FITAS);
+        return o && (
+          <div className="dica-objeto" role="tooltip" style={{ left: (o.x + o.meta.w / 2) * ESCALA, top: o.y * ESCALA }}>
+            clique: escolher a música
+          </div>
+        );
+      })()}
+
       <div className="inventario">
         {painel && !mao && (
           <div className="inventario-painel" role="dialog" aria-label="Inventário">
@@ -310,7 +333,11 @@ export default function Escritorio({ onComputador, desativado }) {
         <button
           ref={bauRef}
           className={`bau-btn ${mao ? 'alvo' : ''} ${sobreBau ? 'brilho' : ''} ${painel ? 'aberto' : ''}`}
-          onClick={() => !mao && setPainel((v) => !v)}
+          onClick={() => {
+            if (mao) return;
+            sfx.click();
+            setPainel((v) => !v);
+          }}
           disabled={desativado}
           aria-label={`Inventário (${inventario.length} ${inventario.length === 1 ? 'item' : 'itens'})`}
           aria-expanded={painel}

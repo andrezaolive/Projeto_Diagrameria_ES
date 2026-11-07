@@ -49,12 +49,14 @@ function Alerta({ alerta, pedido, onFechar }) {
     return () => clearTimeout(t);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (alerta.tipo === 'atencao' && pedido.status !== 'novo') onFechar();
+    if (alerta.tipo !== 'saiu' && pedido.status !== 'novo') onFechar();
   }, [alerta.tipo, pedido.status]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const saiu = alerta.tipo === 'saiu';
+  const urgente = alerta.tipo === 'urgente';
   return (
-    <div className={`alerta ${saiu ? 'saiu' : 'atencao'}`} role={saiu ? 'alert' : 'status'}>
+    <div className={`alerta ${alerta.tipo}`} role={saiu || urgente ? 'alert' : 'status'}>
+      {urgente && <span className="alerta-selo">PEDIDO URGENTE</span>}
       <div className="alerta-topo">
         <img src={iconeEmail} alt="" className="pixel" />
         <strong>{pedido.cliente}</strong>
@@ -65,7 +67,9 @@ function Alerta({ alerta, pedido, onFechar }) {
       <span className="alerta-rodape">
         {saiu
           ? `Foi embora${pedido.multa ? ` · −R$ ${pedido.multa}` : ''}`
-          : `Responda em ${formatarTempo(pedido.paciencia ?? 0)} no e-mail`}
+          : urgente
+            ? `Paga R$ ${pedido.recompensa} · prazo ${formatarTempo(pedido.tempo)} · responda em ${formatarTempo(pedido.paciencia ?? 0)}`
+            : `Responda em ${formatarTempo(pedido.paciencia ?? 0)} no e-mail`}
       </span>
     </div>
   );

@@ -33,7 +33,8 @@ export function curvaCompensacao(excessoDb, passo = PASSO_EXCESSO, res = 0.05) {
 
 const ADIANTE = 2; // quantas repetições ficam agendadas à frente (aba em segundo plano quase não roda timers)
 const FADE = 0.8; // fade de saída
-export const FADE_IN = { de: 0.3, dur: 2 };
+export const FADE_IN = { de: 0.3, dur: 2 }; // menu
+export const FADE_IN_JOGO = { de: 0.4, dur: 1 }; // trilhas de gameplay
 
 let ctx = null;
 let mestre = null; // volume da configuração
@@ -51,7 +52,8 @@ function contexto() {
     mestre.connect(ctx.destination);
     // navegadores só liberam áudio depois de um gesto do jogador
     const destravar = () => {
-      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      // durante a prévia a música do jogo fica suspensa de propósito: não destrava por clique
+      if (ctx.state === 'suspended' && !previa) ctx.resume().catch(() => {});
     };
     for (const ev of ['pointerdown', 'keydown']) window.addEventListener(ev, destravar, { capture: true });
   }
@@ -114,8 +116,9 @@ function encerrar(faixa, fade = FADE) {
 }
 
 /** Toca `url` em loop a cada `loop` segundos (padrão: duração do arquivo). Não reinicia se já estiver tocando. */
-export async function tocarMusica(url, { loop, excessoDb } = {}) {
+export async function tocarMusica(url, { loop, excessoDb, fadeIn = FADE_IN } = {}) {
   if (!contexto()) return;
+  if (previa) pararPrevia(); // trocou de música/tela no meio da prévia
   if (atual?.url === url) return;
   if (atual) encerrar(atual);
   const faixa = {
@@ -141,9 +144,9 @@ export async function tocarMusica(url, { loop, excessoDb } = {}) {
   faixa.loop = loop ?? faixa.buffer.duration;
   faixa.emenda.connect(faixa.ganho).connect(mestre);
   const t = ctx.currentTime;
-  // fade in leve ao abrir o jogo ou voltar ao menu: 30% → 100% em 2 s
-  faixa.ganho.gain.setValueAtTime(FADE_IN.de, t);
-  faixa.ganho.gain.linearRampToValueAtTime(1, t + FADE_IN.dur);
+  // fade in leve (menu: 30% → 100% em 2 s; gameplay: 40% → 100% em 1 s)
+  faixa.ganho.gain.setValueAtTime(fadeIn.de, t);
+  faixa.ganho.gain.linearRampToValueAtTime(1, t + fadeIn.dur);
   faixa.proximo = t;
   agendar(faixa);
   faixa.timer = setInterval(() => agendar(faixa), 5000);
@@ -157,5 +160,99 @@ export function pararMusica(fade = FADE) {
 
 export function setVolumeMusica(v) {
   volume = v;
-  if (mestre) mestre.gain.setTargetAtTime(v, ctx.currentTime, 0.05);
+  if (mestre && !previa) mestre.gain.setTargetAtTime(v, ctx.currentTime, 0.05);
 }
+
+// ------------------------------------------------------------------ prévia (lojinha)
+// Toca os primeiros `segundos` de uma música. A música do jogo sai com um fade rápido e fica
+// PAUSADA (o AudioContext dela é suspenso, então volta do ponto onde parou); a prévia toca num
+// AudioContext próprio. No fim, a música do jogo volta com fade in.
+export const PREVIA = { segundos: 5, fadeSaida: 0.35, fadeVolta: 0.6, fadeFim: 0.4 };
+let ctxPrevia = null;
+let previa = null; // { fonte, ganho, pausou, resolver }
+
+function retomarJogo(pausou) {
+  if (!ctx || !pausou) return;
+  ctx.resume().catch(() => {});
+  const t = ctx.currentTime;
+  mestre.gain.cancelScheduledValues(t);
+  mestre.gain.setValueAtTime(0, t);
+  mestre.gain.linearRampToValueAtTime(volume, t + PREVIA.fadeVolta);
+}
+
+/** Para a prévia que estiver tocando e devolve a música do jogo. */
+export function pararPrevia() {
+  if (!previa) return;
+  const p = previa;
+  previa = null;
+  try {
+    p.fonte?.stop();
+  } catch {
+    /* já parou */
+  }
+  retomarJogo(p.pausou);
+  p.resolver?.();
+}
+
+/** Toca a prévia de `url`; a promessa resolve quando ela acaba (ou é interrompida). */
+export async function tocarPrevia(url, { segundos = PREVIA.segundos } = {}) {
+  if (!contexto()) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  ctxPrevia ||= new AC();
+  if (ctxPrevia.state === 'suspended') ctxPrevia.resume().catch(() => {});
+
+  // prévia em cima de prévia: troca a que está tocando, sem soltar a música do jogo no meio
+  const jaPausada = previa?.pausou ?? false;
+  if (previa) {
+    const p = previa;
+    previa = null;
+    try {
+      p.fonte?.stop();
+    } catch {
+      /* já parou */
+    }
+    p.resolver?.();
+  }
+  let resolver;
+  const fim = new Promise((r) => (resolver = r));
+  const minha = { fonte: null, pausou: jaPausada, resolver };
+  previa = minha;
+
+  // música do jogo: fade rápido e pausa
+  const tocando = Boolean(atual) && ctx.state === 'running';
+  if (tocando && !jaPausada) {
+    const t = ctx.currentTime;
+    mestre.gain.cancelScheduledValues(t);
+    mestre.gain.setValueAtTime(mestre.gain.value, t);
+    mestre.gain.linearRampToValueAtTime(0, t + PREVIA.fadeSaida);
+    minha.pausou = true;
+    setTimeout(() => previa === minha && ctx.suspend().catch(() => {}), PREVIA.fadeSaida * 1000);
+  }
+
+  let buffer;
+  try {
+    buffer = await carregar(url);
+  } catch {
+    if (previa === minha) pararPrevia();
+    return fim;
+  }
+  if (previa !== minha) return fim; // outra prévia começou enquanto carregava
+
+  const fonte = ctxPrevia.createBufferSource();
+  const ganho = ctxPrevia.createGain();
+  fonte.buffer = buffer;
+  fonte.connect(ganho).connect(ctxPrevia.destination);
+  const dur = Math.min(segundos, buffer.duration);
+  // começa depois do fade da música do jogo, entra rápido e sai com fade no fim
+  const t0 = ctxPrevia.currentTime + (minha.pausou && !jaPausada ? PREVIA.fadeSaida : 0.02);
+  ganho.gain.setValueAtTime(0, t0);
+  ganho.gain.linearRampToValueAtTime(volume, t0 + 0.08);
+  ganho.gain.setValueAtTime(volume, t0 + dur - PREVIA.fadeFim);
+  ganho.gain.linearRampToValueAtTime(0, t0 + dur);
+  fonte.start(t0, 0, dur);
+  fonte.onended = () => previa === minha && pararPrevia();
+  minha.fonte = fonte;
+  return fim;
+}
+
+export const tocandoPrevia = () => Boolean(previa);

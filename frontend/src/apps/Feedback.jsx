@@ -9,6 +9,10 @@ const Nome = ({ children }) => <b>"{children}"</b>;
 
 // Relação escrita como no diagrama: A — B, A → «include» → B, A → herda de → B...
 function Relacao({ r, errada = false }) {
+  if (r.tipo === 'transicao') {
+    const t = `"${r.ra}" —${r.ev ? ` ${r.ev} ` : ''}→ "${r.rb}"`;
+    return errada ? <Errado>{t}</Errado> : <span className="fb-certo">{t}</span>;
+  }
   const meio = {
     associacao: ' — ',
     include: ' → «include» → ',
@@ -30,6 +34,7 @@ const SENTIDO = {
   dependencia: 'Na dependência a seta sai de quem usa e aponta para quem é usado.',
   agregacao: 'Na agregação a ligação sai do "todo" (o losango vazado fica nele) e vai até a parte.',
   composicao: 'Na composição a ligação sai do "todo" (o losango cheio fica nele) e vai até a parte.',
+  transicao: 'A transição sai do estado em que o objeto está e aponta para o estado seguinte.',
 };
 
 function Problema({ p }) {
@@ -71,6 +76,24 @@ function Problema({ p }) {
           <Errado>"{p.jogador.rotulo}"</Errado> ({NOME_TIPO[p.jogador.tipo]}) não foi pedido no e-mail.
         </p>
       );
+    case 'foraDoSistema':
+      return (
+        <>
+          <p>
+            O caso de uso <Nome>{p.rotulo}</Nome> está <Errado>fora do sistema</Errado>.
+          </p>
+          <p className="fb-sugestao">Os casos de uso são o que o sistema faz: arraste-o para dentro do retângulo do sistema (aumente o retângulo pelas setinhas, se faltar espaço).</p>
+        </>
+      );
+    case 'atorNoSistema':
+      return (
+        <>
+          <p>
+            O ator <Nome>{p.rotulo}</Nome> está <Errado>dentro do sistema</Errado>.
+          </p>
+          <p className="fb-sugestao">O ator é quem usa o sistema de fora: deixe-o do lado de fora do retângulo, ligado aos casos de uso por associação.</p>
+        </>
+      );
     case 'sentidoInvertido':
       return (
         <>
@@ -80,6 +103,16 @@ function Problema({ p }) {
           <p className="fb-sugestao">
             O certo seria: <Relacao r={p.certa} />. {SENTIDO[p.certa.tipo]}
           </p>
+        </>
+      );
+    case 'eventoErrado':
+      return (
+        <>
+          <p>
+            Na transição de <Nome>{p.certa.ra}</Nome> para <Nome>{p.certa.rb}</Nome> o evento deveria ser <b>{p.certa.ev ? `"${p.certa.ev}"` : '(nenhum)'}</b>, mas você{' '}
+            {p.usado ? <>escreveu <Errado>"{p.usado}"</Errado></> : <Errado>não escreveu nenhum</Errado>}.
+          </p>
+          <p className="fb-sugestao">Selecione a seta no editor e escreva o evento no campo "Evento" da barra de cima.</p>
         </>
       );
     case 'relacaoTipoErrado':
@@ -100,7 +133,7 @@ function Problema({ p }) {
           <p>
             Faltou a relação: <Relacao r={p.certa} errada />
           </p>
-          <p className="fb-sugestao">Releia o e-mail: cada frase com "participa", "inclui", "estende", "herda", "agrega" ou "é composto de" vira uma ligação.</p>
+          <p className="fb-sugestao">Releia o e-mail: cada frase com "participa", "inclui", "estende", "herda", "agrega", "é composto de" ou "vai para ... com o evento" vira uma ligação.</p>
         </>
       );
     case 'multiplicidade':

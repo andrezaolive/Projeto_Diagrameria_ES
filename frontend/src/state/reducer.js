@@ -1,4 +1,5 @@
-import { MODELOS, TOTAL_PEDACOS, criarPedido, multaPedido, pedidosDoDia, precoPedaco } from '../data/pedidos.js';
+import { MODELOS, TOTAL_PEDACOS, URGENTE, criarPedido, criarPedidoUrgente, intervaloChegada, multaPedido, pedidosDoDia, precoPedaco } from '../data/pedidos.js';
+import { ALEATORIA, faixasDoJogador, temTocaFitas } from '../data/musicas.js';
 import { avatarPadrao } from '../lib/avatar.js';
 import { soltarDependentes } from '../lib/decoracao.js';
 
@@ -7,6 +8,8 @@ export const DIAS_CAMPANHA = 23; // dias úteis de um mês de 31 dias começando
 export const ITENS_INICIAIS = ['fundo-por-do-sol'];
 
 export const MAX_HISTORICO = 30;
+// Desempenho mínimo do dia (ver desempenhoDoDia) para liberar o próximo dia da campanha
+export const MEDIA_MINIMA = 60;
 export const NIVEIS_INTERFACE = ['reduzido', 'auto', 'grande'];
 
 const estatisticasIniciais = () => ({
@@ -29,7 +32,7 @@ export const estadoInicial = () => ({
   dinheiro: 100,
   config: { musica: 60, efeitos: 70, interface: 'auto', vhsAtivo: false, vhsIntensidade: 50 }, // interface: reduzido | auto | grande
   campanha: { desbloqueado: 1, concluidos: {} }, // concluidos[dia] = { ganho, media }
-  loja: { possui: [...ITENS_INICIAIS], fundo: 'fundo-por-do-sol', moveis: [] },
+  loja: { possui: [...ITENS_INICIAIS], fundo: 'fundo-por-do-sol', moveis: [], musica: null }, // musica: escolhida no toca-fitas
   // posicoes[objeto]: ver lib/decoracao.js (sem entrada = posição padrão)
   // guardados: objetos-base guardados no inventário (os da loja usam loja.moveis)
   escritorio: { posicoes: {}, guardados: [] },
@@ -71,6 +74,20 @@ function novoPedidoAleatorio(sessao) {
   return criarPedido(m.id, sessao.seq, 1);
 }
 
+const NA_FILA = ['novo', 'aceito'];
+
+// Um urgente por vez na fila. `sorteio` em [0, 1): abaixo de URGENTE.chance chega um, e o mesmo
+// número (reescalado) escolhe o modelo entre os que não estão na fila. Sem `sorteio`, nunca chega.
+export function sortearUrgente(sessao, segundos, sorteio) {
+  if (sorteio == null || segundos % URGENTE.intervalo !== 0 || sorteio >= URGENTE.chance) return null;
+  if (sessao.pedidos.some((p) => p.urgente && NA_FILA.includes(p.status))) return null;
+  const naFila = new Set(sessao.pedidos.filter((p) => NA_FILA.includes(p.status)).map((p) => p.modelo));
+  const opcoes = MODELOS.filter((m) => !naFila.has(m.id));
+  const lista = opcoes.length ? opcoes : MODELOS;
+  const m = lista[Math.min(lista.length - 1, Math.floor((sorteio / URGENTE.chance) * lista.length))];
+  return criarPedidoUrgente(m.id, sessao.seq, sessao.modo === 'campanha' ? sessao.dia : 1);
+}
+
 const atualizarPedido = (sessao, id, f) => ({
   ...sessao,
   pedidos: sessao.pedidos.map((p) => (p.id === id ? { ...p, ...f(p) } : p)),
@@ -81,8 +98,26 @@ export const FINALIZADOS = ['entregue', 'recusado', 'expirado'];
 // Relógio do jogo precisa correr? (pedido em andamento ou cliente esperando resposta)
 export const temRelogio = (sessao) => Boolean(sessao?.ativo || sessao?.pedidos.some((p) => p.status === 'novo' && p.paciencia != null));
 
+// O dia só acaba quando todos os pedidos chegaram (fila vazia) e terminaram
 export const diaEncerrado = (sessao) =>
-  sessao?.modo === 'campanha' && sessao.pedidos.every((p) => FINALIZADOS.includes(p.status));
+  sessao?.modo === 'campanha' && !sessao.fila?.length && sessao.pedidos.every((p) => FINALIZADOS.includes(p.status));
+
+// Libera o próximo pedido da fila do dia: na hora marcada (`proximoEm`, em segundos de jogo) ou na
+// hora, se não sobrou nenhum pedido normal em aberto (o jogador entregou/recusou o anterior antes).
+function liberarFila(sessao, sorteio) {
+  if (!sessao.fila?.length) return sessao;
+  const segundos = sessao.segundos ?? 0;
+  const semPendente = !sessao.pedidos.some((p) => !p.urgente && NA_FILA.includes(p.status));
+  if (!semPendente && segundos < sessao.proximoEm) return sessao;
+  const [id, ...fila] = sessao.fila;
+  return {
+    ...sessao,
+    pedidos: [...sessao.pedidos, criarPedido(id, sessao.seq, sessao.dia)],
+    seq: sessao.seq + 1,
+    fila,
+    proximoEm: fila.length ? segundos + intervaloChegada(sorteio) : null,
+  };
+}
 
 export function reducer(state, action) {
   switch (action.type) {
@@ -90,8 +125,13 @@ export function reducer(state, action) {
       const { modo, dia = 1 } = action;
       let seq = 1;
       let pedidos;
-      if (modo === 'campanha') pedidos = pedidosDoDia(dia).map((id) => criarPedido(id, seq++, dia));
-      else {
+      let fila = [];
+      if (modo === 'campanha') {
+        // só o primeiro chega agora; o resto entra pela fila (liberarFila)
+        const [primeiro, ...resto] = pedidosDoDia(dia);
+        pedidos = [criarPedido(primeiro, seq++, dia)];
+        fila = resto;
+      } else {
         const s = { pedidos: [], seq };
         pedidos = [];
         for (let i = 0; i < 2; i++) {
@@ -105,7 +145,8 @@ export function reducer(state, action) {
       const diagramas = state.diagramas.livre ? { livre: state.diagramas.livre } : {};
       const e = state.estatisticas;
       const estatisticas = { ...e, jogos: e.jogos + 1, jogosPorModo: { ...e.jogosPorModo, [modo]: (e.jogosPorModo[modo] ?? 0) + 1 } };
-      return { ...state, diagramas, estatisticas, sessao: { modo, dia, pedidos, ativo: null, ganho: 0, notas: [], seq } };
+      const chegada = fila.length ? { fila, proximoEm: intervaloChegada(action.sorteio) } : {};
+      return { ...state, diagramas, estatisticas, sessao: { modo, dia, pedidos, ativo: null, ganho: 0, notas: [], seq, segundos: 0, ...chegada } };
     }
 
     case 'ENCERRAR_SESSAO':
@@ -148,11 +189,20 @@ export function reducer(state, action) {
       sessao = { ...sessao, ganho: s.ganho - multa };
       if (s.ativo === action.id) sessao = { ...sessao, ativo: null };
       if (s.modo === 'infinito') sessao = { ...sessao, pedidos: [...sessao.pedidos, novoPedidoAleatorio(sessao)], seq: s.seq + 1 };
+      sessao = liberarFila(sessao, action.sorteio);
       return concluirDiaSeFor({ ...state, dinheiro: state.dinheiro - multa, estatisticas, sessao, diagramas: semDiagrama(state.diagramas, action.id) });
     }
 
     // Um segundo de jogo: corre o prazo do pedido em andamento e a paciência dos pedidos novos.
     // Quem fica sem paciência vai embora (status "expirado"); no modo infinito chega outro pedido.
+    // DEBUG (botão do e-mail em npm run dev): chega um pedido urgente agora, sem esperar o sorteio
+    case 'DEBUG_URGENTE': {
+      const s = state.sessao;
+      if (!s) return state;
+      const u = sortearUrgente({ ...s, pedidos: s.pedidos.map((p) => (p.urgente ? { ...p, urgente: false } : p)) }, 0, Math.random() * URGENTE.chance);
+      return u ? { ...state, sessao: { ...s, pedidos: [...s.pedidos, u], seq: s.seq + 1 } } : state;
+    }
+
     case 'TICK': {
       const s = state.sessao;
       if (!s) return state;
@@ -168,9 +218,15 @@ export function reducer(state, action) {
         multas += multa;
         return { ...p, paciencia: 0, status: 'expirado', multa };
       });
-      let sessao = { ...s, pedidos };
+      const segundos = (s.segundos ?? 0) + 1;
+      let sessao = { ...s, pedidos, segundos };
       if (s.modo === 'infinito')
         for (let i = 0; i < foram; i++) sessao = { ...sessao, pedidos: [...sessao.pedidos, novoPedidoAleatorio(sessao)], seq: sessao.seq + 1 };
+      // próximo pedido do dia (campanha), se chegou a hora ou não sobrou nada em aberto
+      sessao = liberarFila(sessao, action.sorteioChegada);
+      // pedido urgente: sorteio a cada minuto de jogo (o número vem na ação, para o reducer seguir puro)
+      const urgente = sortearUrgente(sessao, segundos, action.sorteio);
+      if (urgente) sessao = { ...sessao, pedidos: [...sessao.pedidos, urgente], seq: sessao.seq + 1 };
       if (!foram) return { ...state, sessao };
       sessao = { ...sessao, ganho: s.ganho - multas };
       const e = state.estatisticas;
@@ -185,9 +241,12 @@ export function reducer(state, action) {
       const s = state.sessao;
       if (!s) return state;
       const { id, nota, valor } = action;
-      let sessao = atualizarPedido(s, id, () => ({ status: 'entregue', nota, valor }));
+      // o diagrama entregue fica no pedido, para o resumo do dia mostrar de novo (com o esperado e o feedback)
+      const entrega = action.diagrama ? { diagrama: action.diagrama, atrasado: Boolean(action.atrasado) } : {};
+      let sessao = atualizarPedido(s, id, () => ({ status: 'entregue', nota, valor, ...entrega }));
       sessao = { ...sessao, ativo: null, ganho: s.ganho + valor, notas: [...s.notas, nota] };
       if (s.modo === 'infinito') sessao = { ...sessao, pedidos: [...sessao.pedidos, novoPedidoAleatorio(sessao)], seq: s.seq + 1 };
+      sessao = liberarFila(sessao, action.sorteio);
       const e = state.estatisticas;
       const estatisticas = {
         ...e,
@@ -205,6 +264,15 @@ export function reducer(state, action) {
       const { id, preco } = action;
       if (state.loja.possui.includes(id) || state.dinheiro < preco) return state;
       return { ...state, dinheiro: state.dinheiro - preco, loja: { ...state.loja, possui: [...state.loja.possui, id] } };
+    }
+
+    // Toca-fitas: escolhe a música (id de data/musicas.js ou 'aleatoria'). Precisa ter o toca-fitas
+    // e, se for uma música, tê-la (de graça ou comprada).
+    case 'ESCOLHER_MUSICA': {
+      const { id } = action;
+      if (!temTocaFitas(state.loja.possui)) return state;
+      if (id !== ALEATORIA && !faixasDoJogador(state.loja.possui).some((f) => f.id === id)) return state;
+      return { ...state, loja: { ...state.loja, musica: id } };
     }
 
     case 'USAR_FUNDO':
@@ -310,15 +378,34 @@ function semDiagrama(diagramas, pedidoId) {
   return resto;
 }
 
+// Desempenho do dia: média de todos os pedidos normais do dia. Entregue vale a nota, recusado vale
+// DESEMPENHO_RECUSADO (10%) e perdido (cliente foi embora) vale 0%. Urgentes não entram na média.
+export const DESEMPENHO_RECUSADO = 10;
+export const desempenhoDoPedido = (p) => (p.status === 'entregue' ? p.nota ?? 0 : p.status === 'recusado' ? DESEMPENHO_RECUSADO : 0);
+export function desempenhoDoDia(pedidos) {
+  const contam = pedidos.filter((p) => !p.urgente && FINALIZADOS.includes(p.status));
+  return contam.length ? Math.round(contam.reduce((t, p) => t + desempenhoDoPedido(p), 0) / contam.length) : 0;
+}
+
+// Fim do dia da campanha: com média >= MEDIA_MINIMA o dia conta como concluído e libera o seguinte;
+// abaixo disso o próximo continua bloqueado (o dia pode ser jogado de novo). O dinheiro ganho e as
+// multas valem nos dois casos. `sessao.relatorio` guarda o resultado para a tela de fim do dia.
 function concluirDiaSeFor(state) {
   const s = state.sessao;
-  if (!diaEncerrado(s)) return state;
-  const media = s.notas.length ? Math.round(s.notas.reduce((a, b) => a + b, 0) / s.notas.length) : 0;
+  if (!diaEncerrado(s) || s.relatorio) return state;
+  const media = desempenhoDoDia(s.pedidos);
+  const aprovado = media >= MEDIA_MINIMA;
+  const sessao = { ...s, relatorio: { media, aprovado, ganho: s.ganho } };
+  if (!aprovado) return { ...state, sessao };
+  const antes = state.campanha.concluidos[s.dia];
+  // rejogando um dia já concluído: fica o melhor resultado
+  const registro = antes && antes.media > media ? antes : { ganho: s.ganho, media };
   return {
     ...state,
+    sessao,
     campanha: {
       desbloqueado: Math.min(DIAS_CAMPANHA, Math.max(state.campanha.desbloqueado, s.dia + 1)),
-      concluidos: { ...state.campanha.concluidos, [s.dia]: { ganho: s.ganho, media } },
+      concluidos: { ...state.campanha.concluidos, [s.dia]: registro },
     },
   };
 }

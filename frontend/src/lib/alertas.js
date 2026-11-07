@@ -2,6 +2,7 @@
 //  - "atencao": pedido novo com 25% ou menos da paciência → o cliente cobra uma resposta
 //  - "saiu": o cliente foi embora, mas ainda há outros pedidos na fila
 //    (se era o último pedido do dia, nada aparece)
+//  - "urgente": chegou um pedido urgente (paga mais, prazo curto)
 
 export const LIMITE_ATENCAO = 0.25;
 
@@ -13,6 +14,13 @@ export const FRASES = {
     'Estou esperando uma resposta...',
     'Tic-tac... vou acabar procurando outra agência.',
     'Psiu! Esqueceram de mim?',
+  ],
+  urgente: [
+    'Preciso disso pra ontem!',
+    'É urgente! Pago bem, mas preciso rápido.',
+    'Socorro! O prazo é curtíssimo!',
+    'Larga tudo e faz o meu, por favor!',
+    'Emergência! Reunião daqui a pouco!',
   ],
   saiu: [
     'Cansei de esperar. Vou procurar outra agência.',
@@ -32,12 +40,17 @@ export const sortearFrase = (tipo, aleatorio = Math.random, evitar = []) => {
 const NA_FILA = ['novo', 'aceito'];
 
 // Compara os pedidos com o que já foi avisado e devolve os alertas novos.
-// `vistos` = { atencao: Set<id>, saiu: Set<id> } (não é alterado: devolve cópias atualizadas)
-export function detectarAlertas(pedidos = [], vistos = { atencao: new Set(), saiu: new Set() }) {
+// `vistos` = { atencao, saiu, urgente: Set<id> } (não é alterado: devolve cópias atualizadas)
+export function detectarAlertas(pedidos = [], vistos = { atencao: new Set(), saiu: new Set(), urgente: new Set() }) {
   const atencao = new Set(vistos.atencao);
   const saiu = new Set(vistos.saiu);
+  const urgente = new Set(vistos.urgente ?? []);
   const alertas = [];
   for (const p of pedidos) {
+    if (p.urgente && p.status === 'novo' && !urgente.has(p.id)) {
+      urgente.add(p.id);
+      alertas.push({ tipo: 'urgente', pedido: p });
+    }
     if (p.status === 'novo' && p.paciencia != null && !atencao.has(p.id) && p.paciencia / p.pacienciaTotal <= LIMITE_ATENCAO) {
       atencao.add(p.id);
       alertas.push({ tipo: 'atencao', pedido: p });
@@ -48,11 +61,12 @@ export function detectarAlertas(pedidos = [], vistos = { atencao: new Set(), sai
       if (temFila) alertas.push({ tipo: 'saiu', pedido: p });
     }
   }
-  return { alertas, vistos: { atencao, saiu } };
+  return { alertas, vistos: { atencao, saiu, urgente } };
 }
 
 // Ponto de partida ao abrir o jogo: o que já estava expirado não gera alerta de novo
 export const vistosIniciais = (pedidos = []) => ({
   atencao: new Set(pedidos.filter((p) => p.status !== 'novo').map((p) => p.id)),
   saiu: new Set(pedidos.filter((p) => p.status === 'expirado').map((p) => p.id)),
+  urgente: new Set(pedidos.filter((p) => p.urgente).map((p) => p.id)),
 });

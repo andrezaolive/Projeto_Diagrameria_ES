@@ -4,10 +4,14 @@ import Computador from './Computador.jsx';
 import Configuracoes from './Configuracoes.jsx';
 import Resultado from '../apps/Resultado.jsx';
 import Alertas from './Alertas.jsx';
+import ResumoDia from './ResumoDia.jsx';
 import { Botao, Dinheiro, Modal, formatarReais } from '../components/ui.jsx';
 import { useGame } from '../state/GameContext.jsx';
-import { diaEncerrado, temRelogio } from '../state/reducer.js';
+import { DIAS_CAMPANHA, MEDIA_MINIMA, diaEncerrado, temRelogio } from '../state/reducer.js';
 import { sfx } from '../lib/sfx.js';
+import { FADE_IN_JOGO, tocarMusica } from '../lib/musica.js';
+import { ALEATORIA, faixaInicial, faixaPorId, sortearFaixa } from '../data/musicas.js';
+import TocaFitas from './TocaFitas.jsx';
 import './jogo.css';
 
 // Fases: escritorio -> entrando (zoom no monitor) -> computador -> saindo -> escritorio
@@ -17,6 +21,29 @@ export default function Jogo({ onMenu, onCalendario }) {
   const [fase, setFase] = useState('escritorio');
   const [pausado, setPausado] = useState(false);
   const [resultado, setResultado] = useState(null);
+  const [vendoResumo, setVendoResumo] = useState(false);
+
+  // Trilha de gameplay: sorteada ao começar; o toca-fitas (se estiver na mesa) passa para a próxima
+  // Música do jogo: a escolhida no toca-fitas (se tiver toca-fitas) ou uma sorteada entre as do jogador
+  const [faixa, setFaixa] = useState(() => faixaInicial(state.loja));
+  const [aviso, setAviso] = useState(null);
+  const [tocaFitas, setTocaFitas] = useState(false);
+  useEffect(() => {
+    const f = faixaPorId(faixa);
+    if (f) tocarMusica(f.url, { loop: f.loop, excessoDb: f.excessoDb, fadeIn: FADE_IN_JOGO });
+  }, [faixa]);
+  const escolherMusica = (id) => {
+    dispatch({ type: 'ESCOLHER_MUSICA', id });
+    const nova = id === ALEATORIA ? sortearFaixa(state.loja.possui, Math.random, faixa) : id;
+    setFaixa(nova);
+    setAviso({ id: Date.now(), texto: `♪ ${faixaPorId(nova).nome}${id === ALEATORIA ? ' (aleatória)' : ''}` });
+    setTocaFitas(false);
+  };
+  useEffect(() => {
+    if (!aviso) return;
+    const t = setTimeout(() => setAviso(null), 2500);
+    return () => clearTimeout(t);
+  }, [aviso]);
 
   const noComputador = fase === 'computador' || fase === 'saindo';
   const fimDoDia = diaEncerrado(sessao) && !resultado;
@@ -39,7 +66,8 @@ export default function Jogo({ onMenu, onCalendario }) {
   const relogio = temRelogio(sessao);
   useEffect(() => {
     if (pausado || resultado || fimDoDia || !relogio) return;
-    const t = setInterval(() => dispatch({ type: 'TICK' }), 1000);
+    // `sorteio`: chance de chegar um pedido urgente a cada minuto (ver sortearUrgente no reducer)
+    const t = setInterval(() => dispatch({ type: 'TICK', sorteio: Math.random(), sorteioChegada: Math.random() }), 1000);
     return () => clearInterval(t);
   }, [pausado, resultado, fimDoDia, relogio, dispatch]);
 
@@ -78,7 +106,8 @@ export default function Jogo({ onMenu, onCalendario }) {
     <div className="tela">
       {!noComputador && (
         <div className={`camada-escritorio ${fase === 'entrando' || fase === 'voltando' ? 'zoom' : ''}`}>
-          <Escritorio onComputador={entrar} desativado={fase !== 'escritorio'} />
+          <Escritorio onComputador={entrar} onTocaFitas={() => setTocaFitas(true)} desativado={fase !== 'escritorio'} />
+          {aviso && <div key={aviso.id} className="aviso-musica" role="status">{aviso.texto}</div>}
         </div>
       )}
 
@@ -106,22 +135,45 @@ export default function Jogo({ onMenu, onCalendario }) {
         </div>
       )}
 
+      {tocaFitas && (
+        <TocaFitas
+          possui={state.loja.possui}
+          escolhida={state.loja.musica}
+          tocando={faixa}
+          onEscolher={escolherMusica}
+          onFechar={() => setTocaFitas(false)}
+        />
+      )}
+
       {resultado && <Resultado resultado={resultado} onOk={() => setResultado(null)} />}
 
-      {fimDoDia && !pausado && (
-        <Modal titulo="RELATORIO_DO_DIA.TXT" w={560} h={380}>
+      {fimDoDia && !pausado && vendoResumo && <ResumoDia pedidos={sessao.pedidos} dia={sessao.dia} onFechar={() => setVendoResumo(false)} />}
+
+      {fimDoDia && !pausado && !vendoResumo && (
+        <Modal titulo="RELATORIO_DO_DIA.TXT" w={600} h={520}>
           <div className="fim-dia">
             <h3>FIM DO DIA {sessao.dia}!</h3>
             <div>Pedidos entregues: {sessao.pedidos.filter((p) => p.status === 'entregue').length}/{sessao.pedidos.length}</div>
             {sessao.pedidos.some((p) => p.status === 'expirado') && (
               <div>Clientes que foram embora: {sessao.pedidos.filter((p) => p.status === 'expirado').length}</div>
             )}
-            <div>Nota média: <span className="valor">{state.campanha.concluidos[sessao.dia]?.media ?? 0}%</span></div>
+            <div>Desempenho do dia: <span className={`valor ${sessao.relatorio?.aprovado ? '' : 'reprovado'}`}>{sessao.relatorio?.media ?? 0}%</span></div>
             <div>Ganho do dia: <span className="valor">{formatarReais(sessao.ganho)}</span></div>
             {sessao.pedidos.some((p) => p.multa) && (
               <div>Multas: <span className="valor">−R$ {sessao.pedidos.reduce((t, p) => t + (p.multa ?? 0), 0)}</span></div>
             )}
-            <Botao variante="rosa" onClick={() => sairPara(onCalendario)}>Ir ao calendário</Botao>
+            {sessao.relatorio?.aprovado ? (
+              <p className="veredito aprovado">{sessao.dia < DIAS_CAMPANHA ? `Dia ${sessao.dia + 1} liberado!` : 'Campanha concluída!'}</p>
+            ) : (
+              <p className="veredito reprovado">Abaixo de {MEDIA_MINIMA}%: o dia {sessao.dia + 1} continua bloqueado. Tente de novo!</p>
+            )}
+            <Botao variante="claro" tamanho="pequeno" onClick={() => setVendoResumo(true)}>Ver resumo do dia</Botao>
+            <div className="botoes-fim">
+              {!sessao.relatorio?.aprovado && (
+                <Botao variante="claro" onClick={() => dispatch({ type: 'INICIAR_SESSAO', modo: 'campanha', dia: sessao.dia, sorteio: Math.random() })}>Tentar de novo</Botao>
+              )}
+              <Botao variante="rosa" onClick={() => sairPara(onCalendario)}>Ir ao calendário</Botao>
+            </div>
           </div>
         </Modal>
       )}

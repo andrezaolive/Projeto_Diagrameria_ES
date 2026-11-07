@@ -122,3 +122,27 @@
   border: var(--px) solid var(--c-ink);
   cursor: pointer;
 }
+
+/* pedido urgente: painel de requisitos em vermelho */
+.editor-requisitos.pedido-urgente { background: var(--c-blush); box-shadow: inset 8px 0 0 var(--c-rose); }
+.editor-requisitos .relogio-pedido .tag-urgente { margin: 0 0 0 8px; }
+
+/* seções da paleta: casos de uso / classes / estados */
+.secoes-paleta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 4px; }
+.secao-paleta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 3px;
+  font-family: var(--f-texto);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--c-ink);
+  background: var(--c-cream);
+  border: 3px solid var(--c-ink);
+  cursor: pointer;
+}
+.secao-paleta svg { width: 22px; height: 22px; }
+.secao-paleta:hover { background: var(--c-butter); }
+.secao-paleta.ativa { background: var(--c-lavender); box-shadow: inset 3px 3px 0 var(--c-grape); }
