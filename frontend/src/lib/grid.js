@@ -1,4 +1,5 @@
 // Grid invisível da área de montagem e geometria dos elementos.
+import { medidasClasse } from './membros.js';
 export const GRID = 20;
 export const ZOOM_MIN = 0.25;
 export const ZOOM_MAX = 3;
@@ -29,6 +30,16 @@ export const TAMANHO_MINIMO = { sistema: { w: 200, h: 160 } };
 
 // Tamanho de um nó: o próprio (se redimensionado) ou o padrão do tipo
 export const tamanho = (node) => {
+  // a classe cresce com os atributos e métodos
+  if (node.tipo === 'classe') {
+    const { w, h } = medidasClasse(node);
+    return { w, h };
+  }
+  // o estado alarga para caber o nome (mínimo 160, sempre no grid)
+  if (node.tipo === 'estado') {
+    const p = TAMANHOS.estado;
+    return { w: Math.max(p.w, Math.ceil(((node.rotulo ?? '').length * 11 + 28) / GRID) * GRID), h: p.h };
+  }
   const p = TAMANHOS[node.tipo];
   return { w: node.w ?? p.w, h: node.h ?? p.h };
 };
@@ -99,14 +110,34 @@ export const centro = (node) => {
 
 // Ponto na borda do elemento na direção de (tx, ty), para as setas não entrarem nas formas
 export function pontoNaBorda(node, tx, ty) {
+  return pontoNaBordaDe(node, centro(node), { x: tx, y: ty });
+}
+
+// Contorno visível de cada forma: as bolinhas do diagrama de estados são menores que a caixa delas
+// (início: círculo de raio 14; fim: anel de raio 16 + traço), então a seta tem que parar nelas.
+const RAIO_VISIVEL = { estadoInicial: 14, estadoFinal: 17.5 };
+
+// Onde o raio que sai de `origem` (dentro do nó) em direção a `alvo` cruza o contorno do nó.
+// Com a origem no centro é a ponta normal de uma seta; com a origem deslocada, a ponta de uma seta
+// paralela (A→B e B→A lado a lado) continua encostada na forma.
+export function pontoNaBordaDe(node, origem, alvo) {
   const { w, h } = tamanho(node);
   const c = centro(node);
-  const dx = tx - c.x, dy = ty - c.y;
-  if (dx === 0 && dy === 0) return c;
+  const dx = alvo.x - origem.x, dy = alvo.y - origem.y;
+  if (dx === 0 && dy === 0) return origem;
   if (ELIPTICOS.includes(node.tipo)) {
-    const t = 1 / Math.sqrt((dx / (w / 2)) ** 2 + (dy / (h / 2)) ** 2);
-    return { x: c.x + dx * t, y: c.y + dy * t };
+    const rx = RAIO_VISIVEL[node.tipo] ?? w / 2;
+    const ry = RAIO_VISIVEL[node.tipo] ?? h / 2;
+    // |(origem + t·d − c) / r|² = 1, maior raiz (saindo de dentro)
+    const ox = (origem.x - c.x) / rx, oy = (origem.y - c.y) / ry;
+    const ux = dx / rx, uy = dy / ry;
+    const a = ux * ux + uy * uy, b = 2 * (ox * ux + oy * uy), k = ox * ox + oy * oy - 1;
+    const t = (-b + Math.sqrt(Math.max(0, b * b - 4 * a * k))) / (2 * a);
+    return { x: origem.x + dx * t, y: origem.y + dy * t };
   }
-  const t = Math.min(w / 2 / Math.abs(dx || 1e-9), h / 2 / Math.abs(dy || 1e-9));
-  return { x: c.x + dx * t, y: c.y + dy * t };
+  // retângulo: o primeiro lado que o raio atinge
+  const tx = dx > 0 ? (c.x + w / 2 - origem.x) / dx : dx < 0 ? (c.x - w / 2 - origem.x) / dx : Infinity;
+  const ty = dy > 0 ? (c.y + h / 2 - origem.y) / dy : dy < 0 ? (c.y - h / 2 - origem.y) / dy : Infinity;
+  const t = Math.max(0, Math.min(tx, ty));
+  return { x: origem.x + dx * t, y: origem.y + dy * t };
 }

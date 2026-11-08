@@ -1,6 +1,7 @@
 // Compara o diagrama do jogador com o gabarito do pedido.
 import { normalizarMult } from './multiplicidade.js';
 import { foraDoLugar } from './grid.js';
+import { avaliarMembros } from './membros.js';
 // O sistema (fronteira) conta como elemento: tipo e nome (o e-mail diz como ele se chama)
 export const TIPOS_AVALIADOS = ['ator', 'casoDeUso', 'classe', 'sistema', 'estadoInicial', 'estado', 'estadoFinal'];
 
@@ -86,13 +87,21 @@ export function avaliar(jogador, esperado) {
   const multiplicidades = multTotal ? multOk / multTotal : null;
 
   const fronteira = avaliarFronteira(jogador, esperado);
+  const membros = avaliarMembros(jogador, esperado);
+  const nota = calcularNota({ estrutura, rotulos, relacoes, multiplicidades, fronteira, membros });
+  return { nota, estrutura, rotulos, relacoes, multiplicidades, fronteira, membros };
+}
 
-  // Sem extras: 40/30/30. Com multiplicidade e/ou fronteira: 35/25/25 + 15 (média dos extras cobrados)
-  const extras = [multiplicidades, fronteira].filter((v) => v != null);
-  const nota = !extras.length
-    ? Math.round(100 * (0.4 * estrutura + 0.3 * rotulos + 0.3 * relacoes))
-    : Math.round(100 * (0.35 * estrutura + 0.25 * rotulos + 0.25 * relacoes + (0.15 * extras.reduce((a, b) => a + b, 0)) / extras.length));
-  return { nota, estrutura, rotulos, relacoes, multiplicidades, fronteira };
+// Pesos: base 40/30/30 (estrutura/nomes/relações). Cada extra cobrado pelo pedido entra com o seu
+// peso e a base encolhe na mesma proporção: multiplicidade ou sistema 15% (35/25/25 + 15 na prática),
+// atributos e métodos 30% (28/21/21 + 30).
+export const PESO_EXTRA = { multiplicidades: 0.15, fronteira: 0.15, membros: 0.3 };
+export function calcularNota(partes) {
+  const extras = Object.keys(PESO_EXTRA).filter((k) => partes[k] != null);
+  const pesoExtras = extras.reduce((t, k) => t + PESO_EXTRA[k], 0);
+  const base = 0.4 * partes.estrutura + 0.3 * partes.rotulos + 0.3 * partes.relacoes;
+  const extra = extras.reduce((t, k) => t + PESO_EXTRA[k] * partes[k], 0);
+  return Math.round(100 * ((1 - pesoExtras) * base + extra));
 }
 
 export function pagamento(recompensa, nota, atrasado) {

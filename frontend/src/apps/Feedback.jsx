@@ -94,6 +94,31 @@ function Problema({ p }) {
           <p className="fb-sugestao">O ator é quem usa o sistema de fora: deixe-o do lado de fora do retângulo, ligado aos casos de uso por associação.</p>
         </>
       );
+    case 'membroFaltando':
+      return (
+        <p>
+          Na classe <Nome>{p.classe}</Nome> faltou o {p.tipoMembro === 'metodo' ? 'método' : 'atributo'} <Errado>{p.membro.texto}</Errado>.
+        </p>
+      );
+    case 'membroNoLugarErrado':
+      return (
+        <>
+          <p>
+            O {p.tipoMembro === 'metodo' ? 'método' : 'atributo'} <b>{p.membro.texto}</b> é da classe <Nome>{p.classe}</Nome>, mas você colocou em <Errado>{p.outra}</Errado>.
+          </p>
+          <p className="fb-sugestao">Cada classe guarda os próprios dados e sabe fazer as próprias operações: releia de quem o e-mail diz que é.</p>
+        </>
+      );
+    case 'membroTipo':
+      return (
+        <>
+          <p>
+            Em <Nome>{p.classe}</Nome>, o {p.tipoMembro === 'metodo' ? 'retorno de' : 'tipo de'} <b>{p.membro.nome}</b> deveria ser <b>{p.membro.tipo}</b>, mas você usou{' '}
+            {p.usado.tipo ? <Errado>{p.usado.tipo}</Errado> : <Errado>nenhum</Errado>}.
+          </p>
+          <p className="fb-sugestao">O tipo vem depois dos dois-pontos: "- saldo: float", "+ consultarSaldo(): float".</p>
+        </>
+      );
     case 'sentidoInvertido':
       return (
         <>
@@ -162,6 +187,7 @@ function Problema({ p }) {
 const SECOES = [
   ['nome', 'Nomes'],
   ['elemento', 'Elementos'],
+  ['membro', 'Atributos e métodos'],
   ['relacao', 'Relações'],
 ];
 

@@ -372,6 +372,8 @@ function officeItems() {
     c.sprite(['.kkk', '.k.k', 'kk.k', 'kkkk'], 190, 136);
   }, { elevavel: true });
 
+  // Pilha de livros (item da loja): a imagem inteira só aparece na loja/inventário; na mesa, cada
+  // livro é um objeto próprio, deitado, e eles vêm empilhados (sobrePadrao = o livro de baixo)
   objeto('livros', 'mesa', (c) => {
     c.box(6, 168, 32, 7, 'sky');
     c.vline(35, 169, 173, 'mist');
@@ -383,7 +385,61 @@ function officeItems() {
     c.box(12, 147, 20, 7, 'butter');
     c.vline(29, 148, 152, 'mist');
     c.hline(14, 22, 150, 'peach');
-  }, { elevavel: true });
+  }, { soLoja: true, elevavel: true });
+  const pilha = [
+    ['pilha-azul', 'Livro azul (pilha)', 6, 168, 32, 'sky', 35, null],
+    ['pilha-rosa', 'Livro rosa (pilha)', 9, 161, 28, 'blush', 34, 'pilha-azul'],
+    ['pilha-menta', 'Livro menta (pilha)', 7, 154, 26, 'mint', 30, 'pilha-rosa'],
+    ['pilha-amarelo', 'Livro amarelo (pilha)', 12, 147, 20, 'butter', 29, 'pilha-menta'],
+  ];
+  for (const [id, rotulo, bx, by, bw, col, lomb, sobre] of pilha)
+    objeto(id, 'mesa', (c) => {
+      c.box(bx, by, bw, 7, col);
+      c.vline(lomb, by + 1, by + 5, 'mist');
+      c.hline(bx + 3, bx + Math.min(10, bw - 6), by + 3, 'cream');
+    }, { elevavel: true, empilhavel: true, rotulo, grupo: 'obj-livros', ...(sobre ? { sobrePadrao: sobre } : {}) });
+
+  // Pote de canetas (item da loja): o pote e 10 canetas, cada uma um objeto próprio que fica DENTRO
+  // do pote (porta: o pote guarda coisas em pé, com a ponta escondida). A imagem do conjunto
+  // ('canetas', soLoja) aparece na loja, no inventário e enquanto o pote cheio está na mão.
+  const POTE = { x: 262, y: 144, w: 15, h: 14 };
+  const CANETAS = [
+    ['branco', 'Caneta branca'], ['preto', 'Caneta preta'], ['azul', 'Caneta azul'], ['roxo', 'Caneta roxa'],
+    ['vermelho', 'Caneta vermelha'], ['rosa', 'Caneta rosa'], ['laranja', 'Caneta laranja'],
+    ['amarelo', 'Caneta amarela'], ['verde', 'Caneta verde'], ['ciano', 'Caneta ciano'],
+  ];
+  const ANGULOS = [-24, -17, -11, -6, -2, 3, 8, 13, 18, 24]; // leque inicial, dentro de ±30°
+  const FUNDO_POTE = 11; // a ponta da caneta fica 11px abaixo da boca do pote
+  const desenharPote = (c) => {
+    c.box(POTE.x, POTE.y, POTE.w, POTE.h, 'grape');
+    c.rect(POTE.x + 1, POTE.y + 1, POTE.w - 2, 2, 'orchid');
+    c.vline(POTE.x + 3, POTE.y + 4, POTE.y + POTE.h - 3, 'violet');
+  };
+  // caneta sem contorno: no pote elas se sobrepõem, e o contorno escondia as cores
+  const PEN = { w: 3, h: 22 };
+  const desenharCaneta = (c, x, y, cor) => {
+    c.rect(x, y, PEN.w, PEN.h, `tinta-${cor}`);
+    c.rect(x, y, PEN.w, 3, cor === 'preto' ? 'plum' : 'ink'); // tampa
+    c.vline(x + PEN.w - 1, y + 3, y + PEN.h - 1, cor === 'preto' ? 'night' : 'plum'); // sombra de um lado
+    c.px(x, y + 5, cor === 'branco' ? 'lilac' : 'cream'); // brilho
+  };
+  const xCaneta = (i) => POTE.x + 1 + Math.round((i * (POTE.w - PEN.w - 2)) / (CANETAS.length - 1));
+  objeto('canetas', 'mesa', (c) => {
+    CANETAS.forEach(([cor], i) => desenharCaneta(c, xCaneta(i), POTE.y + FUNDO_POTE - PEN.h, cor));
+    desenharPote(c);
+  }, { soLoja: true, elevavel: true });
+  objeto('pote-canetas', 'mesa', desenharPote, { elevavel: true, porta: true, fundo: FUNDO_POTE, rotulo: 'Pote de canetas', grupo: 'obj-canetas' });
+  CANETAS.forEach(([cor, rotulo], i) =>
+    objeto(`caneta-${cor}`, 'mesa', (c) => desenharCaneta(c, xCaneta(i), POTE.y + FUNDO_POTE - PEN.h, cor), {
+      elevavel: true,
+      caneta: true,
+      rotulo,
+      tinta: cor,
+      grupo: 'obj-canetas',
+      sobrePadrao: 'pote-canetas',
+      anguloPadrao: ANGULOS[i],
+    }),
+  );
 
   objeto('fone', 'mesa', (c) => {
     c.hline(232, 248, 156, 'ink');
@@ -586,6 +642,25 @@ function wallpaperLavender() {
 
 // ------------------------------------------------------------------ ícones
 const ICONS = {
+  // guia: livro aberto (app de ajuda da área de trabalho)
+  guia: [
+    '................',
+    '................',
+    '.kkkkkk..kkkkkk.',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmsssmmkkmsssmmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kvvvvvvkkvvvvvvk',
+    '.kkkkkkkkkkkkkk.',
+    '.......kk.......',
+    '................',
+  ],
   bau: [
     '................',
     '..kkkkkkkkkkkk..',

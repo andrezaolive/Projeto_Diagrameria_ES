@@ -79,3 +79,18 @@ describe('fronteira do sistema (casos de uso)', () => {
     expect(sobrepoe({ tipo: 'ator', x: 200, y: 0 }, s)).toBe(false); // encostado na borda não conta
   });
 });
+
+describe('pontas das setas', () => {
+  it('param no contorno visível: bolinha do início (raio 14) e retângulo do estado', async () => {
+    const { pontoNaBorda, pontoNaBordaDe, centro } = await import('./grid.js');
+    const inicio = { tipo: 'estadoInicial', x: 0, y: 0 }; // caixa 40x40, círculo de raio 14
+    const p = pontoNaBorda(inicio, 1000, 20);
+    expect(p.x).toBeCloseTo(20 + 14);
+    expect(p.y).toBeCloseTo(20);
+    // raio deslocado (setas paralelas) ainda termina na borda do retângulo
+    const estado = { tipo: 'estado', rotulo: 'Travada', x: 0, y: 0 }; // 160x60
+    const c = centro(estado);
+    const q = pontoNaBordaDe(estado, { x: c.x, y: c.y + 9 }, { x: 1000, y: c.y + 9 });
+    expect(q).toEqual({ x: 160, y: c.y + 9 });
+  });
+});

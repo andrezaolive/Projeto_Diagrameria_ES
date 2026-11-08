@@ -25,7 +25,7 @@ function Barra({ rotulo, valor }) {
 
 export default function Resultado({ resultado, onOk }) {
   const reacao = reacaoMascote(resultado.nota);
-  const { nota, estrutura, rotulos, relacoes, multiplicidades, fronteira, valor, atrasado, pedido, diagrama, esperado } = resultado;
+  const { nota, estrutura, rotulos, relacoes, multiplicidades, fronteira, membros, valor, atrasado, pedido, diagrama, esperado } = resultado;
   const [vendoFeedback, setVendoFeedback] = useState(false);
   // entrega vazia: não há o que comentar, então não há botão de feedback
   const temFeedback = !diagramaVazio(diagrama);
@@ -48,6 +48,7 @@ export default function Resultado({ resultado, onOk }) {
           <Barra rotulo="Relações" valor={relacoes} />
           {multiplicidades != null && <Barra rotulo="Multiplicidade" valor={multiplicidades} />}
           {fronteira != null && <Barra rotulo="Sistema" valor={fronteira} />}
+          {membros != null && <Barra rotulo="Atributos/métodos" valor={membros} />}
           {atrasado && <span className="atraso">Entregue fora do prazo (−50%)</span>}
           <span className="pago">+ R$ {valor}</span>
           <div className="acoes-resultado">

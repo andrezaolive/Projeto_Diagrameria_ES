@@ -146,3 +146,20 @@
 .secao-paleta svg { width: 22px; height: 22px; }
 .secao-paleta:hover { background: var(--c-butter); }
 .secao-paleta.ativa { background: var(--c-lavender); box-shadow: inset 3px 3px 0 var(--c-grape); }
+
+/* escrita direto na caixa da classe (por cima do texto desenhado) */
+.escrita-classe {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  margin: 0;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-cream);
+  border: 2px solid var(--c-sky);
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+}
+.escrita-classe.nome { text-align: center; font-weight: bold; background: var(--c-lilac); }

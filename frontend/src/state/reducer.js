@@ -1,7 +1,8 @@
 import { MODELOS, TOTAL_PEDACOS, URGENTE, criarPedido, criarPedidoUrgente, intervaloChegada, multaPedido, pedidosDoDia, precoPedaco } from '../data/pedidos.js';
 import { ALEATORIA, faixasDoJogador, temTocaFitas } from '../data/musicas.js';
 import { avatarPadrao } from '../lib/avatar.js';
-import { soltarDependentes } from '../lib/decoracao.js';
+import { niveisNoInfinito, nivelDoModelo } from '../lib/dificuldade.js';
+import { conteudoDe, ehPorta, grupoDoObjeto, membrosDoGrupo, moverComConteudo, soltarDependentes } from '../lib/decoracao.js';
 
 export const DIAS_CAMPANHA = 23; // dias úteis de um mês de 31 dias começando na segunda
 
@@ -36,6 +37,7 @@ export const estadoInicial = () => ({
   // posicoes[objeto]: ver lib/decoracao.js (sem entrada = posição padrão)
   // guardados: objetos-base guardados no inventário (os da loja usam loja.moveis)
   escritorio: { posicoes: {}, guardados: [] },
+  computador: { icones: {} }, // posição dos ícones da área de trabalho ({ id: { col, lin } }, ver lib/areaTrabalho.js)
   sessao: null,
   diagramas: {},
 });
@@ -50,6 +52,7 @@ export function migrar(salvo) {
     ...salvo,
     loja: { ...loja, possui: renomear(loja.possui), moveis: renomear(loja.moveis) },
     escritorio: { ...base.escritorio, ...salvo.escritorio },
+    computador: { ...base.computador, ...salvo.computador, icones: { ...salvo.computador?.icones } },
     perfil: { ...base.perfil, ...salvo.perfil, avatar: { ...base.perfil.avatar, ...salvo.perfil?.avatar } },
     estatisticas: {
       ...base.estatisticas,
@@ -67,9 +70,11 @@ export function migrar(salvo) {
 
 const vazio = () => ({ nodes: [], edges: [] });
 
+// Modo infinito: os primeiros pedidos são fáceis, depois entram os médios e, mais adiante, os difíceis
 function novoPedidoAleatorio(sessao) {
   const ultimo = sessao.pedidos.at(-1)?.modelo;
-  const opcoes = MODELOS.filter((m) => m.id !== ultimo);
+  const niveis = niveisNoInfinito(sessao.seq);
+  const opcoes = MODELOS.filter((m) => m.id !== ultimo && niveis.includes(nivelDoModelo(m).id));
   const m = opcoes[Math.floor(Math.random() * opcoes.length)];
   return criarPedido(m.id, sessao.seq, 1);
 }
@@ -160,6 +165,18 @@ export function reducer(state, action) {
 
     // DEBUG: troca os pedidos ainda não aceitos pelos próximos modelos da lista, em sequência
     // (dá a volta). Serve para passar por todos os modelos sem esperar. Não cobra multa nem conta estatística.
+    // DEBUG ("Ver todos os pedidos", só em npm run dev): troca o pedido `alvo` (o primeiro da caixa)
+    // por um novo do `modelo` escolhido, na mesma posição. Sem alvo, o pedido entra na caixa.
+    case 'DEBUG_TROCAR_PEDIDO': {
+      const s = state.sessao;
+      if (!s || !MODELOS.some((m) => m.id === action.modelo)) return state;
+      const novo = criarPedido(action.modelo, s.seq, s.dia ?? 1);
+      const existe = s.pedidos.some((p) => p.id === action.alvo);
+      const pedidos = existe ? s.pedidos.map((p) => (p.id === action.alvo ? novo : p)) : [...s.pedidos, novo];
+      const sessao = { ...s, pedidos, seq: s.seq + 1, ativo: s.ativo === action.alvo ? null : s.ativo };
+      return { ...state, sessao, diagramas: semDiagrama(state.diagramas, action.alvo) };
+    }
+
     case 'DEBUG_REFRESH_PEDIDOS': {
       const s = state.sessao;
       if (!s) return state;
@@ -284,6 +301,9 @@ export function reducer(state, action) {
       if (!possui.includes(action.id)) return state;
       const tirando = moveis.includes(action.id);
       const novo = tirando ? moveis.filter((m) => m !== action.id) : [...moveis, action.id];
+      // item de vários objetos (pilha de livros): tira/põe todos, e volta empilhado
+      const membros = membrosDoGrupo(action.id);
+      if (membros.length) return { ...state, escritorio: reporGrupo(state.escritorio, membros, tirando), loja: { ...state.loja, moveis: novo } };
       // ao tirar um objeto do escritório, o que estava em cima dele cai
       const escritorio = tirando ? soltarDoEscritorio(state.escritorio, action.id.replace(/^obj-/, '')) : state.escritorio;
       return { ...state, escritorio, loja: { ...state.loja, moveis: novo } };
@@ -305,20 +325,56 @@ export function reducer(state, action) {
     }
 
     // posicao no formato de lib/decoracao.js
+    // (mover o pote leva junto as canetas que estão dentro dele)
     case 'MOVER_OBJETO':
       return {
         ...state,
-        escritorio: { ...state.escritorio, posicoes: { ...state.escritorio.posicoes, [action.objeto]: action.posicao } },
+        escritorio: { ...state.escritorio, posicoes: moverComConteudo(state.escritorio.posicoes, action.objeto, action.posicao) },
       };
 
     // Tirou um objeto do lugar (está na mão): quem estava em cima dele cai
+    // Grupo inteiro (pilha de livros, pote com canetas) tirado do baú e solto onde o jogador quis:
+    // volta a ficar em uso, cada membro na posição calculada (posicoesDoGrupo em lib/decoracao.js)
+    case 'COLOCAR_GRUPO': {
+      const { grupo, posicoes } = action;
+      if (!state.loja.possui.includes(grupo)) return state;
+      const membros = membrosDoGrupo(grupo);
+      const e = reporGrupo(state.escritorio, membros, false);
+      const moveis = state.loja.moveis.includes(grupo) ? state.loja.moveis : [...state.loja.moveis, grupo];
+      return { ...state, escritorio: { ...e, posicoes: { ...e.posicoes, ...posicoes } }, loja: { ...state.loja, moveis } };
+    }
+
+    // Rabisco da folha de rascunho (papel da mesa): imagem PNG em data URL, ou null
+    case 'SALVAR_RABISCO':
+      return { ...state, escritorio: { ...state.escritorio, rabisco: action.dados ?? null } };
+
+    // Ícone da área de trabalho do computador arrastado para uma célula do grid (já resolvida em lib/areaTrabalho.js)
+    case 'MOVER_ICONE':
+      return { ...state, computador: { ...state.computador, icones: { ...state.computador?.icones, [action.id]: action.posicao } } };
+
     case 'PEGAR_OBJETO':
       return { ...state, escritorio: { ...state.escritorio, posicoes: soltarDependentes(state.escritorio.posicoes, action.objeto) } };
 
     // Guarda no inventário: some do escritório. Itens da loja saem de "em uso"; os do jogo vão para `guardados`.
     case 'GUARDAR_OBJETO': {
       const { objeto } = action;
-      const escritorio = soltarDoEscritorio(state.escritorio, objeto);
+      // pote: as canetas que estão dentro dele vão junto para o baú (e voltam com ele); a posição do pote
+      // fica guardada, para elas reaparecerem no mesmo lugar dentro dele
+      const grupo = grupoDoObjeto(objeto);
+      const porta = ehPorta(objeto);
+      const dentro = porta && grupo ? conteudoDe(objeto, state.escritorio.posicoes, membrosDoGrupo(grupo).filter((m) => !state.escritorio.guardados.includes(m))) : [];
+      const escritorio = porta
+        ? { ...state.escritorio, guardadosDentro: { ...state.escritorio.guardadosDentro, [objeto]: dentro } }
+        : soltarDoEscritorio(state.escritorio, objeto);
+      // livro da pilha / pote e canetas: guardam sozinhos; com o grupo todo no baú, viram de novo o item da loja
+      if (grupo) {
+        const membros = membrosDoGrupo(grupo);
+        const novos = [objeto, ...dentro].filter((n) => !escritorio.guardados.includes(n));
+        const guardados = [...escritorio.guardados, ...novos];
+        if (membros.every((m) => guardados.includes(m)))
+          return { ...state, escritorio: reporGrupo({ ...escritorio, guardados }, membros, true), loja: { ...state.loja, moveis: state.loja.moveis.filter((m) => m !== grupo) } };
+        return { ...state, escritorio: { ...escritorio, guardados } };
+      }
       const idLoja = `obj-${objeto}`;
       if (state.loja.possui.includes(idLoja))
         return { ...state, escritorio, loja: { ...state.loja, moveis: state.loja.moveis.filter((m) => m !== idLoja) } };
@@ -332,9 +388,18 @@ export function reducer(state, action) {
       const idLoja = `obj-${objeto}`;
       if (state.loja.possui.includes(idLoja)) {
         const moveis = state.loja.moveis.includes(idLoja) ? state.loja.moveis : [...state.loja.moveis, idLoja];
-        return { ...state, loja: { ...state.loja, moveis } };
+        // a pilha inteira sai do baú e volta para a mesa empilhada (posições padrão)
+        const membros = membrosDoGrupo(idLoja);
+        const escritorio = membros.length ? reporGrupo(state.escritorio, membros, false) : state.escritorio;
+        return { ...state, escritorio, loja: { ...state.loja, moveis } };
       }
-      return { ...state, escritorio: { ...state.escritorio, guardados: state.escritorio.guardados.filter((g) => g !== objeto) } };
+      // pote retirado sozinho: as canetas que foram guardadas dentro dele saem junto (continuam dentro)
+      const { [objeto]: junto = [], ...outrosDentro } = state.escritorio.guardadosDentro ?? {};
+      const saem = new Set([objeto, ...junto]);
+      return {
+        ...state,
+        escritorio: { ...state.escritorio, guardados: state.escritorio.guardados.filter((g) => !saem.has(g)), guardadosDentro: outrosDentro },
+      };
     }
 
     case 'ARRUMAR_ESCRITORIO':
@@ -371,6 +436,16 @@ export function reducer(state, action) {
 function soltarDoEscritorio(escritorio, objeto) {
   const { [objeto]: _, ...posicoes } = soltarDependentes(escritorio.posicoes, objeto);
   return { ...escritorio, posicoes };
+}
+
+// Objetos de um grupo (pilha de livros) saem todos do escritório (`guardar`) ou voltam todos para a
+// posição padrão, empilhados. Em ambos os casos esquecem as posições e saem da lista de guardados.
+function reporGrupo(escritorio, membros, guardar) {
+  let e = escritorio;
+  if (guardar) for (const m of membros) e = soltarDoEscritorio(e, m);
+  const posicoes = Object.fromEntries(Object.entries(e.posicoes).filter(([n]) => !membros.includes(n)));
+  const guardadosDentro = Object.fromEntries(Object.entries(e.guardadosDentro ?? {}).filter(([n]) => !membros.includes(n)));
+  return { ...e, posicoes, guardados: e.guardados.filter((g) => !membros.includes(g)), guardadosDentro };
 }
 
 function semDiagrama(diagramas, pedidoId) {

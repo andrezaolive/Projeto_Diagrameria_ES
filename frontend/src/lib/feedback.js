@@ -4,6 +4,7 @@
 import { TIPOS_AVALIADOS, chaveRelacao, normalizar } from './avaliacao.js';
 import { multIgual, normalizarMult } from './multiplicidade.js';
 import { foraDoLugar } from './grid.js';
+import { compararMembros, temMembros } from './membros.js';
 
 export const NOME_TIPO = {
   ator: 'ator',
@@ -97,6 +98,20 @@ export const CONCEITOS = {
     titulo: 'Transição',
     texto: 'Seta de um estado para o próximo, com o EVENTO que provoca a mudança escrito sobre ela. Selecione a seta no editor para escrever o evento.',
     exemplo: '"Tocando" —pause→ "Pausado".',
+  },
+  atributo: {
+    titulo: 'Atributo',
+    texto:
+      'Um dado que cada objeto da classe guarda. Fica na parte do meio da caixa, um por linha: visibilidade, nome e tipo. ' +
+      '"-" é privado (só a própria classe mexe) e "+" é público. Se o tipo é outra classe, as duas também se ligam por associação.',
+    exemplo: '- saldo: float · - titular: Cliente (e ContaBancaria — Cliente).',
+  },
+  metodo: {
+    titulo: 'Método (operação)',
+    texto:
+      'Algo que o objeto sabe fazer. Fica na parte de baixo da caixa: visibilidade, nome, parâmetros entre parênteses e o tipo de retorno. ' +
+      'Se um parâmetro é de outra classe e ela só é usada ali, a ligação é uma dependência (seta tracejada).',
+    exemplo: '+ sacar(valor: float): bool · + gerar(carro: Carro): String (e Relatório ⇢ Carro).',
   },
   multiplicidade: {
     titulo: 'Multiplicidade (1, 0..1, 1..*, 0..*)',
@@ -211,6 +226,22 @@ export function gerarFeedback(jogador, esperado) {
       problemas.push({ categoria: 'elemento', tipo: 'tipoErrado', rotulo: ne.rotulo, usado: nj.tipo, certo: ne.tipo, conceitos: [nj.tipo, ne.tipo] });
   }
   for (const nj of livres) problemas.push({ categoria: 'elemento', tipo: 'sobrando', jogador: nj, conceitos: [nj.tipo] });
+
+  // atributos e métodos das classes que o pedido detalha (na classe correspondente do jogador)
+  for (const ce of esperado.nodes.filter((n) => n.tipo === 'classe' && temMembros(n))) {
+    const cj = casados.get(ce);
+    if (!cj) continue; // a classe inteira já aparece como faltando
+    for (const r of compararMembros(cj, ce)) {
+      if (r.pontos === 1) continue;
+      if (!r.achou) {
+        // pode estar na classe errada
+        const outra = jogador.nodes.find((n) => n !== cj && n.tipo === 'classe' && compararMembros(n, { [r.campo]: [r.esperado.texto] })[0]?.achou);
+        problemas.push({ categoria: 'membro', tipo: outra ? 'membroNoLugarErrado' : 'membroFaltando', classe: ce.rotulo, outra: outra?.rotulo, membro: r.esperado, tipoMembro: r.tipoMembro, conceitos: [r.tipoMembro] });
+      } else {
+        problemas.push({ categoria: 'membro', tipo: 'membroTipo', classe: ce.rotulo, membro: r.esperado, usado: r.achou, tipoMembro: r.tipoMembro, conceitos: [r.tipoMembro] });
+      }
+    }
+  }
 
   // fronteira do sistema (só se o pedido tem sistema e o jogador desenhou um; sem sistema, já é "faltando")
   if (esperado.nodes.some((n) => n.tipo === 'sistema'))

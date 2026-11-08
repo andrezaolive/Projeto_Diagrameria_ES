@@ -1,5 +1,6 @@
 // Desenho SVG dos elementos UML, no estilo pixel (traço grosso, sem suavização nas retas).
-import { centro, pontoNaBorda, retangulo, tamanho } from '../lib/grid.js';
+import { centro, pontoNaBorda, pontoNaBordaDe, retangulo, tamanho } from '../lib/grid.js';
+import { LINHA_MEMBRO, TOPO_CLASSE, medidasClasse } from '../lib/membros.js';
 
 export const ELEMENTOS = [
   { tipo: 'ator', nome: 'Ator', rotulo: 'Ator' },
@@ -91,9 +92,18 @@ export function Defs({ prefixo = 'm' }) {
   );
 }
 
-function Texto({ x, y, children, tamanho = 22, peso }) {
+function Texto({ x, y, children, tamanho = 22, peso, cor = INK }) {
   return (
-    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontFamily="VT323, monospace" fontSize={tamanho} fontWeight={peso} fill={INK} stroke="none" style={{ pointerEvents: 'none' }}>
+    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontFamily="VT323, monospace" fontSize={tamanho} fontWeight={peso} fill={cor} stroke="none" style={{ pointerEvents: 'none' }}>
+      {children}
+    </text>
+  );
+}
+
+// Linha de membro da classe, alinhada à esquerda
+function TextoEsq({ x, y, children }) {
+  return (
+    <text x={x} y={y} textAnchor="start" dominantBaseline="middle" fontFamily="VT323, monospace" fontSize={18} fill={INK} stroke="none" style={{ pointerEvents: 'none', whiteSpace: 'pre' }}>
       {children}
     </text>
   );
@@ -126,18 +136,26 @@ export function Forma({ node, selecionado, destaque, alerta }) {
             <Texto x={w / 2} y={h / 2}>{node.rotulo}</Texto>
           </>
         );
-      case 'classe':
+      case 'classe': {
+        // nome no topo; atributos; métodos (vazios mostram um texto-guia apagado)
+        const { divisoria } = medidasClasse(node);
+        const atr = node.atributos ?? [];
+        const met = node.metodos ?? [];
+        const linha = (txt, i, y0, key) => (
+          <TextoEsq key={key} x={10} y={y0 + 4 + LINHA_MEMBRO * i + LINHA_MEMBRO / 2}>{txt}</TextoEsq>
+        );
         return (
           <g shapeRendering="crispEdges">
             <rect x={0} y={0} width={w} height={h} fill="var(--c-cream)" stroke={contorno} strokeWidth={T} />
-            <rect x={1.5} y={1.5} width={w - 3} height={30} fill="var(--c-lilac)" />
-            <line x1={0} y1={32} x2={w} y2={32} stroke={contorno} strokeWidth={T} />
-            <line x1={0} y1={66} x2={w} y2={66} stroke={contorno} strokeWidth={T} />
+            <rect x={1.5} y={1.5} width={w - 3} height={TOPO_CLASSE - 2} fill="var(--c-lilac)" />
+            <line x1={0} y1={TOPO_CLASSE} x2={w} y2={TOPO_CLASSE} stroke={contorno} strokeWidth={T} />
+            <line x1={0} y1={divisoria} x2={w} y2={divisoria} stroke={contorno} strokeWidth={T} />
             <Texto x={w / 2} y={17} peso="bold">{node.rotulo}</Texto>
-            <Texto x={w / 2} y={49} tamanho={18}>- atributos</Texto>
-            <Texto x={w / 2} y={83} tamanho={18}>+ métodos()</Texto>
+            {atr.length ? atr.map((t, i) => linha(t, i, TOPO_CLASSE, `a${i}`)) : <Texto x={w / 2} y={TOPO_CLASSE + 16} tamanho={18} cor="var(--c-lavender)">- atributos</Texto>}
+            {met.length ? met.map((t, i) => linha(t, i, divisoria, `m${i}`)) : <Texto x={w / 2} y={divisoria + 16} tamanho={18} cor="var(--c-lavender)">+ métodos()</Texto>}
           </g>
         );
+      }
       case 'nota':
         return (
           <g shapeRendering="crispEdges">
@@ -193,21 +211,29 @@ export function Forma({ node, selecionado, destaque, alerta }) {
   );
 }
 
-export function Aresta({ edge, nodes, selecionada, prefixo = 'm' }) {
+// `edges`: as outras relações do diagrama (para saber se há uma transição de volta, B→A)
+export function Aresta({ edge, nodes, edges = [], selecionada, prefixo = 'm' }) {
   const a = nodes.find((n) => n.id === edge.de);
   const b = nodes.find((n) => n.id === edge.para);
   if (!a || !b) return null;
   const ca = centro(a), cb = centro(b);
   let p = pontoNaBorda(a, cb.x, cb.y);
   let q = pontoNaBorda(b, ca.x, ca.y);
-  // transição: desloca a seta para a direita do seu sentido, para que A→B e B→A fiquem lado a lado
+  // A→B e B→A (ex.: Travada ⇄ Destravada): as duas setas andam lado a lado, cada uma deslocada para a
+  // direita do seu sentido, com as pontas recalculadas para continuarem encostadas nas formas
+  const len = Math.hypot(cb.x - ca.x, cb.y - ca.y) || 1;
   let normal = { x: 0, y: 0 };
-  if (edge.tipo === 'transicao') {
-    const len = Math.hypot(q.x - p.x, q.y - p.y) || 1;
-    normal = { x: -(q.y - p.y) / len, y: (q.x - p.x) / len };
+  const temVolta = edge.tipo === 'transicao' && edges.some((o) => o.id !== edge.id && o.de === edge.para && o.para === edge.de);
+  if (temVolta) {
+    normal = { x: -(cb.y - ca.y) / len, y: (cb.x - ca.x) / len };
     const d = 9;
-    p = { x: p.x + normal.x * d, y: p.y + normal.y * d };
-    q = { x: q.x + normal.x * d, y: q.y + normal.y * d };
+    const oa = { x: ca.x + normal.x * d, y: ca.y + normal.y * d };
+    const ob = { x: cb.x + normal.x * d, y: cb.y + normal.y * d };
+    p = pontoNaBordaDe(a, oa, ob);
+    q = pontoNaBordaDe(b, ob, oa);
+  } else if (edge.tipo === 'transicao') {
+    // seta única: o evento fica um pouco ao lado da linha, e não em cima dela
+    normal = { x: -(cb.y - ca.y) / len, y: (cb.x - ca.x) / len };
   }
   const cor = selecionada ? 'var(--c-rose)' : INK;
   // o evento da transição fica um pouco afastado da linha, do mesmo lado do deslocamento
@@ -332,7 +358,7 @@ export function DiagramaEstatico({ diagrama, prefixo }) {
     <svg viewBox={`${minX} ${minY} ${w} ${h}`} preserveAspectRatio="xMidYMid meet">
       <Defs prefixo={prefixo} />
       {ordenados.map((n) => <Forma key={n.id} node={n} />)}
-      {edges.map((e) => <Aresta key={e.id} edge={e} nodes={nodes} prefixo={prefixo} />)}
+      {edges.map((e) => <Aresta key={e.id} edge={e} nodes={nodes} edges={edges} prefixo={prefixo} />)}
     </svg>
   );
 }

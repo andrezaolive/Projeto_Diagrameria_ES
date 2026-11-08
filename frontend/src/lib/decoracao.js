@@ -61,9 +61,16 @@ export function limitarPosicao(meta, x, y) {
 
 // ---------------------------------------------------------------- posições salvas
 // Posição padrão (desenho original) no formato salvo
+// Itens da loja que viram vários objetos (ex.: a pilha de livros → 4 livros): metadado `grupo` no gerador
+export const membrosDoGrupo = (idLoja) => Object.keys(OBJETOS).filter((n) => OBJETOS[n].grupo === idLoja);
+export const grupoDoObjeto = (nome) => OBJETOS[nome]?.grupo ?? null;
+export const ehPorta = (nome) => Boolean(OBJETOS[nome]?.porta);
+
 export function posicaoPadrao(nome) {
   const meta = OBJETOS[nome];
   if (meta.zona !== 'mesa') return { x: meta.x, y: meta.y };
+  // vem empilhado em outro objeto (livros da pilha) ou dentro dele (canetas no pote, já inclinadas)
+  if (meta.sobrePadrao) return { x: meta.x, sobre: meta.sobrePadrao, ...(meta.anguloPadrao != null ? { angulo: meta.anguloPadrao } : {}) };
   if (meta.apoio === 'estante') return { x: meta.x, sobre: 'estante' };
   return { x: meta.x, sobre: 'mesa', chao: meta.y + meta.h };
 }
@@ -106,7 +113,10 @@ export function resolverCena(nomes, posicoes = {}) {
     } else if (entradas[entrada.sobre] && !visitando.has(entrada.sobre)) {
       visitando.add(nome);
       const s = calcular(entrada.sobre, visitando);
-      r = { x: entrada.x, y: s.y - meta.h + 1, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1 };
+      // dentro de um porta-objetos (pote de canetas): a ponta afunda `fundo` px abaixo da boca
+      r = s.meta.porta
+        ? { x: entrada.x, y: s.y + s.meta.fundo - meta.h, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1, dentro: true }
+        : { x: entrada.x, y: s.y - meta.h + 1, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1 };
     } else {
       // apoio sumiu: cai na mesa, no fundo
       r = { x: entrada.x, y: BASE_MIN_NA_MESA - meta.h, raiz: 'mesa', chao: BASE_MIN_NA_MESA, nivel: 0 };
@@ -123,7 +133,10 @@ export function soltarDependentes(posicoes, nome) {
   const removido = normalizarEntrada(nome, posicoes[nome]);
   if (!removido.sobre) return posicoes;
   const novas = { ...posicoes };
-  for (const [n, e] of Object.entries(posicoes)) {
+  // inclui quem está em cima na posição padrão (ex.: livros da pilha que nunca foram mexidos)
+  for (const n of Object.keys(OBJETOS)) {
+    if (n === nome || OBJETOS[n].zona !== 'mesa' || OBJETOS[n].variante) continue;
+    const e = normalizarEntrada(n, posicoes[n]);
     if (e?.sobre !== nome) continue;
     const { chao: _, ...resto } = e;
     novas[n] = removido.sobre === 'mesa' ? { ...resto, sobre: 'mesa', chao: removido.chao } : { ...resto, sobre: removido.sobre };
@@ -155,6 +168,15 @@ export function pousar(nome, deitado, x, y, cena) {
 
   const centro = x + meta.w / 2;
   const base = y + meta.h;
+
+  // caneta solta sobre a boca do pote: entra no pote (o ângulo é sorteado por quem solta, no escritório)
+  if (meta.caneta) {
+    const pote = cena.find((o) => o.meta.porta && centro >= o.x && centro <= o.x + o.meta.w && base >= o.y - 12 && base <= o.y + o.meta.h + 4);
+    if (pote) {
+      const px = limitar(Math.round(x), pote.x - 1, pote.x + pote.meta.w - meta.w + 1);
+      return { entrada: { x: px, sobre: pote.nome }, x: px, y: pote.y + pote.meta.fundo - meta.h };
+    }
+  }
   let raiz = 'mesa';
   let chao = limitar(Math.round(base), BASE_MIN_NA_MESA, SCENE_H);
   let nx = limitar(Math.round(x), 0, SCENE_W - meta.w);
@@ -202,16 +224,26 @@ export function ordemDeDesenho(objs) {
   const peso = (o) => (o.meta.zona === 'fixo' ? -2 : o.meta.zona === 'parede' ? -1 : 0);
   const area = (o) => o.meta.w * o.meta.h;
   const fileira = (o) => o.chao ?? o.y + o.meta.h;
+  // o que está dentro do pote é desenhado antes dele (o pote cobre a ponta)
+  const camada = (o) => (o.dentro ? -1 : o.nivel ?? 0);
   return [...objs].sort(
     (a, b) =>
-      peso(a) - peso(b) ||
-      (a.meta.zona === 'parede' ? area(b) - area(a) : fileira(a) - fileira(b) || (a.nivel ?? 0) - (b.nivel ?? 0)),
+      peso(a) - peso(b) || (a.meta.zona === 'parede' ? area(b) - area(a) : fileira(a) - fileira(b) || camada(a) - camada(b)),
   );
 }
 
 // Acerta o objeto só onde há pixel visível (com 1px de folga para traços finos).
 // mascara = { w, h, alfa: Uint8Array } ou null (usa o retângulo inteiro)
 export function acertou(obj, mascara, ax, ay) {
+  // caneta inclinada no pote: desfaz a rotação (em volta da base) antes de olhar o pixel
+  const ang = obj.dentro ? obj.entrada?.angulo : 0;
+  if (ang) {
+    const cx = obj.x + obj.meta.w / 2, cy = obj.y + obj.meta.h;
+    const r = (-ang * Math.PI) / 180;
+    const dx = ax - cx, dy = ay - cy;
+    ax = cx + dx * Math.cos(r) - dy * Math.sin(r);
+    ay = cy + dx * Math.sin(r) + dy * Math.cos(r);
+  }
   const lx = Math.floor(ax - obj.x), ly = Math.floor(ay - obj.y);
   if (lx < 0 || ly < 0 || lx >= obj.meta.w || ly >= obj.meta.h) return false;
   if (!mascara) return true;
@@ -231,4 +263,40 @@ export function objetoNoPonto(objsOrdenados, mascaras, ax, ay) {
     if (o.meta.zona !== 'fixo' && acertou(o, mascaras[chave] ?? mascaras[o.nome], ax, ay)) return o;
   }
   return null;
+}
+
+// Ângulo de uma caneta posta de volta no pote: levemente bagunçado, nunca mais que 30° para cada lado
+export const ANGULO_MAX_POTE = 30;
+export const anguloAleatorio = (aleatorio = Math.random) => Math.round((aleatorio() * 2 - 1) * ANGULO_MAX_POTE);
+
+// Grupo (pilha de livros, pote com canetas) solto de uma vez: `conjunto` é a imagem do grupo inteiro
+// (sprite soLoja) e `entrada`/`x` dizem onde ela pousou. Cada membro vai para a mesma posição relativa
+// do arranjo original (mesma ordem, mesmos ângulos); o de baixo herda o apoio do conjunto.
+export function posicoesDoGrupo(conjunto, grupo, entrada, x) {
+  const dx = x - OBJETOS[conjunto].x;
+  return Object.fromEntries(
+    membrosDoGrupo(grupo).map((m) => {
+      const meta = OBJETOS[m];
+      if (!meta.sobrePadrao) return [m, { ...entrada, x: meta.x + dx }];
+      return [m, { x: meta.x + dx, sobre: meta.sobrePadrao, ...(meta.anguloPadrao != null ? { angulo: meta.anguloPadrao } : {}) }];
+    }),
+  );
+}
+
+// Objetos guardados DENTRO de um porta-objetos (canetas no pote), pela posição salva ou padrão
+export function conteudoDe(nome, posicoes, presentes) {
+  return presentes.filter((n) => n !== nome && OBJETOS[n] && normalizarEntrada(n, posicoes[n]).sobre === nome);
+}
+
+// Move um objeto; se ele guarda coisas dentro (pote), elas vão junto, na mesma posição dentro dele
+export function moverComConteudo(posicoes, nome, nova) {
+  const novas = { ...posicoes, [nome]: nova };
+  if (!OBJETOS[nome]?.porta) return novas;
+  const dx = nova.x - normalizarEntrada(nome, posicoes[nome]).x;
+  for (const n of Object.keys(OBJETOS)) {
+    if (n === nome || OBJETOS[n].zona !== 'mesa' || OBJETOS[n].variante) continue;
+    const e = normalizarEntrada(n, posicoes[n]);
+    if (e.sobre === nome) novas[n] = { ...e, x: e.x + dx };
+  }
+  return novas;
 }

@@ -253,3 +253,66 @@
 .toca-fitas .loja-grade { grid-template-columns: repeat(3, 1fr); }
 .toca-fitas .loja-item .px-btn { white-space: nowrap; }
 .disco-mini .aleatoria { font-family: var(--f-titulo); font-size: 40px; color: var(--c-lavender); }
+
+/* ---------------------------------------------------------- debug: todos os pedidos */
+.todos-pedidos { height: 100%; display: flex; flex-direction: column; }
+.todos-filtros { display: flex; gap: 8px; padding: 12px 16px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
+.todos-lista { flex: 1; min-height: 0; list-style: none; margin: 0; padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+.todos-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 8px;
+  text-align: left;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-cream);
+  border: var(--px) solid var(--c-ink);
+  cursor: pointer;
+}
+.todos-item:hover { background: var(--c-butter); }
+.todos-cabeca { display: flex; justify-content: space-between; gap: 8px; font-size: 22px; }
+.todos-cabeca code { font-size: 16px; color: var(--c-grape); }
+.todos-assunto { font-size: 18px; color: var(--c-plum); }
+.todos-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.todos-tag { padding: 1px 6px 0; font-size: 16px; background: var(--c-lilac); border: 2px solid var(--c-ink); }
+.todos-tag.principal { background: var(--c-sky); font-weight: bold; }
+
+/* dificuldade do pedido */
+.tag-nivel { padding: 2px 8px 0; font-family: var(--f-titulo); font-size: 9px; color: var(--c-ink); border: 3px solid var(--c-ink); white-space: nowrap; }
+.tag-nivel.facil { background: var(--c-mint); }
+.tag-nivel.medio { background: var(--c-butter); }
+.tag-nivel.dificil { background: var(--c-rose); color: var(--c-cream); }
+.todos-cabeca { align-items: center; }
+.todos-cabeca b { flex: 1; }
+
+/* ---------------------------------------------------------- guia dos diagramas */
+.guia { height: 100%; display: flex; flex-direction: column; }
+.guia-abas { display: flex; gap: 8px; padding: 10px 16px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
+.guia-aba {
+  display: flex; align-items: center; gap: 8px; padding: 6px 14px 4px;
+  font-family: var(--f-titulo); font-size: 12px; color: var(--c-ink);
+  background: var(--c-cream); border: var(--px) solid var(--c-ink); cursor: pointer;
+}
+.guia-aba:hover { background: var(--c-butter); }
+.guia-aba.ativa { background: var(--c-lavender); box-shadow: inset 3px 3px 0 var(--c-grape); }
+.guia-corpo { flex: 1; min-height: 0; padding: 14px 22px 22px; font-size: 22px; background: var(--c-cream); }
+.guia-resumo { margin: 0 0 6px; padding: 10px 14px 8px; background: var(--c-lilac); border-left: 8px solid var(--c-grape); }
+.guia-titulo { margin: 18px 0 8px; font-family: var(--f-titulo); font-size: 13px; color: var(--c-grape); }
+.guia-pecas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.guia-peca { display: flex; gap: 10px; padding: 8px 10px; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.guia-peca b { font-family: var(--f-titulo); font-size: 11px; }
+.guia-peca p { margin: 2px 0 0; font-size: 19px; line-height: 1.1; }
+.guia-peca .guia-uso { color: var(--c-plum); }
+.guia-icone { flex: none; width: 52px; height: 44px; display: grid; place-items: center; background: var(--c-cream); border: 3px solid var(--c-ink); }
+.guia-icone code { font-size: 14px; white-space: nowrap; }
+.guia-exemplo { display: grid; grid-template-columns: 340px 1fr; gap: 12px; align-items: stretch; }
+.guia-email { margin: 0; padding: 10px 14px; font-size: 20px; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.guia-email p { margin: 6px 0 0; line-height: 1.1; }
+.guia-de { font-weight: bold; color: var(--c-grape); }
+.guia-diagrama { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.guia-diagrama svg { width: 100%; height: 300px; background: var(--c-cream); border: 3px solid var(--c-ink); }
+.guia-diagrama figcaption { font-size: 17px; text-align: center; color: var(--c-plum); }
+.guia-passos { margin: 0; padding-left: 26px; display: grid; gap: 6px; font-size: 20px; line-height: 1.15; }
+.guia-passos .guia-frase { color: var(--c-grape); }

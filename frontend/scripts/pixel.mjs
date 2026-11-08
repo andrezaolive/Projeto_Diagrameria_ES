@@ -2,7 +2,7 @@
 import { deflateSync } from 'node:zlib';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { PALETTE } from '../src/art/palette.js';
+import { PALETTE, TINTAS } from '../src/art/palette.js';
 
 const rgba = (hex) => [
   parseInt(hex.slice(1, 3), 16),
@@ -10,7 +10,11 @@ const rgba = (hex) => [
   parseInt(hex.slice(5, 7), 16),
   255,
 ];
-const COLORS = Object.fromEntries(Object.entries(PALETTE).map(([k, v]) => [k, rgba(v)]));
+const COLORS = {
+  ...Object.fromEntries(Object.entries(PALETTE).map(([k, v]) => [k, rgba(v)])),
+  // tintas das canetas: 'tinta-azul', 'tinta-verde'... (exceção à paleta, ver palette.js)
+  ...Object.fromEntries(Object.entries(TINTAS).map(([k, v]) => [`tinta-${k}`, rgba(v)])),
+};
 
 // Letras usadas nos sprites em ASCII
 export const LEGEND = {

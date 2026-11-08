@@ -3,6 +3,8 @@ import { Botao } from '../components/ui.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { MODELOS, modeloPorId, multaPedido } from '../data/pedidos.js';
 import { formatarTempo } from '../screens/Computador.jsx';
+import TodosPedidos from './TodosPedidos.jsx';
+import { nivelDoModelo } from '../lib/dificuldade.js';
 import './apps.css';
 
 const SELO = {
@@ -47,6 +49,7 @@ export default function Email({ abrirApp }) {
   const sel = pedidos.find((p) => p.id === selId) ?? pedidos[0];
   const modelo = sel && modeloPorId(sel.modelo);
   const ocupado = Boolean(state.sessao?.ativo);
+  const [vendoTodos, setVendoTodos] = useState(false); // debug: lista de todos os pedidos
 
   return (
     <div className="email">
@@ -65,6 +68,9 @@ export default function Email({ abrirApp }) {
             </button>
             <button onClick={() => dispatch({ type: 'DEBUG_URGENTE' })} title="Debug: chega um pedido urgente agora">
               + Urgente
+            </button>
+            <button onClick={() => setVendoTodos(true)} title="Debug: escolhe qualquer pedido do jogo para o lugar do primeiro e-mail">
+              ☰ Ver todos os pedidos
             </button>
             <span>
               debug · próximo: {MODELOS[state.sessao.debugIndice ?? 0].id} ({(state.sessao.debugIndice ?? 0) + 1}/{MODELOS.length})
@@ -88,6 +94,18 @@ export default function Email({ abrirApp }) {
         {pedidos.length === 0 && <li className="vazio">Caixa vazia.</li>}
       </ul>
 
+      {import.meta.env.DEV && vendoTodos && (
+        <TodosPedidos
+          onFechar={() => setVendoTodos(false)}
+          onEscolher={(modelo) => {
+            // o primeiro da caixa (como aparece na lista) é trocado pelo escolhido
+            dispatch({ type: 'DEBUG_TROCAR_PEDIDO', alvo: pedidos[0]?.id, modelo });
+            setSelId(`${modelo}-${state.sessao.seq}`);
+            setVendoTodos(false);
+          }}
+        />
+      )}
+
       {sel && (
         <article className={`email-leitura ${sel.urgente ? 'urgente' : ''}`}>
           <header>
@@ -96,6 +114,7 @@ export default function Email({ abrirApp }) {
             <div className="linha meta">
               {sel.urgente && <span className="selo selo-urgente">URGENTE</span>}
               <span className="selo" style={{ background: SELO[sel.status].cor }}>{SELO[sel.status].txt}</span>
+              <span className={`tag-nivel ${nivelDoModelo(modelo).id}`}>{nivelDoModelo(modelo).nome}</span>
               <span>Pagamento: R$ {sel.recompensa}</span>
               <span>Prazo: {formatarTempo(sel.tempo)}</span>
               {sel.nota != null && <span>Nota: {sel.nota}%</span>}

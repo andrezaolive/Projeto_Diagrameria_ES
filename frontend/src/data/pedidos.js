@@ -1,3 +1,4 @@
+import { nivelDoModelo, ordemPorDificuldade } from '../lib/dificuldade.js';
 // Modelos de pedidos recebidos por e-mail. "esperado" é o diagrama-gabarito usado na avaliação.
 // Coordenadas do gabarito já estão no grid (múltiplos de 20).
 
@@ -12,6 +13,8 @@ const e = (tipo, de, para, multDe, multPara) => ({
   ...(multDe ? { multDe } : {}),
   ...(multPara ? { multPara } : {}),
 });
+// Classe com atributos e métodos (uma linha UML por membro: "- saldo: float", "+ sacar(valor: float): bool")
+const c = (id, rotulo, x, y, atributos = [], metodos = []) => ({ id, tipo: 'classe', rotulo, x, y, atributos, metodos });
 // Transição do diagrama de estados: `evento` vai no rótulo da seta (vazio saindo do início e chegando ao fim)
 const t = (de, para, evento = '') => ({ id: `${de}-transicao-${para}`, tipo: 'transicao', de, para, rotulo: evento });
 
@@ -475,6 +478,142 @@ export const MODELOS = [
     },
   },
   // ---------------------------------------------------------------------------
+  // Classes com atributos e métodos (avaliados: nome e tipo de cada membro, na classe certa).
+  // As ligações nascem dos membros: atributo do tipo de outra classe → associação; outra classe
+  // só como parâmetro de método → dependência. Os três últimos focam em composição.
+  {
+    id: 'conta-bancaria',
+    cliente: 'Banco Lilás',
+    assunto: 'Contas e clientes',
+    tempo: 330,
+    recompensa: 190,
+    corpo: [
+      'Olá! Precisamos de um diagrama de classes com atributos e métodos.',
+      'Classe "Cliente" com os atributos "- nome: String" e "- cpf: String".',
+      'Classe "ContaBancaria" com os atributos "- numero: String", "- saldo: float" e "- titular: Cliente".',
+      'Métodos de ContaBancaria: "+ depositar(valor: float)", "+ sacar(valor: float): bool" e "+ consultarSaldo(): float".',
+      'Como o titular é um Cliente, ContaBancaria se associa a Cliente.',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Cliente', 40, 60, ['- nome: String', '- cpf: String']),
+        c('k2', 'ContaBancaria', 400, 60,
+          ['- numero: String', '- saldo: float', '- titular: Cliente'],
+          ['+ depositar(valor: float)', '+ sacar(valor: float): bool', '+ consultarSaldo(): float']),
+      ],
+      edges: [e('associacao', 'k2', 'k1')],
+    },
+  },
+  {
+    id: 'emprestimo',
+    cliente: 'Biblioteca Pixel Azul',
+    assunto: 'Empréstimos com prazo',
+    tempo: 360,
+    recompensa: 210,
+    corpo: [
+      'Oi! Queremos um diagrama de classes dos empréstimos, com atributos e métodos.',
+      'Classe "Livro" com "- titulo: String" e "- isbn: String".',
+      'Classe "Leitor" com "- nome: String" e "- matricula: int".',
+      'Classe "Emprestimo" com os atributos "- dataRetirada: Date", "- livro: Livro" e "- leitor: Leitor", e os métodos "+ renovar(): bool" e "+ calcularMulta(dias: int): float".',
+      'Os atributos livro e leitor ligam Emprestimo a Livro e a Leitor por associação.',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Livro', 40, 40, ['- titulo: String', '- isbn: String']),
+        c('k2', 'Leitor', 40, 280, ['- nome: String', '- matricula: int']),
+        c('k3', 'Emprestimo', 400, 140,
+          ['- dataRetirada: Date', '- livro: Livro', '- leitor: Leitor'],
+          ['+ renovar(): bool', '+ calcularMulta(dias: int): float']),
+      ],
+      edges: [e('associacao', 'k3', 'k1'), e('associacao', 'k3', 'k2')],
+    },
+  },
+  {
+    id: 'locadora',
+    cliente: 'Locadora Veloz Roxa',
+    assunto: 'Relatório de aluguéis',
+    tempo: 300,
+    recompensa: 180,
+    corpo: [
+      'Boa tarde! Precisamos de um diagrama de classes com atributos e métodos.',
+      'Classe "Carro" com "- placa: String" e "- modelo: String", e os métodos "+ alugar()" e "+ devolver()".',
+      'Classe "RelatorioLocacao" com o atributo "- dataGeracao: Date" e o método "+ gerar(carro: Carro): String".',
+      'O RelatorioLocacao só usa Carro como parâmetro do método gerar: ele depende de Carro (use dependência, saindo do relatório).',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Carro', 40, 60, ['- placa: String', '- modelo: String'], ['+ alugar()', '+ devolver()']),
+        c('k2', 'RelatorioLocacao', 420, 60, ['- dataGeracao: Date'], ['+ gerar(carro: Carro): String']),
+      ],
+      edges: [e('dependencia', 'k2', 'k1')],
+    },
+  },
+  {
+    id: 'comanda',
+    cliente: 'Bistrô Ametista',
+    assunto: 'Comandas da cozinha',
+    tempo: 360,
+    recompensa: 220,
+    corpo: [
+      'Olá! Precisamos do diagrama de classes das comandas, com atributos e métodos.',
+      'Classe "Comanda" com "- mesa: int" e "- aberta: bool", e os métodos "+ adicionarItem(item: ItemComanda)" e "+ calcularTotal(): float".',
+      'Classe "ItemComanda" com "- quantidade: int" e "- produto: Produto", e o método "+ subtotal(): float".',
+      'Classe "Produto" com "- nome: String" e "- preco: float".',
+      'A Comanda é composta de ItemComanda (sem a comanda, os itens não existem): cada Comanda tem 1..* itens e cada item pertence a 1 comanda.',
+      'ItemComanda se associa a Produto pelo atributo produto.',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Comanda', 40, 40, ['- mesa: int', '- aberta: bool'], ['+ adicionarItem(item: ItemComanda)', '+ calcularTotal(): float']),
+        c('k2', 'ItemComanda', 500, 40, ['- quantidade: int', '- produto: Produto'], ['+ subtotal(): float']),
+        c('k3', 'Produto', 500, 300, ['- nome: String', '- preco: float']),
+      ],
+      edges: [e('composicao', 'k1', 'k2', '1', '1..*'), e('associacao', 'k2', 'k3')],
+    },
+  },
+  {
+    id: 'casa',
+    cliente: 'Construtora Pedra Lilás',
+    assunto: 'Projeto de casas',
+    tempo: 300,
+    recompensa: 190,
+    corpo: [
+      'Oi! Queremos um diagrama de classes das nossas plantas, com atributos e métodos.',
+      'Classe "Casa" com "- endereco: String" e os métodos "+ adicionarComodo(comodo: Comodo)" e "+ calcularArea(): float".',
+      'Classe "Comodo" com "- nome: String" e "- area: float".',
+      'A Casa é composta de Comodo: se a casa é demolida, os cômodos deixam de existir (composição, com o losango cheio na Casa).',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Casa', 40, 60, ['- endereco: String'], ['+ adicionarComodo(comodo: Comodo)', '+ calcularArea(): float']),
+        c('k2', 'Comodo', 480, 60, ['- nome: String', '- area: float']),
+      ],
+      edges: [e('composicao', 'k1', 'k2')],
+    },
+  },
+  {
+    id: 'curso-online',
+    cliente: 'Escola Nebulosa',
+    assunto: 'Cursos, módulos e aulas',
+    tempo: 360,
+    recompensa: 220,
+    corpo: [
+      'Olá! Precisamos de um diagrama de classes da plataforma de cursos, com atributos e métodos.',
+      'Classe "Curso" com "- titulo: String" e "- cargaHoraria: int", e o método "+ publicar()".',
+      'Classe "Modulo" com "- titulo: String" e "- ordem: int".',
+      'Classe "Aula" com "- titulo: String" e "- duracao: int", e o método "+ assistir()".',
+      'O Curso é composto de Modulo, e o Modulo é composto de Aula (apagar o curso apaga os módulos e as aulas).',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Curso', 40, 60, ['- titulo: String', '- cargaHoraria: int'], ['+ publicar()']),
+        c('k2', 'Modulo', 380, 60, ['- titulo: String', '- ordem: int']),
+        c('k3', 'Aula', 700, 60, ['- titulo: String', '- duracao: int'], ['+ assistir()']),
+      ],
+      edges: [e('composicao', 'k1', 'k2'), e('composicao', 'k2', 'k3')],
+    },
+  },
+  // ---------------------------------------------------------------------------
   // Pedidos vindos dos gabaritos do backend (branch feature/front-finalizado:
   // backend/db/seeds/01_gabaritos.js + docs/schemas/exemplos/*.json), com as mesmas
   // multiplicidades. Adaptados ao editor: atributos e métodos ficam de fora.
@@ -731,23 +870,25 @@ export const MODELOS = [
   },
 ];
 
-// Ordem de introdução na campanha (fáceis primeiro)
-// Os pedidos de diagrama de classes vindos do backend entram intercalados, por dificuldade.
-const ORDEM_CAMPANHA = [
-  'cafeteria', 'catraca', 'idiomas', 'biblioteca', 'semaforo', 'cooperativa', 'cinema', 'atlas', 'player',
-  'playlist', 'pizzaria', 'lanchonete', 'hotel', 'rastreio', 'rh', 'petshop', 'loja-online', 'banco',
-  'cinemateca', 'streaming', 'chamado', 'clinica', 'academia', 'acervo', 'conservatorio', 'farmacia',
-  'escola', 'frota',
-];
-
 export const modeloPorId = (id) => MODELOS.find((m) => m.id === id);
 
-// Pedidos de um dia da campanha: 1 pedido nos primeiros dias, até 3 depois.
+// Ordem de introdução na campanha: por dificuldade (lib/dificuldade.js), alternando os tipos de diagrama.
+export const ORDEM_CAMPANHA = ordemPorDificuldade(MODELOS);
+// Depois que todos os pedidos já apareceram, a campanha repete só os médios e difíceis
+const REPETICAO = ORDEM_CAMPANHA.filter((id) => nivelDoModelo(modeloPorId(id)).id !== 'facil');
+
+
+// Pedidos de um dia da campanha: 1 pedido nos primeiros dias, até 3 depois. Os dias seguem a
+// ORDEM_CAMPANHA em sequência (cada dia continua de onde o anterior parou), então todos os modelos
+// aparecem, do fácil ao difícil; depois disso, só médios e difíceis.
+export const pedidosNoDia = (dia) => Math.min(3, 1 + Math.floor((dia - 1) / 4));
 export function pedidosDoDia(dia) {
-  const qtd = Math.min(3, 1 + Math.floor((dia - 1) / 4));
-  const ids = [];
-  for (let i = 0; i < qtd; i++) ids.push(ORDEM_CAMPANHA[(dia - 1 + i * 3) % ORDEM_CAMPANHA.length]);
-  return ids;
+  let inicio = 0;
+  for (let d = 1; d < dia; d++) inicio += pedidosNoDia(d);
+  return Array.from({ length: pedidosNoDia(dia) }, (_, i) => {
+    const k = inicio + i;
+    return k < ORDEM_CAMPANHA.length ? ORDEM_CAMPANHA[k] : REPETICAO[(k - ORDEM_CAMPANHA.length) % REPETICAO.length];
+  });
 }
 
 // Pagamento cresce levemente com o dia

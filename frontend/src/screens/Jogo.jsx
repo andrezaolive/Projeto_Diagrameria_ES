@@ -12,6 +12,7 @@ import { sfx } from '../lib/sfx.js';
 import { FADE_IN_JOGO, tocarMusica } from '../lib/musica.js';
 import { ALEATORIA, faixaInicial, faixaPorId, sortearFaixa } from '../data/musicas.js';
 import TocaFitas from './TocaFitas.jsx';
+import Rascunho from './Rascunho.jsx';
 import './jogo.css';
 
 // Fases: escritorio -> entrando (zoom no monitor) -> computador -> saindo -> escritorio
@@ -20,6 +21,10 @@ export default function Jogo({ onMenu, onCalendario }) {
   const sessao = state.sessao;
   const [fase, setFase] = useState('escritorio');
   const [pausado, setPausado] = useState(false);
+  // aviso antes de ir ao menu principal no meio do dia (o progresso da partida se perde)
+  const [confirmarSaida, setConfirmarSaida] = useState(false);
+  const confirmandoRef = useRef(false);
+  confirmandoRef.current = confirmarSaida;
   const [resultado, setResultado] = useState(null);
   const [vendoResumo, setVendoResumo] = useState(false);
 
@@ -28,6 +33,7 @@ export default function Jogo({ onMenu, onCalendario }) {
   const [faixa, setFaixa] = useState(() => faixaInicial(state.loja));
   const [aviso, setAviso] = useState(null);
   const [tocaFitas, setTocaFitas] = useState(false);
+  const [rascunho, setRascunho] = useState(false); // folha do papel da mesa
   useEffect(() => {
     const f = faixaPorId(faixa);
     if (f) tocarMusica(f.url, { loop: f.loop, excessoDb: f.excessoDb, fadeIn: FADE_IN_JOGO });
@@ -89,6 +95,8 @@ export default function Jogo({ onMenu, onCalendario }) {
   useEffect(() => {
     const tecla = (e) => {
       if (e.key !== 'Escape' || e.defaultPrevented) return;
+      // com o aviso de saída aberto, o Esc só fecha o aviso (e a pausa continua)
+      if (confirmandoRef.current) return setConfirmarSaida(false);
       setPausado((p) => !p);
     };
     window.addEventListener('keydown', tecla);
@@ -106,7 +114,7 @@ export default function Jogo({ onMenu, onCalendario }) {
     <div className="tela">
       {!noComputador && (
         <div className={`camada-escritorio ${fase === 'entrando' || fase === 'voltando' ? 'zoom' : ''}`}>
-          <Escritorio onComputador={entrar} onTocaFitas={() => setTocaFitas(true)} desativado={fase !== 'escritorio'} />
+          <Escritorio onComputador={entrar} onTocaFitas={() => setTocaFitas(true)} onPapel={() => setRascunho(true)} desativado={fase !== 'escritorio'} />
           {aviso && <div key={aviso.id} className="aviso-musica" role="status">{aviso.texto}</div>}
         </div>
       )}
@@ -134,6 +142,8 @@ export default function Jogo({ onMenu, onCalendario }) {
           {saiu.texto}
         </div>
       )}
+
+      {rascunho && <Rascunho onFechar={() => setRascunho(false)} />}
 
       {tocaFitas && (
         <TocaFitas
@@ -186,11 +196,50 @@ export default function Jogo({ onMenu, onCalendario }) {
             <Configuracoes
               rodape={(aplicar) => (
                 <>
-                  <Botao variante="claro" som="voltar" onClick={() => { aplicar(); sairPara(onMenu); }}>Menu</Botao>
+                  <Botao
+                    variante="claro"
+                    som="voltar"
+                    onClick={() => {
+                      aplicar();
+                      // dia em andamento: pergunta antes; dia já encerrado: nada a perder
+                      if (diaEncerrado(sessao)) sairPara(onMenu);
+                      else setConfirmarSaida(true);
+                    }}
+                  >
+                    Menu
+                  </Botao>
                   <Botao variante="menta" onClick={() => { aplicar(); setPausado(false); }}>Continuar</Botao>
                 </>
               )}
             />
+          </div>
+        </Modal>
+      )}
+
+      {confirmarSaida && (
+        <Modal titulo="SAIR.EXE" w={620} h={360} onFechar={() => setConfirmarSaida(false)}>
+          <div className="confirmar-saida" role="alertdialog" aria-labelledby="aviso-saida">
+            <h3 id="aviso-saida">Você vai perder o progresso atual</h3>
+            <p>
+              {sessao.modo === 'campanha'
+                ? `O dia ${sessao.dia} recomeça do zero na próxima vez: os pedidos e os diagramas deste dia são descartados.`
+                : 'Os pedidos e os diagramas desta partida são descartados.'}
+            </p>
+            <p className="nota-saida">O dinheiro que você já ganhou (e as multas que pagou) continua.</p>
+            <div className="botoes-fim">
+              <Botao
+                variante="claro"
+                som="voltar"
+                onClick={() => {
+                  setConfirmarSaida(false);
+                  setPausado(false);
+                }}
+                autoFocus
+              >
+                Voltar ao jogo
+              </Botao>
+              <Botao variante="rosa" onClick={() => sairPara(onMenu)}>Sair mesmo assim</Botao>
+            </div>
           </div>
         </Modal>
       )}
