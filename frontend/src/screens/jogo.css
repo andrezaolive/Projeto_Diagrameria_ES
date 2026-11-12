@@ -119,18 +119,22 @@
 }
 .wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; }
 
-.icones {
+/* área dos ícones: o palco inteiro acima da barra de tarefas; cada ícone numa célula do grid
+   (lib/areaTrabalho.js: 132×124 a partir de 16,16) */
+.icones { position: absolute; left: 0; top: 0; right: 0; bottom: 52px; }
+.icone-destino {
   position: absolute;
-  left: 20px;
-  top: 20px;
-  display: grid;
-  grid-auto-flow: column;
-  grid-template-rows: repeat(5, 116px);
-  gap: 8px;
-}
-.icone {
-  position: relative;
   width: 124px;
+  height: 116px;
+  border: var(--px) dashed var(--c-mist);
+  background: rgba(212, 196, 236, 0.2);
+  pointer-events: none;
+}
+.icone.arrastando { z-index: 5; cursor: grabbing; opacity: 0.85; }
+.icone {
+  position: absolute;
+  width: 124px;
+  touch-action: none;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -353,6 +357,11 @@
   animation: alerta-entra 0.35s steps(5) both;
 }
 .alerta.saiu { background: var(--c-rose); border-left-color: var(--c-ink); }
+/* pedido urgente: tons de vermelho, com selo e borda piscando */
+.alerta.urgente { background: var(--c-blush); border-color: var(--c-ink); border-left-color: var(--c-rose); animation: alerta-entra 0.35s steps(5) both, urgente-borda 0.6s steps(1) 0.35s 6; }
+.alerta-selo { align-self: flex-start; margin-bottom: 4px; padding: 3px 8px 1px; font-family: var(--f-titulo); font-size: 11px; color: var(--c-cream); background: var(--c-rose); border: var(--px) solid var(--c-ink); }
+.alerta.urgente .alerta-rodape { color: var(--c-ink); font-weight: bold; }
+@keyframes urgente-borda { 50% { border-left-color: var(--c-ink); } }
 @keyframes alerta-entra { from { transform: translateX(380px); } to { transform: none; } }
 .alerta-topo { display: flex; align-items: center; gap: 8px; }
 .alerta-topo img { width: 24px; height: 24px; }
@@ -367,3 +376,145 @@
 .alerta.atencao .alerta-rodape { animation: paciencia-pisca 0.8s steps(1) infinite; }
 @keyframes paciencia-pisca { 50% { opacity: 0.4; } }
 @media (prefers-reduced-motion: reduce) { .alerta { animation: none; } .alerta.atencao .alerta-rodape { animation: none; } }
+
+/* ---------------------------------------------------------- toca-fitas */
+.dica-objeto {
+  position: absolute;
+  z-index: 7;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--f-titulo);
+  font-size: 12px;
+  color: var(--c-ink);
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  padding: 8px 10px 6px;
+}
+/* faixa que começou a tocar (some sozinho) */
+.aviso-musica {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  z-index: 940;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-family: var(--f-titulo);
+  font-size: 14px;
+  color: var(--c-cream);
+  background: var(--c-plum);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 0 4px 0 var(--sombra-suave);
+  padding: 10px 14px 8px;
+  animation: aviso-musica 2.5s steps(10) forwards;
+}
+@keyframes aviso-musica {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  12%, 80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; }
+}
+
+/* fim do dia: aprovado (libera o próximo) ou reprovado (abaixo da média mínima) */
+.fim-dia .valor.reprovado { color: var(--c-rose); }
+.fim-dia .veredito { margin: 0; padding: 8px 14px 6px; border: var(--px) solid var(--c-ink); font-size: 24px; }
+.fim-dia .veredito.aprovado { background: var(--c-mint); }
+.fim-dia .veredito.reprovado { background: var(--c-blush); }
+.fim-dia .botoes-fim { display: flex; gap: 14px; }
+
+/* ---------------------------------------------------------- resumo do dia */
+.resumo-dia { height: 100%; display: flex; flex-direction: column; }
+.resumo-lista { flex: 1; min-height: 0; list-style: none; margin: 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.resumo-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'cliente ver' 'assunto ver' 'situacao ver';
+  align-items: center;
+  gap: 0 12px;
+  padding: 8px 14px 6px;
+  text-align: left;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-mist);
+  border: var(--px) solid var(--c-ink);
+  cursor: pointer;
+}
+.resumo-item:hover:not(:disabled) { background: var(--c-butter); }
+.resumo-item:disabled { cursor: not-allowed; }
+.resumo-item.urgente:not(.perdido) { border-left: 10px solid var(--c-rose); }
+.resumo-item .cliente { grid-area: cliente; font-size: 24px; font-weight: bold; }
+.resumo-item .assunto { grid-area: assunto; font-size: 19px; color: var(--c-plum); }
+.resumo-item .situacao { grid-area: situacao; font-size: 20px; }
+.resumo-item .ver { grid-area: ver; font-family: var(--f-titulo); font-size: 12px; color: var(--c-grape); }
+.resumo-rodape { display: flex; justify-content: flex-end; padding: 10px 16px; border-top: var(--px) solid var(--c-ink); }
+
+/* aviso antes de sair para o menu no meio do dia */
+.confirmar-saida { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px 30px; text-align: center; font-size: 24px; }
+.confirmar-saida h3 { margin: 0; font-family: var(--f-titulo); font-size: 16px; color: var(--c-rose); line-height: 1.4; }
+.confirmar-saida p { margin: 0; line-height: 1.15; }
+.confirmar-saida .nota-saida { font-size: 20px; color: var(--c-plum); }
+.confirmar-saida .botoes-fim { display: flex; gap: 14px; margin-top: 8px; }
+
+/* ---------------------------------------------------------- folha de rascunho */
+.rascunho { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 20px 10px; }
+/* papel pautado: linhas a cada 8 pixels de arte (32px) e margem rosa; cores lisas, sem degradê */
+.folha {
+  position: relative;
+  flex: none;
+  box-sizing: content-box; /* a borda fica por fora: o canvas tem exatamente 4px por pixel de arte */
+  cursor: none;
+  background-color: var(--c-butter); /* folha amarelada */
+  background-image:
+    linear-gradient(90deg, transparent 52px, var(--c-blush) 52px, var(--c-blush) 56px, transparent 56px),
+    repeating-linear-gradient(180deg, transparent 0 28px, var(--c-sky) 28px 32px);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 6px 6px 0 var(--sombra-texto);
+}
+.folha canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.lapis-cursor { position: absolute; pointer-events: none; image-rendering: pixelated; }
+.rascunho-rodape { width: 100%; display: flex; align-items: center; gap: 10px; font-size: 19px; color: var(--c-plum); }
+.rascunho-rodape .espaco { flex: 1; }
+
+/* cores do pote de canetas na folha de rascunho */
+.rascunho-cores { display: flex; gap: 6px; align-self: flex-start; }
+.rascunho-cor { width: 34px; height: 34px; padding: 4px; background: var(--c-mist); border: 3px solid var(--c-ink); cursor: pointer; }
+.rascunho-cor span { display: block; width: 100%; height: 100%; background: var(--tinta); border: 2px solid var(--c-ink); }
+.rascunho-cor:hover { background: var(--c-butter); }
+.rascunho-cor.ativa { background: var(--c-grape); box-shadow: 0 -4px 0 var(--c-grape); transform: translateY(-4px); }
+
+/* ---------------------------------------------------------- café (data/cafe.js) */
+/* vapor da caneca cheia: sobe e some, em passos (sem suavizar o pixel art) */
+.objeto.vapor { animation: vapor 1.6s steps(4) infinite; }
+@keyframes vapor {
+  0% { transform: translateY(0); opacity: 0.9; }
+  100% { transform: translateY(-8px); opacity: 0.2; }
+}
+/* fio de café caindo do bico enquanto a cafeteira prepara */
+.cafe-gotejando {
+  position: absolute;
+  width: 4px;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, var(--c-plum) 0 8px, transparent 8px 12px);
+  animation: gotejar 0.4s steps(3) infinite;
+}
+@keyframes gotejar {
+  from { background-position: 0 0; }
+  to { background-position: 0 12px; }
+}
+.efeito-cafe { gap: 6px; color: var(--c-ink); background: var(--c-peach); }
+.barra-tarefas .efeito-cafe { margin-right: 8px; }
+
+/* Café: linhas de velocidade estilo anime sobre a tela inteira (components/VelocidadeCafe.jsx).
+   Canvas 320×180 ampliado sem suavização; 50% de transparência; não bloqueia cliques. */
+.velocidade-cafe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 860;
+  opacity: 0.5;
+  pointer-events: none;
+  image-rendering: pixelated;
+  animation: velocidade-entra 0.4s steps(4) both;
+}
+@keyframes velocidade-entra { from { opacity: 0; } to { opacity: 0.5; } }

@@ -189,17 +189,45 @@ function officeItems() {
       c.px(nx + 4, ny, 'rose');
     }, { rotulo: `Post-it ${{ butter: 'amarelo', blush: 'rosa', mint: 'menta', sky: 'azul' }[col]}` });
 
-  objeto('caneca', 'mesa', (c) => {
+  // Caneca: vem vazia; enche na cafeteira (variantes caneca-cheia-<tipo>, mesmo recorte; a cor do café
+  // mostra a força). O vapor é um sprite à parte, desenhado por cima da caneca cheia no jogo.
+  const desenharCaneca = (c, topo, fundo, crema) => {
     c.box(240, 126, 12, 14, 'blush');
-    c.rect(241, 127, 10, 2, 'peach');
+    c.hline(241, 250, 127, topo);
+    c.hline(241, 250, 128, fundo);
+    if (crema) for (const x of [243, 246, 248]) c.px(x, 127, crema);
     c.box(251, 129, 5, 7, 'blush');
     c.rect(252, 130, 3, 5, 'grape');
     c.vline(243, 132, 136, 'cream');
+  };
+  objeto('caneca', 'mesa', (c) => desenharCaneca(c, 'plum', 'grape'), { elevavel: true, xicara: true, rotulo: 'Caneca' });
+  const CAFES = { descafeinado: ['peach', 'peach', 'cream'], normal: ['plum', 'plum', 'peach'], forte: ['night', 'night', 'plum'] };
+  for (const [tipo, [topo, fundo, crema]] of Object.entries(CAFES))
+    objeto(`caneca-cheia-${tipo}`, 'mesa', (c) => desenharCaneca(c, topo, fundo, crema), { variante: true });
+  objeto('vapor', 'mesa', (c) => {
     for (let j = 0; j < 7; j++) {
       c.px(245 + (j % 2), 124 - j * 1.5, 'mist');
       c.px(249 - (j % 2), 122 - j * 1.4, 'lilac');
     }
-  }, { elevavel: true, rotulo: 'Caneca' });
+  }, { variante: true });
+
+  // Cafeteira de cápsula (item da loja): a caneca encaixa na bandeja, debaixo do bico
+  // (`bandeja`: x da caneca e base dela, relativos ao canto do sprite). Os 3 botões da coluna têm as
+  // cores das cápsulas (descafeinado, café, extra forte).
+  const CF = { x: 211, y: 120 }; // à direita do teclado
+  objeto('cafeteira', 'mesa', (c) => {
+    c.box(CF.x + 15, CF.y + 4, 9, 24, 'violet'); // coluna
+    c.vline(CF.x + 16, CF.y + 9, CF.y + 25, 'orchid');
+    c.px(CF.x + 19, CF.y + 11, 'mint');
+    c.px(CF.x + 19, CF.y + 14, 'butter');
+    c.px(CF.x + 19, CF.y + 17, 'rose');
+    c.box(CF.x, CF.y + 26, 24, 4, 'grape'); // base com a bandeja
+    c.hline(CF.x + 2, CF.x + 13, CF.y + 27, 'lavender');
+    c.box(CF.x, CF.y, 24, 9, 'violet'); // cabeça
+    c.hline(CF.x + 1, CF.x + 22, CF.y + 1, 'orchid');
+    c.hline(CF.x + 3, CF.x + 10, CF.y + 4, 'grape'); // tampa da cápsula
+    c.rect(CF.x + 6, CF.y + 9, 3, 2, 'ink'); // bico
+  }, { bandeja: { x: 2, base: 26 }, rotulo: 'Cafeteira' });
 
   objeto('papeis', 'mesa', (c) => {
     c.box(36, 140, 30, 20, 'mist');
@@ -372,6 +400,8 @@ function officeItems() {
     c.sprite(['.kkk', '.k.k', 'kk.k', 'kkkk'], 190, 136);
   }, { elevavel: true });
 
+  // Pilha de livros (item da loja): a imagem inteira só aparece na loja/inventário; na mesa, cada
+  // livro é um objeto próprio, deitado, e eles vêm empilhados (sobrePadrao = o livro de baixo)
   objeto('livros', 'mesa', (c) => {
     c.box(6, 168, 32, 7, 'sky');
     c.vline(35, 169, 173, 'mist');
@@ -383,7 +413,80 @@ function officeItems() {
     c.box(12, 147, 20, 7, 'butter');
     c.vline(29, 148, 152, 'mist');
     c.hline(14, 22, 150, 'peach');
-  }, { elevavel: true });
+  }, { soLoja: true, elevavel: true });
+  const pilha = [
+    ['pilha-azul', 'Livro azul (pilha)', 6, 168, 32, 'sky', 35, null],
+    ['pilha-rosa', 'Livro rosa (pilha)', 9, 161, 28, 'blush', 34, 'pilha-azul'],
+    ['pilha-menta', 'Livro menta (pilha)', 7, 154, 26, 'mint', 30, 'pilha-rosa'],
+    ['pilha-amarelo', 'Livro amarelo (pilha)', 12, 147, 20, 'butter', 29, 'pilha-menta'],
+  ];
+  for (const [id, rotulo, bx, by, bw, col, lomb, sobre] of pilha)
+    objeto(id, 'mesa', (c) => {
+      c.box(bx, by, bw, 7, col);
+      c.vline(lomb, by + 1, by + 5, 'mist');
+      c.hline(bx + 3, bx + Math.min(10, bw - 6), by + 3, 'cream');
+    }, { elevavel: true, empilhavel: true, rotulo, grupo: 'obj-livros', ...(sobre ? { sobrePadrao: sobre } : {}) });
+
+  // Pote de canetas (item da loja): o pote e 10 canetas, cada uma um objeto próprio que fica DENTRO
+  // do pote (porta: o pote guarda coisas em pé, com a ponta escondida). A imagem do conjunto
+  // ('canetas', soLoja) aparece na loja, no inventário e enquanto o pote cheio está na mão.
+  const POTE = { x: 262, y: 144, w: 15, h: 14 };
+  const CANETAS = [
+    ['branco', 'Caneta branca'], ['preto', 'Caneta preta'], ['azul', 'Caneta azul'], ['roxo', 'Caneta roxa'],
+    ['vermelho', 'Caneta vermelha'], ['rosa', 'Caneta rosa'], ['laranja', 'Caneta laranja'],
+    ['amarelo', 'Caneta amarela'], ['verde', 'Caneta verde'], ['ciano', 'Caneta ciano'],
+  ];
+  // leque inicial: todas com a base no centro do fundo do pote, de 10° a 30° para cada lado
+  // (as mesmas regras de quando o jogador devolve uma caneta; assim nenhuma vaza pelas laterais)
+  const ANGULOS = [-30, -26, -21, -16, -11, 11, 16, 21, 26, 30];
+  const FUNDO_POTE = 11; // a ponta da caneta fica 11px abaixo da boca do pote
+  const desenharPote = (c) => {
+    c.box(POTE.x, POTE.y, POTE.w, POTE.h, 'grape');
+    c.rect(POTE.x + 1, POTE.y + 1, POTE.w - 2, 2, 'orchid');
+    c.vline(POTE.x + 3, POTE.y + 4, POTE.y + POTE.h - 3, 'violet');
+  };
+  // caneta sem contorno: no pote elas se sobrepõem, e o contorno escondia as cores
+  const PEN = { w: 3, h: 22 };
+  // cor do pixel (lx, ly) da caneta em pé (0 ≤ lx < PEN.w, 0 ≤ ly < PEN.h)
+  const corDaCaneta = (lx, ly, cor) => {
+    if (ly < 3) return cor === 'preto' ? 'plum' : 'ink'; // tampa
+    if (lx === PEN.w - 1) return cor === 'preto' ? 'night' : 'plum'; // sombra de um lado
+    if (lx === 0 && ly === 5) return cor === 'branco' ? 'lilac' : 'cream'; // brilho
+    return `tinta-${cor}`;
+  };
+  const desenharCaneta = (c, x, y, cor) => {
+    for (let ly = 0; ly < PEN.h; ly++) for (let lx = 0; lx < PEN.w; lx++) c.px(x + lx, y + ly, corDaCaneta(lx, ly, cor));
+  };
+  // a mesma caneta girada `ang` graus em volta do meio da base (como o rotate do CSS no jogo),
+  // por amostragem inversa: cada pixel de destino pega a cor do pixel da caneta reta que cai nele
+  const desenharCanetaGirada = (c, x, y, cor, ang) => {
+    const cx = x + PEN.w / 2, cy = y + PEN.h;
+    const r = (ang * Math.PI) / 180, cos = Math.cos(r), sin = Math.sin(r);
+    for (let j = Math.floor(cy - PEN.h - 2); j <= cy + 2; j++)
+      for (let i = Math.floor(cx - PEN.h); i <= cx + PEN.h; i++) {
+        const dx = i + 0.5 - cx, dy = j + 0.5 - cy;
+        const lx = Math.floor(cx + dx * cos + dy * sin - x), ly = Math.floor(cy - dx * sin + dy * cos - y);
+        if (lx >= 0 && ly >= 0 && lx < PEN.w && ly < PEN.h) c.px(i, j, corDaCaneta(lx, ly, cor));
+      }
+  };
+  // snap no centro inferior: a base de todas fica no meio do fundo do pote
+  const xCaneta = () => POTE.x + Math.round((POTE.w - PEN.w) / 2);
+  objeto('canetas', 'mesa', (c) => {
+    CANETAS.forEach(([cor], i) => desenharCanetaGirada(c, xCaneta(i), POTE.y + FUNDO_POTE - PEN.h, cor, ANGULOS[i]));
+    desenharPote(c);
+  }, { soLoja: true, elevavel: true });
+  objeto('pote-canetas', 'mesa', desenharPote, { elevavel: true, porta: true, fundo: FUNDO_POTE, rotulo: 'Pote de canetas', grupo: 'obj-canetas' });
+  CANETAS.forEach(([cor, rotulo], i) =>
+    objeto(`caneta-${cor}`, 'mesa', (c) => desenharCaneta(c, xCaneta(i), POTE.y + FUNDO_POTE - PEN.h, cor), {
+      elevavel: true,
+      caneta: true,
+      rotulo,
+      tinta: cor,
+      grupo: 'obj-canetas',
+      sobrePadrao: 'pote-canetas',
+      anguloPadrao: ANGULOS[i],
+    }),
+  );
 
   objeto('fone', 'mesa', (c) => {
     c.hline(232, 248, 156, 'ink');
@@ -586,6 +689,25 @@ function wallpaperLavender() {
 
 // ------------------------------------------------------------------ ícones
 const ICONS = {
+  // guia: livro aberto (app de ajuda da área de trabalho)
+  guia: [
+    '................',
+    '................',
+    '.kkkkkk..kkkkkk.',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmsssmmkkmsssmmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kvvvvvvkkvvvvvvk',
+    '.kkkkkkkkkkkkkk.',
+    '.......kk.......',
+    '................',
+  ],
   bau: [
     '................',
     '..kkkkkkkkkkkk..',
@@ -750,7 +872,33 @@ const ICONS = {
   ],
 };
 
+// Cápsulas de café (aba Café da lojinha e botões da cafeteira): cor da tampa/corpo = força do café
+const CAPSULA = [
+  '................',
+  '................',
+  '..kkkkkkkkkkkk..',
+  '.kmmmmmmmmmmmmk.',
+  '.kmcmmmmmmmmmmk.',
+  '..kkkkkkkkkkkk..',
+  '..kccXXXXXXXgk..',
+  '..kcXXXXXXXXgk..',
+  '...kcXXXXXXgk...',
+  '...kcXXXXXXgk...',
+  '....kcXXXXgk....',
+  '....kcXXXXgk....',
+  '.....kcXXgk.....',
+  '......kkkk......',
+  '................',
+  '................',
+];
+const COR_CAPSULA = { descafeinado: 't', normal: 'y', forte: 'r' };
+
 function icons() {
+  for (const [tipo, cor] of Object.entries(COR_CAPSULA)) {
+    const c = new Canvas(16, 16);
+    c.sprite(CAPSULA.map((r) => r.replaceAll('X', cor)));
+    c.save(OUT + `ui/capsula-${tipo}-16.png`);
+  }
   for (const [name, rows] of Object.entries(ICONS)) {
     const c = new Canvas(16, 16);
     c.sprite(rows);

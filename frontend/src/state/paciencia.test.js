@@ -49,7 +49,10 @@ describe('paciência dos clientes', () => {
       multas += m;
     }
     expect(s.dinheiro).toBe(saldo);
-    expect(s.campanha.concluidos[1]).toEqual({ ganho: -multas, media: 0 });
+    // ninguém atendido: 0% de desempenho, o dia não conta como concluído
+    expect(s.sessao.relatorio).toEqual({ media: 0, aprovado: false, ganho: -multas });
+    expect(s.campanha.concluidos[1]).toBeUndefined();
+    expect(s.campanha.desbloqueado).toBe(1);
     expect(temRelogio(s.sessao)).toBe(false); // nada mais para cronometrar
   });
 
@@ -118,7 +121,9 @@ describe('multa por pedido perdido', () => {
 describe('multa reduzida em dívida', () => {
   it('com saldo negativo a multa é 25% do pagamento; com saldo zero ou positivo, 50%', () => {
     const p = { recompensa: 120 };
-    expect(MULTA).toEqual({ normal: 0.5, emDivida: 0.25 });
+    expect(MULTA).toEqual({ normal: 0.5, emDivida: 0.25, urgente: 0.2 });
+    expect(multaPedido({ recompensa: 200, urgente: true }, 50)).toBe(40); // urgente: 20%, com ou sem dívida
+    expect(multaPedido({ recompensa: 200, urgente: true }, -5)).toBe(40);
     expect(multaPedido(p, 50)).toBe(60);
     expect(multaPedido(p, 0)).toBe(60);
     expect(multaPedido(p, -1)).toBe(30);

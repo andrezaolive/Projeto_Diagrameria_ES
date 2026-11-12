@@ -95,7 +95,7 @@ describe('superfícies: monitor, estante e tela livre', () => {
   });
 
   it('save antigo { x, y } continua valendo', () => {
-    expect(normalizarEntrada('caneca', { x: 50, y: 120 })).toEqual({ x: 50, sobre: 'mesa', chao: 146 });
+    expect(normalizarEntrada('caneca', { x: 50, y: 120 })).toEqual({ x: 50, sobre: 'mesa', chao: 120 + 14 }); // caneca: 14px de altura
     expect(normalizarEntrada('caneca', { x: 150, y: 15 })).toEqual({ x: 150, sobre: 'monitor' });
   });
 

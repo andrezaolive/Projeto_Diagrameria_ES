@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import escritorio from '../assets/scenes/office-320x180.png';
 import iconeBau from '../assets/ui/icon-bau-16.png';
-import { ITENS_LOJA, OBJETOS_BASE, metaDe, nomeObjeto, podeDeitar, spriteDe } from '../data/loja.js';
+import { ITENS_LOJA, OBJETOS_BASE, metaDe, metaObjeto, nomeObjeto, objetosDoItem, podeDeitar, spriteDe, spriteObjeto } from '../data/loja.js';
+import { CAFETEIRA, CANECA } from '../data/cafe.js';
 import { MONITOR, SCENE_W, SCENE_H } from '../art/layout.js';
-import { chaveSprite, estaEmPilha, objetoNoPonto, ordemDeDesenho, pousar, resolverCena } from '../lib/decoracao.js';
+import { anguloAleatorio, chaveSprite, conteudoDe, estaEmPilha, normalizarEntrada, objetoNoPonto, ordemDeDesenho, posicoesDoGrupo, pousar, resolverCena } from '../lib/decoracao.js';
 import { useGame } from '../state/GameContext.jsx';
 import { sfx } from '../lib/sfx.js';
 
@@ -40,8 +41,32 @@ function carregarMascara(nome, deitado) {
 //    e é solto no próximo clique (Esc devolve);
 //  - rodinha do mouse sobre um livro (ou com ele na mão): em pé ↔ deitado;
 //  - soltar sobre o baú guarda no inventário.
-export default function Escritorio({ onComputador, desativado }) {
+//  - toca-fitas: clicar (sem arrastar) troca a música; arrastar move como os outros.
+// Objetos que abrem algo com um clique (sem arrastar): o toca-fitas (músicas) e o papel (rascunho).
+// Arrastar continua movendo como os outros.
+// Cafeteira: clique abre os botões das cápsulas; caneca cheia: clique bebe o café (arrastar move as duas).
+const TOCA_FITAS = 'radio';
+const PAPEL = 'papeis';
+const VAPOR = 'vapor'; // sprite do vapor por cima da caneca cheia (posição relativa à caneca, no gerador)
+
+export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafeteira, desativado }) {
   const { state, dispatch } = useGame();
+  const { preparando, xicara } = state.cafe;
+  const beber = () => {
+    sfx.click();
+    dispatch({ type: 'BEBER_CAFE' });
+  };
+  const clicaveis = { [TOCA_FITAS]: onTocaFitas, [PAPEL]: onPapel, [CAFETEIRA]: onCafeteira, ...(xicara ? { [CANECA]: beber } : {}) };
+  const DICA_CLIQUE = {
+    [TOCA_FITAS]: 'clique: escolher a música',
+    [PAPEL]: 'clique: rabiscar no papel',
+    [CAFETEIRA]: preparando ? `preparando o café... ${preparando.falta} s` : 'clique: fazer café',
+    ...(xicara ? { [CANECA]: 'clique: beber o café' } : {}),
+  };
+  // enquanto a cafeteira trabalha, a caneca e a cafeteira não saem do lugar
+  const presa = (nome) => Boolean(preparando) && (nome === CANECA || nome === CAFETEIRA);
+  // a caneca cheia usa o sprite com café (a cor mostra a força)
+  const sprite = (nome, deitado) => (nome === CANECA && xicara ? spriteObjeto(`caneca-cheia-${xicara}`) : spriteDe(nome, deitado));
   const ref = useRef(null);
   const bauRef = useRef(null);
   // mao = { nome, deitado, ox, oy, px, py, modo: 'arraste'|'segurando', apertado, moveu, original, origem }
@@ -55,11 +80,31 @@ export default function Escritorio({ onComputador, desativado }) {
 
   const { posicoes, guardados } = state.escritorio;
   const comprados = ITENS_LOJA.filter((i) => i.objeto && state.loja.possui.includes(i.id));
-  const emUso = comprados.filter((i) => state.loja.moveis.includes(i.id)).map((i) => i.objeto);
-  // inventário: objetos do jogo guardados + objetos comprados que não estão em uso
-  const inventario = [...OBJETOS_BASE.filter((n) => guardados.includes(n)), ...comprados.filter((i) => !state.loja.moveis.includes(i.id)).map((i) => i.objeto)];
+  const usados = comprados.filter((i) => state.loja.moveis.includes(i.id));
+  // em uso: os objetos de cada item (a pilha de livros são 4), menos os livros guardados um a um
+  const emUso = usados.flatMap(objetosDoItem).filter((n) => !guardados.includes(n));
+  // inventário: objetos do jogo guardados + livros da pilha guardados soltos + itens comprados fora de uso
+  // (a pilha inteira guardada aparece como uma entrada só: "Pilha de livros")
+  // canetas guardadas DENTRO do pote não aparecem soltas: o pote mostra quantas leva
+  const guardadosDentro = state.escritorio.guardadosDentro ?? {};
+  const dentroDePote = new Set(Object.entries(guardadosDentro).filter(([pote]) => guardados.includes(pote)).flatMap(([, ns]) => ns));
+  const inventario = [
+    ...OBJETOS_BASE.filter((n) => guardados.includes(n)),
+    ...usados.flatMap((i) => (i.objetos ?? []).filter((n) => guardados.includes(n) && !dentroDePote.has(n))),
+    ...comprados.filter((i) => !state.loja.moveis.includes(i.id)).map((i) => i.objeto),
+  ];
+  const nomeNoInventario = (nome) => {
+    const n = (guardadosDentro[nome] ?? []).filter((c) => guardados.includes(c)).length;
+    return n ? `${nomeObjeto(nome)} (${n} caneta${n > 1 ? 's' : ''})` : nomeObjeto(nome);
+  };
+  const ehGrupo = (nome) => Boolean(ITENS_LOJA.find((i) => i.objeto === nome)?.objetos);
 
-  const nomes = [...OBJETOS_BASE.filter((n) => !guardados.includes(n)), ...emUso].filter((n) => n !== mao?.nome);
+  const presentes = [...OBJETOS_BASE.filter((n) => !guardados.includes(n)), ...emUso];
+  // o pote na mão leva junto o que está dentro dele (as canetas não caem nem ficam para trás)
+  // (a cafeteira leva a caneca da bandeja do mesmo jeito)
+  const levaJunto = (m) => m.porta || m.bandeja;
+  const naMaoJunto = mao && levaJunto(metaDe(mao.nome, mao.deitado)) && !mao.grupo ? conteudoDe(mao.nome, posicoes, presentes) : [];
+  const nomes = presentes.filter((n) => n !== mao?.nome && !naMaoJunto.includes(n));
   const cena = resolverCena(nomes, posicoes);
   const objs = ordemDeDesenho(cena);
 
@@ -86,12 +131,17 @@ export default function Escritorio({ onComputador, desativado }) {
   };
 
   const soltar = (noBau) => {
-    if (noBau) {
+    sfx.clickSoltar(); // pegar usa o click normal; soltar, o mesmo bem baixinho
+    if (mao.grupo) {
+      // grupo inteiro na mão (pilha de livros, pote com canetas): no baú, continua guardado; na mesa,
+      // cada um vira um objeto separado, na mesma arrumação de sempre
+      if (!noBau) dispatch({ type: 'COLOCAR_GRUPO', grupo: mao.grupo, posicoes: posicoesDoGrupo(mao.nome, mao.grupo, destino.entrada, destino.x) });
+    } else if (noBau) {
       dispatch({ type: 'GUARDAR_OBJETO', objeto: mao.nome });
-      sfx.voltar?.();
     } else {
-      dispatch({ type: 'MOVER_OBJETO', objeto: mao.nome, posicao: destino.entrada });
-      sfx.soltar?.();
+      // caneta posta de volta no pote: fica levemente torta (ângulo sorteado, até 30° para cada lado)
+      const noPote = cena.find((o) => o.nome === destino.entrada.sobre)?.meta.porta;
+      dispatch({ type: 'MOVER_OBJETO', objeto: mao.nome, posicao: noPote ? { ...destino.entrada, angulo: anguloAleatorio() } : destino.entrada });
     }
     setMao(null);
     setSobreBau(false);
@@ -101,7 +151,9 @@ export default function Escritorio({ onComputador, desativado }) {
   const cancelar = useCallback(() => {
     const m = maoRef.current;
     if (!m) return;
-    if (m.origem === 'inventario') dispatch({ type: 'GUARDAR_OBJETO', objeto: m.nome });
+    if (m.grupo) {
+      // grupo tirado do baú e devolvido: nada mudou no estado
+    } else if (m.origem === 'inventario') dispatch({ type: 'GUARDAR_OBJETO', objeto: m.nome });
     else if (m.original) dispatch({ type: 'MOVER_OBJETO', objeto: m.nome, posicao: m.original });
     setMao(null);
     setSobreBau(false);
@@ -140,10 +192,21 @@ export default function Escritorio({ onComputador, desativado }) {
     const o = objetoNoPonto(objs, MASCARAS, p.x, p.y);
     if (!o) return; // deixa o clique seguir para o monitor
     e.preventDefault();
+    if (presa(o.nome)) {
+      // café sendo feito: a cafeteira só mostra o andamento; a caneca não sai da bandeja
+      if (o.nome === CAFETEIRA) {
+        sfx.click();
+        onCafeteira?.();
+      }
+      return;
+    }
     ref.current.setPointerCapture(e.pointerId);
     setPainel(false);
-    const empilhado = o.meta.zona === 'mesa' && estaEmPilha(o, cena);
-    if (empilhado) dispatch({ type: 'PEGAR_OBJETO', objeto: o.nome }); // quem está em cima cai
+    sfx.click(); // só ao apertar: soltar o item não toca de novo
+    // o toca-fitas só sai do lugar se for arrastado (clique troca a música)
+    // pote: o que está dentro vai junto (não conta como pilha e nada cai)
+    const empilhado = !clicaveis[o.nome] && o.meta.zona === 'mesa' && (o.meta.porta ? o.nivel > 0 : estaEmPilha(o, cena));
+    if (empilhado && !o.meta.porta) dispatch({ type: 'PEGAR_OBJETO', objeto: o.nome }); // quem está em cima cai
     setMao({
       nome: o.nome,
       deitado: Boolean(o.entrada?.deitado),
@@ -177,8 +240,15 @@ export default function Escritorio({ onComputador, desativado }) {
       soltar(emCimaDoBau(e));
       return;
     }
+    if (clicaveis[mao.nome] && mao.modo === 'arraste') {
+      const abrir = clicaveis[mao.nome];
+      setMao(null); // nem saiu do lugar (o click já tocou ao apertar)
+      abrir?.();
+      return;
+    }
     // clique sem arrastar (ou objeto tirado de uma pilha): continua na mão até o próximo clique
-    if (mao.modo === 'arraste') dispatch({ type: 'PEGAR_OBJETO', objeto: mao.nome });
+    // (o pote não derruba as canetas: elas vão na mão junto com ele)
+    if (mao.modo === 'arraste' && !metaDe(mao.nome, mao.deitado).porta) dispatch({ type: 'PEGAR_OBJETO', objeto: mao.nome });
     setMao((m) => (m ? { ...m, modo: 'segurando', apertado: false } : m));
   };
 
@@ -190,7 +260,7 @@ export default function Escritorio({ onComputador, desativado }) {
       if (!podeDeitar(mao.nome) || mao.deitado === deitar) return;
       const m = metaDe(mao.nome, deitar);
       setMao((x) => ({ ...x, deitado: deitar, ox: m.w / 2, oy: m.h / 2 }));
-      sfx.clique?.();
+      sfx.click();
       return;
     }
     const p = arte(e);
@@ -208,18 +278,34 @@ export default function Escritorio({ onComputador, desativado }) {
     const base = o.y + o.meta.h;
     const novo = pousar(o.nome, deitar, Math.round(centro - m.w / 2), base - m.h, cena.filter((x) => !acima.has(x.nome)));
     dispatch({ type: 'MOVER_OBJETO', objeto: o.nome, posicao: novo.entrada });
-    sfx.clique?.();
+    sfx.click();
   };
 
   const retirar = (nome, e) => {
     const p = arte(e);
     const m = metaDe(nome, false);
+    // grupo (pilha de livros, pote com canetas): fica na mão inteiro e só se separa quando for solto
+    if (ehGrupo(nome)) {
+      sfx.click();
+      setPainel(false);
+      const grupo = ITENS_LOJA.find((i) => i.objeto === nome).id;
+      setMao({ nome, grupo, deitado: false, ox: m.w / 2, oy: m.h / 2, px: p.x, py: p.y, sx: p.x, sy: p.y, modo: 'segurando', apertado: false, moveu: true, original: null, origem: 'inventario' });
+      return;
+    }
     dispatch({ type: 'RETIRAR_OBJETO', objeto: nome });
+    sfx.click();
     setPainel(false);
     setMao({ nome, deitado: false, ox: m.w / 2, oy: m.h / 2, px: p.x, py: p.y, sx: p.x, sy: p.y, modo: 'segurando', apertado: false, moveu: true, original: null, origem: 'inventario' });
   };
 
-  const estilo = (x, y, meta) => ({ left: x * ESCALA, top: y * ESCALA, width: meta.w * ESCALA, height: meta.h * ESCALA });
+  // `angulo`: canetas no pote ficam inclinadas, girando pela base
+  const estilo = (x, y, meta, angulo) => ({
+    left: x * ESCALA,
+    top: y * ESCALA,
+    width: meta.w * ESCALA,
+    height: meta.h * ESCALA,
+    ...(angulo ? { transform: `rotate(${angulo}deg)`, transformOrigin: '50% 100%' } : {}),
+  });
 
   return (
     <div
@@ -242,7 +328,10 @@ export default function Escritorio({ onComputador, desativado }) {
           width: pct(MONITOR.w, SCENE_W),
           height: pct(MONITOR.h, SCENE_H),
         }}
-        onClick={onComputador}
+        onClick={() => {
+          sfx.click();
+          onComputador();
+        }}
         disabled={desativado || Boolean(mao)}
         aria-label="Usar o computador"
       >
@@ -251,20 +340,55 @@ export default function Escritorio({ onComputador, desativado }) {
       {objs.map((o) => (
         <img
           key={o.nome}
-          src={spriteDe(o.nome, o.entrada?.deitado)}
+          src={sprite(o.nome, o.entrada?.deitado)}
           alt=""
           draggable={false}
           className={`objeto pixel ${sobre === o.nome && !mao ? 'realce' : ''}`}
-          style={estilo(o.x, o.y, o.meta)}
+          style={estilo(o.x, o.y, o.meta, o.dentro ? o.entrada?.angulo : 0)}
         />
       ))}
+      {/* café: gotas caindo do bico enquanto prepara; vapor saindo da caneca cheia */}
+      {(() => {
+        const maquina = objs.find((o) => o.nome === CAFETEIRA);
+        const caneca = objs.find((o) => o.nome === CANECA);
+        const v = metaObjeto(VAPOR), c0 = metaObjeto(CANECA);
+        return (
+          <>
+            {preparando && maquina && (
+              <span className="cafe-gotejando" style={{ left: (maquina.x + 7) * ESCALA, top: (maquina.y + 11) * ESCALA, height: (maquina.meta.bandeja.base - 14 - 11 + 1) * ESCALA }} aria-hidden="true" />
+            )}
+            {/* (na bandeja, o vapor ficaria por cima da cabeça da cafeteira: só aparece fora dela) */}
+            {xicara && caneca && caneca.entrada?.sobre !== CAFETEIRA && (
+              <img src={spriteObjeto(VAPOR)} alt="" draggable={false} className="objeto pixel vapor" style={estilo(caneca.x + v.x - c0.x, caneca.y + v.y - c0.y, v)} />
+            )}
+          </>
+        );
+      })()}
 
       {mao && (
         <>
           {/* prévia de onde vai pousar */}
-          {!sobreBau && <img src={spriteDe(mao.nome, mao.deitado)} alt="" draggable={false} className="objeto pixel fantasma" style={estilo(destino.x, destino.y, metaMao)} />}
+          {!sobreBau && <img src={sprite(mao.nome, mao.deitado)} alt="" draggable={false} className="objeto pixel fantasma" style={estilo(destino.x, destino.y, metaMao)} />}
+          {/* canetas dentro do pote na mão: mesma posição e inclinação, desenhadas antes do pote */}
+          {naMaoJunto.map((n) => {
+            const e = normalizarEntrada(n, posicoes[n]);
+            const m = metaDe(n, false);
+            // pote: canetas no centro do fundo, inclinadas; cafeteira: caneca na bandeja
+            const b = metaMao.bandeja;
+            const pos = b ? [noAr.x + b.x, noAr.y + b.base - m.h, 0] : [noAr.x + Math.round((metaMao.w - m.w) / 2), noAr.y + metaMao.fundo - m.h, e.angulo];
+            return (
+              <img
+                key={n}
+                src={sprite(n, false)}
+                alt=""
+                draggable={false}
+                className={`objeto pixel levantado ${sobreBau ? 'indo-pro-bau' : ''}`}
+                style={estilo(pos[0], pos[1], m, pos[2])}
+              />
+            );
+          })}
           <img
-            src={spriteDe(mao.nome, mao.deitado)}
+            src={sprite(mao.nome, mao.deitado)}
             alt=""
             draggable={false}
             className={`objeto pixel levantado ${sobreBau ? 'indo-pro-bau' : ''}`}
@@ -279,6 +403,16 @@ export default function Escritorio({ onComputador, desativado }) {
         <span className="dica-monitor">clique para usar</span>
       </div>
 
+      {/* toca-fitas, papel, cafeteira e caneca cheia: dica ao passar o mouse */}
+      {!mao && !desativado && DICA_CLIQUE[sobre] && (() => {
+        const o = objs.find((x) => x.nome === sobre);
+        return o && (
+          <div className="dica-objeto" role="tooltip" style={{ left: (o.x + o.meta.w / 2) * ESCALA, top: o.y * ESCALA }}>
+            {DICA_CLIQUE[sobre]}
+          </div>
+        );
+      })()}
+
       <div className="inventario">
         {painel && !mao && (
           <div className="inventario-painel" role="dialog" aria-label="Inventário">
@@ -292,11 +426,11 @@ export default function Escritorio({ onComputador, desativado }) {
                   const k = Math.min(40 / m.w, 40 / m.h, 3);
                   return (
                     <li key={nome}>
-                      <button onClick={(e) => retirar(nome, e)} title={`Pegar: ${nomeObjeto(nome)}`}>
+                      <button onClick={(e) => retirar(nome, e)} title={`Pegar: ${nomeNoInventario(nome)}`}>
                         <span className="miniatura">
-                          <img src={spriteDe(nome, false)} alt="" className="pixel" draggable={false} style={{ width: m.w * k, height: m.h * k }} />
+                          <img src={sprite(nome, false)} alt="" className="pixel" draggable={false} style={{ width: m.w * k, height: m.h * k }} />
                         </span>
-                        <span className="nome">{nomeObjeto(nome)}</span>
+                        <span className="nome">{nomeNoInventario(nome)}</span>
                       </button>
                     </li>
                   );
@@ -310,7 +444,11 @@ export default function Escritorio({ onComputador, desativado }) {
         <button
           ref={bauRef}
           className={`bau-btn ${mao ? 'alvo' : ''} ${sobreBau ? 'brilho' : ''} ${painel ? 'aberto' : ''}`}
-          onClick={() => !mao && setPainel((v) => !v)}
+          onClick={() => {
+            if (mao) return;
+            sfx.click();
+            setPainel((v) => !v);
+          }}
           disabled={desativado}
           aria-label={`Inventário (${inventario.length} ${inventario.length === 1 ? 'item' : 'itens'})`}
           aria-expanded={painel}

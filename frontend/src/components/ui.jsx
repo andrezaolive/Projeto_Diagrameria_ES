@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { sfx } from '../lib/sfx.js';
+import { sfx, tocarHover } from '../lib/sfx.js';
 import moeda from '../assets/ui/icon-moeda-16.png';
 
 // Tamanho da interface (Configurações → Interface): reduzido | auto | grande.
@@ -24,6 +24,16 @@ export function FiltroVhs({ intensidade }) {
 }
 
 // Palco fixo de 1280x720 escalado para caber na janela do navegador
+// Opções que tocam o som de hover ao receber o mouse (botões habilitados, seletores e sliders).
+// Para desligar num elemento: data-sem-hover.
+const SELETOR_HOVER = 'button:not(:disabled), select:not(:disabled), input[type="range"]:not(:disabled)';
+function aoPassarMouse(e) {
+  const alvo = e.target.closest?.(SELETOR_HOVER);
+  if (!alvo || alvo.closest('[data-sem-hover]')) return;
+  if (e.relatedTarget && alvo.contains(e.relatedTarget)) return; // andou dentro do mesmo botão
+  tocarHover();
+}
+
 export function Palco({ nivel = 'auto', vhs = { ativo: false, intensidade: 50 }, children }) {
   const [previa, setPrevia] = useState(null);
   const filtro = previa ?? vhs;
@@ -38,6 +48,7 @@ export function Palco({ nivel = 'auto', vhs = { ativo: false, intensidade: 50 },
     <div className="palco-externo">
       <div
         className="palco"
+        onPointerOver={aoPassarMouse}
         data-ui={nivel}
         data-vhs={filtro.ativo && filtro.intensidade > 0 ? '' : undefined}
         style={{ transform: `scale(${escala}) translate(-50%, -50%)`, '--vhs': filtro.intensidade / 100 }}

@@ -1,7 +1,9 @@
+import { nivelDoModelo, ordemPorDificuldade } from '../lib/dificuldade.js';
 // Modelos de pedidos recebidos por e-mail. "esperado" é o diagrama-gabarito usado na avaliação.
 // Coordenadas do gabarito já estão no grid (múltiplos de 20).
 
-const n = (id, tipo, rotulo, x, y) => ({ id, tipo, rotulo, x, y });
+// w/h: só no sistema (fronteira), que tem tamanho próprio
+const n = (id, tipo, rotulo, x, y, w, h) => ({ id, tipo, rotulo, x, y, ...(w ? { w, h } : {}) });
 // multDe / multPara: multiplicidade em cada ponta (só associação, agregação e composição; ver lib/multiplicidade.js)
 const e = (tipo, de, para, multDe, multPara) => ({
   id: `${de}-${tipo}-${para}`,
@@ -11,16 +13,21 @@ const e = (tipo, de, para, multDe, multPara) => ({
   ...(multDe ? { multDe } : {}),
   ...(multPara ? { multPara } : {}),
 });
+// Classe com atributos e métodos (uma linha UML por membro: "- saldo: float", "+ sacar(valor: float): bool")
+const c = (id, rotulo, x, y, atributos = [], metodos = []) => ({ id, tipo: 'classe', rotulo, x, y, atributos, metodos });
+// Transição do diagrama de estados: `evento` vai no rótulo da seta (vazio saindo do início e chegando ao fim)
+const t = (de, para, evento = '') => ({ id: `${de}-transicao-${para}`, tipo: 'transicao', de, para, rotulo: evento });
 
 export const MODELOS = [
   {
     id: 'biblioteca',
     cliente: 'Biblioteca Lua Cheia',
     assunto: 'Sistema de empréstimos',
-    tempo: 240,
+    tempo: 270,
     recompensa: 120,
     corpo: [
       'Olá! Precisamos de um diagrama de casos de uso.',
+      'O sistema se chama "Sistema da Biblioteca".',
       'Atores: "Aluno" e "Bibliotecário".',
       'O Aluno pode "Consultar acervo" e "Emprestar livro".',
       'O Bibliotecário participa de "Emprestar livro" e "Devolver livro".',
@@ -28,12 +35,13 @@ export const MODELOS = [
     ],
     esperado: {
       nodes: [
-        n('a1', 'ator', 'Aluno', 40, 100),
-        n('a2', 'ator', 'Bibliotecário', 600, 120),
-        n('c1', 'casoDeUso', 'Consultar acervo', 200, 40),
-        n('c2', 'casoDeUso', 'Emprestar livro', 200, 160),
-        n('c3', 'casoDeUso', 'Devolver livro', 200, 280),
-        n('c4', 'casoDeUso', 'Verificar cadastro', 400, 220),
+        n('s1', 'sistema', 'Sistema da Biblioteca', 140, 20, 460, 380),
+        n('a1', 'ator', 'Aluno', 20, 140),
+        n('a2', 'ator', 'Bibliotecário', 660, 200),
+        n('c1', 'casoDeUso', 'Consultar acervo', 180, 80),
+        n('c2', 'casoDeUso', 'Emprestar livro', 180, 200),
+        n('c3', 'casoDeUso', 'Devolver livro', 180, 320),
+        n('c4', 'casoDeUso', 'Verificar cadastro', 400, 200),
       ],
       edges: [
         e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'),
@@ -46,10 +54,11 @@ export const MODELOS = [
     id: 'pizzaria',
     cliente: 'Pizzaria Forno Roxo',
     assunto: 'App de delivery',
-    tempo: 240,
+    tempo: 270,
     recompensa: 130,
     corpo: [
       'Boa noite! Queremos um diagrama de casos de uso do nosso app.',
+      'O sistema se chama "App da Pizzaria".',
       'Atores: "Cliente" e "Entregador".',
       'O Cliente pode "Fazer pedido" e "Acompanhar entrega".',
       'Fazer pedido sempre inclui "Pagar".',
@@ -57,16 +66,18 @@ export const MODELOS = [
     ],
     esperado: {
       nodes: [
-        n('a1', 'ator', 'Cliente', 40, 100),
-        n('a2', 'ator', 'Entregador', 600, 200),
-        n('c1', 'casoDeUso', 'Fazer pedido', 200, 60),
-        n('c2', 'casoDeUso', 'Acompanhar entrega', 200, 180),
-        n('c3', 'casoDeUso', 'Pagar', 400, 20),
-        n('c4', 'casoDeUso', 'Entregar pedido', 380, 260),
+        n('s1', 'sistema', 'App da Pizzaria', 140, 20, 460, 360),
+        n('a1', 'ator', 'Cliente', 20, 120),
+        n('a2', 'ator', 'Entregador', 660, 240),
+        n('c1', 'casoDeUso', 'Fazer pedido', 180, 80),
+        n('c2', 'casoDeUso', 'Acompanhar entrega', 180, 240),
+        n('c3', 'casoDeUso', 'Pagar', 400, 80),
+        n('c4', 'casoDeUso', 'Entregar pedido', 400, 260),
       ],
       edges: [
         e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'),
-        e('include', 'c1', 'c3'), e('associacao', 'a2', 'c4'),
+        e('include', 'c1', 'c3'),
+        e('associacao', 'a2', 'c4'),
       ],
     },
   },
@@ -74,23 +85,27 @@ export const MODELOS = [
     id: 'cinema',
     cliente: 'Cine Pastel',
     assunto: 'Venda de ingressos',
-    tempo: 200,
+    tempo: 230,
     recompensa: 140,
     corpo: [
       'Oi! Precisamos modelar a venda online.',
+      'O sistema se chama "Site do Cinema".',
       'Ator: "Cliente". Ele pode "Comprar ingresso".',
       'Comprar ingresso inclui "Escolher assento".',
       'Opcionalmente, "Aplicar cupom" estende Comprar ingresso.',
     ],
     esperado: {
       nodes: [
-        n('a1', 'ator', 'Cliente', 40, 120),
-        n('c1', 'casoDeUso', 'Comprar ingresso', 220, 140),
-        n('c2', 'casoDeUso', 'Escolher assento', 440, 60),
-        n('c3', 'casoDeUso', 'Aplicar cupom', 440, 240),
+        n('s1', 'sistema', 'Site do Cinema', 140, 20, 460, 340),
+        n('a1', 'ator', 'Cliente', 20, 140),
+        n('c1', 'casoDeUso', 'Comprar ingresso', 180, 160),
+        n('c2', 'casoDeUso', 'Escolher assento', 400, 80),
+        n('c3', 'casoDeUso', 'Aplicar cupom', 400, 260),
       ],
       edges: [
-        e('associacao', 'a1', 'c1'), e('include', 'c1', 'c2'), e('extend', 'c3', 'c1'),
+        e('associacao', 'a1', 'c1'),
+        e('include', 'c1', 'c2'),
+        e('extend', 'c3', 'c1'),
       ],
     },
   },
@@ -122,19 +137,21 @@ export const MODELOS = [
     id: 'banco',
     cliente: 'Banco Nuvem',
     assunto: 'Caixa eletrônico',
-    tempo: 200,
+    tempo: 230,
     recompensa: 140,
     corpo: [
       'Prezados, precisamos do diagrama de casos de uso do caixa.',
+      'O sistema se chama "Caixa Eletrônico".',
       'Ator: "Cliente". Ele pode "Sacar" e "Depositar".',
       'Tanto Sacar quanto Depositar incluem "Autenticar".',
     ],
     esperado: {
       nodes: [
-        n('a1', 'ator', 'Cliente', 40, 120),
-        n('c1', 'casoDeUso', 'Sacar', 220, 60),
-        n('c2', 'casoDeUso', 'Depositar', 220, 220),
-        n('c3', 'casoDeUso', 'Autenticar', 440, 140),
+        n('s1', 'sistema', 'Caixa Eletrônico', 140, 20, 460, 340),
+        n('a1', 'ator', 'Cliente', 20, 140),
+        n('c1', 'casoDeUso', 'Sacar', 180, 80),
+        n('c2', 'casoDeUso', 'Depositar', 180, 240),
+        n('c3', 'casoDeUso', 'Autenticar', 400, 160),
       ],
       edges: [
         e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'),
@@ -171,10 +188,11 @@ export const MODELOS = [
     id: 'academia',
     cliente: 'Academia Halter Lilás',
     assunto: 'Gestão de treinos',
-    tempo: 240,
+    tempo: 270,
     recompensa: 150,
     corpo: [
       'E aí! Queremos um diagrama de casos de uso.',
+      'O sistema se chama "Sistema da Academia".',
       'Atores: "Aluno" e "Instrutor".',
       'O Aluno pode "Matricular" e "Registrar presença".',
       'O Instrutor pode "Montar treino".',
@@ -182,16 +200,18 @@ export const MODELOS = [
     ],
     esperado: {
       nodes: [
-        n('a1', 'ator', 'Aluno', 40, 100),
-        n('a2', 'ator', 'Instrutor', 620, 120),
-        n('c1', 'casoDeUso', 'Matricular', 200, 40),
-        n('c2', 'casoDeUso', 'Registrar presença', 200, 180),
-        n('c3', 'casoDeUso', 'Montar treino', 420, 100),
-        n('c4', 'casoDeUso', 'Avaliar físico', 420, 260),
+        n('s1', 'sistema', 'Sistema da Academia', 140, 20, 460, 380),
+        n('a1', 'ator', 'Aluno', 20, 120),
+        n('a2', 'ator', 'Instrutor', 660, 120),
+        n('c1', 'casoDeUso', 'Matricular', 180, 80),
+        n('c2', 'casoDeUso', 'Registrar presença', 180, 220),
+        n('c3', 'casoDeUso', 'Montar treino', 400, 120),
+        n('c4', 'casoDeUso', 'Avaliar físico', 400, 280),
       ],
       edges: [
         e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'),
-        e('associacao', 'a2', 'c3'), e('extend', 'c4', 'c3'),
+        e('associacao', 'a2', 'c3'),
+        e('extend', 'c4', 'c3'),
       ],
     },
   },
@@ -199,23 +219,558 @@ export const MODELOS = [
     id: 'cafeteria',
     cliente: 'Café Lo-Fi',
     assunto: 'Cardápio digital',
-    tempo: 180,
+    tempo: 210,
     recompensa: 110,
     corpo: [
       'Oi, pessoal da agência :)',
+      'O sistema se chama "App da Cafeteria".',
       'Ator: "Cliente". Ele pode "Ver cardápio" e "Pedir café".',
       'Pedir café inclui "Pagar".',
     ],
     esperado: {
       nodes: [
-        n('a1', 'ator', 'Cliente', 40, 100),
-        n('c1', 'casoDeUso', 'Ver cardápio', 220, 40),
-        n('c2', 'casoDeUso', 'Pedir café', 220, 180),
-        n('c3', 'casoDeUso', 'Pagar', 440, 180),
+        n('s1', 'sistema', 'App da Cafeteria', 140, 20, 460, 300),
+        n('a1', 'ator', 'Cliente', 20, 120),
+        n('c1', 'casoDeUso', 'Ver cardápio', 180, 80),
+        n('c2', 'casoDeUso', 'Pedir café', 180, 200),
+        n('c3', 'casoDeUso', 'Pagar', 400, 200),
       ],
       edges: [
-        e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'), e('include', 'c2', 'c3'),
+        e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'),
+        e('include', 'c2', 'c3'),
       ],
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Casos de uso com dependência entre casos (um só acontece se o outro já existir/tiver acontecido).
+  // Linha tracejada com seta: sai de quem depende e aponta para aquilo de que ele depende.
+  {
+    id: 'hotel',
+    cliente: 'Hotel Brisa Lilás',
+    assunto: 'Reservas online',
+    tempo: 270,
+    recompensa: 150,
+    corpo: [
+      'Olá! Queremos um diagrama de casos de uso das reservas.',
+      'O sistema se chama "Sistema de Reservas".',
+      'Atores: "Hóspede" e "Recepcionista".',
+      'O Hóspede pode "Reservar quarto" e "Cancelar reserva".',
+      'O Recepcionista faz o "Fazer check-in".',
+      'Cancelar reserva depende de Reservar quarto, e Fazer check-in também depende de Reservar quarto (use dependência).',
+    ],
+    esperado: {
+      nodes: [
+        n('s1', 'sistema', 'Sistema de Reservas', 140, 20, 460, 360),
+        n('a1', 'ator', 'Hóspede', 20, 120),
+        n('a2', 'ator', 'Recepcionista', 660, 220),
+        n('c1', 'casoDeUso', 'Reservar quarto', 180, 80),
+        n('c2', 'casoDeUso', 'Cancelar reserva', 180, 240),
+        n('c3', 'casoDeUso', 'Fazer check-in', 400, 240),
+      ],
+      edges: [
+        e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'),
+        e('associacao', 'a2', 'c3'),
+        e('dependencia', 'c2', 'c1'), e('dependencia', 'c3', 'c1'),
+      ],
+    },
+  },
+  {
+    id: 'streaming',
+    cliente: 'Streaming Nébula',
+    assunto: 'App de filmes e séries',
+    tempo: 270,
+    recompensa: 150,
+    corpo: [
+      'Oi! Precisamos do diagrama de casos de uso do nosso app.',
+      'O sistema se chama "App de Streaming".',
+      'Ator: "Assinante". Ele pode "Assinar plano", "Assistir filme" e "Baixar episódio".',
+      'Assistir filme depende de Assinar plano, e Baixar episódio também depende de Assinar plano (use dependência).',
+    ],
+    esperado: {
+      nodes: [
+        n('s1', 'sistema', 'App de Streaming', 140, 20, 460, 360),
+        n('a1', 'ator', 'Assinante', 20, 160),
+        n('c1', 'casoDeUso', 'Assinar plano', 400, 180),
+        n('c2', 'casoDeUso', 'Assistir filme', 180, 100),
+        n('c3', 'casoDeUso', 'Baixar episódio', 180, 260),
+      ],
+      edges: [
+        e('associacao', 'a1', 'c1'), e('associacao', 'a1', 'c2'), e('associacao', 'a1', 'c3'),
+        e('dependencia', 'c2', 'c1'), e('dependencia', 'c3', 'c1'),
+      ],
+    },
+  },
+  {
+    id: 'farmacia',
+    cliente: 'Farmácia Lavanda',
+    assunto: 'Venda de remédios',
+    tempo: 300,
+    recompensa: 170,
+    corpo: [
+      'Boa tarde! Queremos um diagrama de casos de uso da farmácia.',
+      'O sistema se chama "Sistema da Farmácia".',
+      'Atores: "Cliente" e "Farmacêutico".',
+      'O Cliente pode "Comprar remédio". O Farmacêutico faz o "Validar receita".',
+      'Comprar remédio depende de Validar receita (use dependência).',
+      'Comprar remédio sempre inclui "Pagar".',
+    ],
+    esperado: {
+      nodes: [
+        n('s1', 'sistema', 'Sistema da Farmácia', 140, 20, 460, 360),
+        n('a1', 'ator', 'Cliente', 20, 120),
+        n('a2', 'ator', 'Farmacêutico', 660, 200),
+        n('c1', 'casoDeUso', 'Comprar remédio', 180, 80),
+        n('c2', 'casoDeUso', 'Validar receita', 400, 200),
+        n('c3', 'casoDeUso', 'Pagar', 180, 260),
+      ],
+      edges: [
+        e('associacao', 'a1', 'c1'), e('associacao', 'a2', 'c2'),
+        e('dependencia', 'c1', 'c2'),
+        e('include', 'c1', 'c3'),
+      ],
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Diagramas de estados: começam na bolinha preta (estado inicial) e terminam na bolinha com
+  // anel (estado final). Transições levam o evento escrito na seta; saindo do início e chegando
+  // ao fim não há evento.
+  {
+    id: 'rastreio',
+    cliente: 'Entregas Cometa',
+    assunto: 'Status da entrega',
+    tempo: 270,
+    recompensa: 150,
+    corpo: [
+      'Olá! Precisamos de um diagrama de estados das nossas entregas.',
+      'Estados: "Recebido", "Em preparo", "A caminho", "Entregue" e "Cancelado".',
+      'Tudo começa em Recebido.',
+      'Recebido vai para Em preparo com o evento "confirmar". Em preparo vai para A caminho com "despachar". A caminho vai para Entregue com "entregar".',
+      'Recebido também pode ir para Cancelado com o evento "cancelar".',
+      'Entregue e Cancelado terminam o processo.',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Recebido', 100, 100),
+        n('e2', 'estado', 'Em preparo', 340, 100),
+        n('e3', 'estado', 'A caminho', 580, 100),
+        n('e4', 'estado', 'Entregue', 580, 260),
+        n('e5', 'estado', 'Cancelado', 100, 260),
+        n('f', 'estadoFinal', 'Fim', 400, 380),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'e2', 'confirmar'), t('e2', 'e3', 'despachar'), t('e3', 'e4', 'entregar'),
+        t('e1', 'e5', 'cancelar'),
+        t('e4', 'f'), t('e5', 'f'),
+      ],
+    },
+  },
+  {
+    id: 'semaforo',
+    cliente: 'Prefeitura de Vila Lilás',
+    assunto: 'Semáforo inteligente',
+    tempo: 240,
+    recompensa: 130,
+    corpo: [
+      'Bom dia! Queremos o diagrama de estados do novo semáforo.',
+      'Estados: "Vermelho", "Verde" e "Amarelo".',
+      'O semáforo começa em Vermelho.',
+      'Vermelho vai para Verde, Verde vai para Amarelo e Amarelo volta para Vermelho, sempre com o evento "tempo esgotado".',
+      'Do Vermelho, o evento "desligar" encerra o funcionamento.',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Vermelho', 100, 100),
+        n('e2', 'estado', 'Verde', 400, 100),
+        n('e3', 'estado', 'Amarelo', 260, 260),
+        n('f', 'estadoFinal', 'Fim', 40, 280),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'e2', 'tempo esgotado'), t('e2', 'e3', 'tempo esgotado'), t('e3', 'e1', 'tempo esgotado'),
+        t('e1', 'f', 'desligar'),
+      ],
+    },
+  },
+  {
+    id: 'catraca',
+    cliente: 'Metrô Aurora',
+    assunto: 'Catraca da estação',
+    tempo: 210,
+    recompensa: 120,
+    corpo: [
+      'Oi! Precisamos do diagrama de estados da catraca.',
+      'Estados: "Travada" e "Destravada". Ela começa Travada.',
+      'Travada vai para Destravada com o evento "inserir bilhete".',
+      'Destravada volta para Travada com o evento "passar".',
+      'Travada termina com o evento "desativar".',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Travada', 100, 100),
+        n('e2', 'estado', 'Destravada', 420, 100),
+        n('f', 'estadoFinal', 'Fim', 160, 280),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'e2', 'inserir bilhete'), t('e2', 'e1', 'passar'),
+        t('e1', 'f', 'desativar'),
+      ],
+    },
+  },
+  {
+    id: 'player',
+    cliente: 'Rádio Vinil Roxo',
+    assunto: 'Player de música',
+    tempo: 270,
+    recompensa: 150,
+    corpo: [
+      'E aí! Queremos o diagrama de estados do nosso player.',
+      'Estados: "Parado", "Tocando" e "Pausado". O player começa Parado.',
+      'Parado vai para Tocando com "play". Tocando vai para Pausado com "pause", e Pausado volta para Tocando com "play".',
+      'Tocando volta para Parado com "stop".',
+      'Parado termina com o evento "fechar".',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Parado', 100, 100),
+        n('e2', 'estado', 'Tocando', 420, 100),
+        n('e3', 'estado', 'Pausado', 420, 280),
+        n('f', 'estadoFinal', 'Fim', 160, 300),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'e2', 'play'), t('e2', 'e3', 'pause'), t('e3', 'e2', 'play'), t('e2', 'e1', 'stop'),
+        t('e1', 'f', 'fechar'),
+      ],
+    },
+  },
+  {
+    id: 'chamado',
+    cliente: 'Suporte Nuvem Roxa',
+    assunto: 'Chamados de suporte',
+    tempo: 270,
+    recompensa: 160,
+    corpo: [
+      'Olá! Precisamos do diagrama de estados de um chamado de suporte.',
+      'Estados: "Aberto", "Em atendimento" e "Resolvido". Todo chamado começa Aberto.',
+      'Aberto vai para Em atendimento com "atribuir". Em atendimento vai para Resolvido com "resolver".',
+      'Resolvido pode voltar para Em atendimento com "reabrir".',
+      'Resolvido termina com o evento "fechar".',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Aberto', 100, 100),
+        n('e2', 'estado', 'Em atendimento', 400, 100),
+        n('e3', 'estado', 'Resolvido', 400, 280),
+        n('f', 'estadoFinal', 'Fim', 700, 300),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'e2', 'atribuir'), t('e2', 'e3', 'resolver'), t('e3', 'e2', 'reabrir'),
+        t('e3', 'f', 'fechar'),
+      ],
+    },
+  },
+  // Estados com decisão (losango): a pergunta fica dentro do losango e cada seta que sai leva a
+  // condição entre colchetes ("[sim]" / "[não]"; na nota os colchetes são opcionais).
+  {
+    id: 'login-app',
+    cliente: 'Banco Estrela Roxa',
+    assunto: 'Login do aplicativo',
+    tempo: 300,
+    recompensa: 170,
+    corpo: [
+      'Olá! Precisamos do diagrama de estados do login do nosso app.',
+      'Estados: "Digitando senha", "Logado" e "Bloqueado". Tudo começa em Digitando senha.',
+      'Com o evento "enviar", o app chega a uma decisão (losango) com a pergunta "Senha certa?".',
+      'Da decisão, com a condição "[sim]" vai para Logado; com "[não]" volta para Digitando senha.',
+      'Digitando senha vai para Bloqueado com o evento "errar 3 vezes".',
+      'Logado termina com o evento "sair", e Bloqueado termina o processo.',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Digitando senha', 100, 100),
+        n('d', 'decisao', 'Senha certa?', 400, 80),
+        n('e2', 'estado', 'Logado', 700, 100),
+        n('e3', 'estado', 'Bloqueado', 100, 260),
+        n('f', 'estadoFinal', 'Fim', 480, 280),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'd', 'enviar'), t('d', 'e2', '[sim]'), t('d', 'e1', '[não]'),
+        t('e1', 'e3', 'errar 3 vezes'),
+        t('e2', 'f', 'sair'), t('e3', 'f'),
+      ],
+    },
+  },
+  {
+    id: 'pagamento',
+    cliente: 'Loja Pixel Lilás',
+    assunto: 'Pagamento do pedido',
+    tempo: 300,
+    recompensa: 170,
+    corpo: [
+      'Oi! Queremos o diagrama de estados do pagamento dos pedidos da loja.',
+      'Estados: "Aguardando pagamento", "Pago" e "Recusado". O pedido começa em Aguardando pagamento.',
+      'Com o evento "pagar", o pedido passa por uma decisão (losango): "Aprovado?".',
+      'Com a condição "[sim]" vai para Pago; com "[não]" vai para Recusado.',
+      'Recusado volta para Aguardando pagamento com "tentar de novo", ou termina com "desistir".',
+      'Pago termina o processo.',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Aguardando pagamento', 100, 100),
+        n('d', 'decisao', 'Aprovado?', 480, 80),
+        n('e2', 'estado', 'Pago', 740, 100),
+        n('e3', 'estado', 'Recusado', 480, 260),
+        n('f', 'estadoFinal', 'Fim', 800, 280),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'd', 'pagar'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+        t('e3', 'e1', 'tentar de novo'),
+        t('e2', 'f'), t('e3', 'f', 'desistir'),
+      ],
+    },
+  },
+  {
+    id: 'devolucao',
+    cliente: 'Biblioteca Pixel Azul',
+    assunto: 'Devolução de livros',
+    tempo: 270,
+    recompensa: 160,
+    corpo: [
+      'Olá! Precisamos do diagrama de estados de um livro na devolução.',
+      'Estados: "Emprestado", "Disponível" e "Com multa". O livro começa Emprestado.',
+      'Com o evento "devolver", há uma decisão (losango): "No prazo?".',
+      'Com a condição "[sim]" o livro fica Disponível; com "[não]" fica Com multa.',
+      'Com multa vai para Disponível com o evento "pagar multa".',
+      'Disponível termina o processo.',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Emprestado', 100, 100),
+        n('d', 'decisao', 'No prazo?', 380, 80),
+        n('e2', 'estado', 'Disponível', 640, 100),
+        n('e3', 'estado', 'Com multa', 380, 260),
+        n('f', 'estadoFinal', 'Fim', 700, 280),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'd', 'devolver'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+        t('e3', 'e2', 'pagar multa'),
+        t('e2', 'f'),
+      ],
+    },
+  },
+  {
+    id: 'encomenda',
+    cliente: 'Peças e Pixels',
+    assunto: 'Separação de encomendas',
+    tempo: 330,
+    recompensa: 180,
+    corpo: [
+      'Bom dia! Queremos o diagrama de estados das encomendas do nosso depósito.',
+      'Estados: "Recebido", "Separando", "Aguardando estoque" e "Enviado". Toda encomenda começa em Recebido.',
+      'Com o evento "conferir", a encomenda passa por uma decisão (losango): "Tem estoque?".',
+      'Com a condição "[sim]" vai para Separando; com "[não]" vai para Aguardando estoque.',
+      'Aguardando estoque volta para Recebido com o evento "chegar produto".',
+      'Separando vai para Enviado com "despachar", e Enviado termina o processo.',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Recebido', 100, 100),
+        n('d', 'decisao', 'Tem estoque?', 400, 80),
+        n('e2', 'estado', 'Separando', 700, 100),
+        n('e3', 'estado', 'Aguardando estoque', 380, 260),
+        n('e4', 'estado', 'Enviado', 700, 260),
+        n('f', 'estadoFinal', 'Fim', 940, 280),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'd', 'conferir'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+        t('e3', 'e1', 'chegar produto'),
+        t('e2', 'e4', 'despachar'), t('e4', 'f'),
+      ],
+    },
+  },
+  {
+    id: 'caixa-eletronico',
+    cliente: 'Rede Caixa Lua',
+    assunto: 'Saque no caixa eletrônico',
+    tempo: 390,
+    recompensa: 220,
+    corpo: [
+      'Oi! Queremos o diagrama de estados do nosso caixa eletrônico. Ele tem duas decisões (losangos).',
+      'Estados: "Ocioso", "Aguardando saque" e "Entregando dinheiro". O caixa começa Ocioso.',
+      'Com o evento "inserir cartão", ele chega à decisão "Senha certa?": com "[sim]" vai para Aguardando saque; com "[não]" volta para Ocioso.',
+      'Em Aguardando saque, o evento "pedir saque" leva à decisão "Tem saldo?": com "[sim]" vai para Entregando dinheiro; com "[não]" volta para Aguardando saque.',
+      'Entregando dinheiro volta para Ocioso com o evento "retirar dinheiro".',
+      'Ocioso termina com o evento "desligar".',
+    ],
+    esperado: {
+      nodes: [
+        n('i', 'estadoInicial', 'Início', 20, 120),
+        n('e1', 'estado', 'Ocioso', 100, 100),
+        n('d1', 'decisao', 'Senha certa?', 420, 80),
+        n('e2', 'estado', 'Aguardando saque', 720, 100),
+        n('d2', 'decisao', 'Tem saldo?', 900, 260),
+        n('e3', 'estado', 'Entregando dinheiro', 520, 280),
+        n('f', 'estadoFinal', 'Fim', 40, 300),
+      ],
+      edges: [
+        t('i', 'e1'),
+        t('e1', 'd1', 'inserir cartão'), t('d1', 'e2', '[sim]'), t('d1', 'e1', '[não]'),
+        t('e2', 'd2', 'pedir saque'), t('d2', 'e3', '[sim]'), t('d2', 'e2', '[não]'),
+        t('e3', 'e1', 'retirar dinheiro'),
+        t('e1', 'f', 'desligar'),
+      ],
+    },
+  },
+  // ---------------------------------------------------------------------------
+  // Classes com atributos e métodos (avaliados: nome e tipo de cada membro, na classe certa).
+  // As ligações nascem dos membros: atributo do tipo de outra classe → associação; outra classe
+  // só como parâmetro de método → dependência. Os três últimos focam em composição.
+  {
+    id: 'conta-bancaria',
+    cliente: 'Banco Lilás',
+    assunto: 'Contas e clientes',
+    tempo: 330,
+    recompensa: 190,
+    corpo: [
+      'Olá! Precisamos de um diagrama de classes com atributos e métodos.',
+      'Classe "Cliente" com os atributos "- nome: String" e "- cpf: String".',
+      'Classe "ContaBancaria" com os atributos "- numero: String", "- saldo: float" e "- titular: Cliente".',
+      'Métodos de ContaBancaria: "+ depositar(valor: float)", "+ sacar(valor: float): bool" e "+ consultarSaldo(): float".',
+      'Como o titular é um Cliente, ContaBancaria se associa a Cliente.',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Cliente', 40, 60, ['- nome: String', '- cpf: String']),
+        c('k2', 'ContaBancaria', 400, 60,
+          ['- numero: String', '- saldo: float', '- titular: Cliente'],
+          ['+ depositar(valor: float)', '+ sacar(valor: float): bool', '+ consultarSaldo(): float']),
+      ],
+      edges: [e('associacao', 'k2', 'k1')],
+    },
+  },
+  {
+    id: 'emprestimo',
+    cliente: 'Biblioteca Pixel Azul',
+    assunto: 'Empréstimos com prazo',
+    tempo: 360,
+    recompensa: 210,
+    corpo: [
+      'Oi! Queremos um diagrama de classes dos empréstimos, com atributos e métodos.',
+      'Classe "Livro" com "- titulo: String" e "- isbn: String".',
+      'Classe "Leitor" com "- nome: String" e "- matricula: int".',
+      'Classe "Emprestimo" com os atributos "- dataRetirada: Date", "- livro: Livro" e "- leitor: Leitor", e os métodos "+ renovar(): bool" e "+ calcularMulta(dias: int): float".',
+      'Os atributos livro e leitor ligam Emprestimo a Livro e a Leitor por associação.',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Livro', 40, 40, ['- titulo: String', '- isbn: String']),
+        c('k2', 'Leitor', 40, 280, ['- nome: String', '- matricula: int']),
+        c('k3', 'Emprestimo', 400, 140,
+          ['- dataRetirada: Date', '- livro: Livro', '- leitor: Leitor'],
+          ['+ renovar(): bool', '+ calcularMulta(dias: int): float']),
+      ],
+      edges: [e('associacao', 'k3', 'k1'), e('associacao', 'k3', 'k2')],
+    },
+  },
+  {
+    id: 'locadora',
+    cliente: 'Locadora Veloz Roxa',
+    assunto: 'Relatório de aluguéis',
+    tempo: 300,
+    recompensa: 180,
+    corpo: [
+      'Boa tarde! Precisamos de um diagrama de classes com atributos e métodos.',
+      'Classe "Carro" com "- placa: String" e "- modelo: String", e os métodos "+ alugar()" e "+ devolver()".',
+      'Classe "RelatorioLocacao" com o atributo "- dataGeracao: Date" e o método "+ gerar(carro: Carro): String".',
+      'O RelatorioLocacao só usa Carro como parâmetro do método gerar: ele depende de Carro (use dependência, saindo do relatório).',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Carro', 40, 60, ['- placa: String', '- modelo: String'], ['+ alugar()', '+ devolver()']),
+        c('k2', 'RelatorioLocacao', 420, 60, ['- dataGeracao: Date'], ['+ gerar(carro: Carro): String']),
+      ],
+      edges: [e('dependencia', 'k2', 'k1')],
+    },
+  },
+  {
+    id: 'comanda',
+    cliente: 'Bistrô Ametista',
+    assunto: 'Comandas da cozinha',
+    tempo: 360,
+    recompensa: 220,
+    corpo: [
+      'Olá! Precisamos do diagrama de classes das comandas, com atributos e métodos.',
+      'Classe "Comanda" com "- mesa: int" e "- aberta: bool", e os métodos "+ adicionarItem(item: ItemComanda)" e "+ calcularTotal(): float".',
+      'Classe "ItemComanda" com "- quantidade: int" e "- produto: Produto", e o método "+ subtotal(): float".',
+      'Classe "Produto" com "- nome: String" e "- preco: float".',
+      'A Comanda é composta de ItemComanda (sem a comanda, os itens não existem): cada Comanda tem 1..* itens e cada item pertence a 1 comanda.',
+      'ItemComanda se associa a Produto pelo atributo produto.',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Comanda', 40, 40, ['- mesa: int', '- aberta: bool'], ['+ adicionarItem(item: ItemComanda)', '+ calcularTotal(): float']),
+        c('k2', 'ItemComanda', 500, 40, ['- quantidade: int', '- produto: Produto'], ['+ subtotal(): float']),
+        c('k3', 'Produto', 500, 300, ['- nome: String', '- preco: float']),
+      ],
+      edges: [e('composicao', 'k1', 'k2', '1', '1..*'), e('associacao', 'k2', 'k3')],
+    },
+  },
+  {
+    id: 'casa',
+    cliente: 'Construtora Pedra Lilás',
+    assunto: 'Projeto de casas',
+    tempo: 300,
+    recompensa: 190,
+    corpo: [
+      'Oi! Queremos um diagrama de classes das nossas plantas, com atributos e métodos.',
+      'Classe "Casa" com "- endereco: String" e os métodos "+ adicionarComodo(comodo: Comodo)" e "+ calcularArea(): float".',
+      'Classe "Comodo" com "- nome: String" e "- area: float".',
+      'A Casa é composta de Comodo: se a casa é demolida, os cômodos deixam de existir (composição, com o losango cheio na Casa).',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Casa', 40, 60, ['- endereco: String'], ['+ adicionarComodo(comodo: Comodo)', '+ calcularArea(): float']),
+        c('k2', 'Comodo', 480, 60, ['- nome: String', '- area: float']),
+      ],
+      edges: [e('composicao', 'k1', 'k2')],
+    },
+  },
+  {
+    id: 'curso-online',
+    cliente: 'Escola Nebulosa',
+    assunto: 'Cursos, módulos e aulas',
+    tempo: 360,
+    recompensa: 220,
+    corpo: [
+      'Olá! Precisamos de um diagrama de classes da plataforma de cursos, com atributos e métodos.',
+      'Classe "Curso" com "- titulo: String" e "- cargaHoraria: int", e o método "+ publicar()".',
+      'Classe "Modulo" com "- titulo: String" e "- ordem: int".',
+      'Classe "Aula" com "- titulo: String" e "- duracao: int", e o método "+ assistir()".',
+      'O Curso é composto de Modulo, e o Modulo é composto de Aula (apagar o curso apaga os módulos e as aulas).',
+    ],
+    esperado: {
+      nodes: [
+        c('k1', 'Curso', 40, 60, ['- titulo: String', '- cargaHoraria: int'], ['+ publicar()']),
+        c('k2', 'Modulo', 380, 60, ['- titulo: String', '- ordem: int']),
+        c('k3', 'Aula', 700, 60, ['- titulo: String', '- duracao: int'], ['+ assistir()']),
+      ],
+      edges: [e('composicao', 'k1', 'k2'), e('composicao', 'k2', 'k3')],
     },
   },
   // ---------------------------------------------------------------------------
@@ -475,22 +1030,25 @@ export const MODELOS = [
   },
 ];
 
-// Ordem de introdução na campanha (fáceis primeiro)
-// Os pedidos de diagrama de classes vindos do backend entram intercalados, por dificuldade.
-const ORDEM_CAMPANHA = [
-  'cafeteria', 'idiomas', 'biblioteca', 'cooperativa', 'cinema', 'atlas', 'playlist', 'pizzaria',
-  'lanchonete', 'rh', 'petshop', 'loja-online', 'banco', 'cinemateca', 'clinica', 'academia',
-  'acervo', 'conservatorio', 'escola', 'frota',
-];
-
 export const modeloPorId = (id) => MODELOS.find((m) => m.id === id);
 
-// Pedidos de um dia da campanha: 1 pedido nos primeiros dias, até 3 depois.
+// Ordem de introdução na campanha: por dificuldade (lib/dificuldade.js), alternando os tipos de diagrama.
+export const ORDEM_CAMPANHA = ordemPorDificuldade(MODELOS);
+// Depois que todos os pedidos já apareceram, a campanha repete só os médios e difíceis
+const REPETICAO = ORDEM_CAMPANHA.filter((id) => nivelDoModelo(modeloPorId(id)).id !== 'facil');
+
+
+// Pedidos de um dia da campanha: 1 pedido nos primeiros dias, até 3 depois. Os dias seguem a
+// ORDEM_CAMPANHA em sequência (cada dia continua de onde o anterior parou), então todos os modelos
+// aparecem, do fácil ao difícil; depois disso, só médios e difíceis.
+export const pedidosNoDia = (dia) => Math.min(3, 1 + Math.floor((dia - 1) / 4));
 export function pedidosDoDia(dia) {
-  const qtd = Math.min(3, 1 + Math.floor((dia - 1) / 4));
-  const ids = [];
-  for (let i = 0; i < qtd; i++) ids.push(ORDEM_CAMPANHA[(dia - 1 + i * 3) % ORDEM_CAMPANHA.length]);
-  return ids;
+  let inicio = 0;
+  for (let d = 1; d < dia; d++) inicio += pedidosNoDia(d);
+  return Array.from({ length: pedidosNoDia(dia) }, (_, i) => {
+    const k = inicio + i;
+    return k < ORDEM_CAMPANHA.length ? ORDEM_CAMPANHA[k] : REPETICAO[(k - ORDEM_CAMPANHA.length) % REPETICAO.length];
+  });
 }
 
 // Pagamento cresce levemente com o dia
@@ -498,8 +1056,15 @@ export const bonusDoDia = (dia) => 1 + (dia - 1) * 0.05;
 
 // Multa por pedido perdido (recusado ou cliente que foi embora): metade do que ele pagaria.
 // Quem já está devendo (saldo negativo no momento da multa) paga só um quarto.
-export const MULTA = { normal: 0.5, emDivida: 0.25 };
-export const multaPedido = (pedido, saldo = 0) => Math.round(pedido.recompensa * (saldo < 0 ? MULTA.emDivida : MULTA.normal));
+// Urgente perdido ou recusado: só 20% (com ou sem dívida)
+export const MULTA = { normal: 0.5, emDivida: 0.25, urgente: 0.2 };
+export const taxaDeMulta = (pedido, saldo = 0) => (pedido.urgente ? MULTA.urgente : saldo < 0 ? MULTA.emDivida : MULTA.normal);
+export const multaPedido = (pedido, saldo = 0) => Math.round(pedido.recompensa * taxaDeMulta(pedido, saldo));
+
+// Campanha: o 1º pedido do dia chega na hora; cada seguinte chega de 45 s a 90 s depois do anterior
+// (ou na hora, se o jogador não tiver mais nenhum pedido em aberto). `sorteio` em [0, 1).
+export const CHEGADA = { min: 45, max: 90 };
+export const intervaloChegada = (sorteio = 0.5) => CHEGADA.min + Math.round(Math.min(1, Math.max(0, sorteio)) * (CHEGADA.max - CHEGADA.min));
 
 // Paciência do cliente: segundos que ele espera o pedido ser aceito antes de ir embora.
 // Nos dias mais avançados da campanha os clientes são mais apressados (mínimo de 1 minuto).
@@ -519,6 +1084,36 @@ export function criarPedido(modeloId, seq, dia = 1) {
     pacienciaTotal: pacienciaDoDia(dia),
     status: 'novo', // novo | aceito | entregue | recusado | expirado (o cliente foi embora)
     pedacos: [], // pedaços da resposta já revelados na aba de dicas
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Pedido urgente: a cada minuto de jogo (relógio rodando) há 1 chance em 3 de chegar um, se não
+// houver outro urgente na fila. Paga mais, mas o cliente espera pouco e o prazo de entrega é curto.
+export const URGENTE = {
+  intervalo: 60, // segundos de jogo entre sorteios
+  chance: 1 / 3,
+  pagamento: 1.8, // × recompensa normal
+  prazo: 0.5, // × tempo de entrega normal
+  paciencia: 0.35, // × paciência normal
+  prazoMinimo: 45,
+  pacienciaMinima: 20,
+};
+
+export function criarPedidoUrgente(modeloId, seq, dia = 1) {
+  const p = criarPedido(modeloId, seq, dia);
+  const tempo = Math.max(URGENTE.prazoMinimo, Math.round(p.tempo * URGENTE.prazo));
+  const paciencia = Math.max(URGENTE.pacienciaMinima, Math.round(p.pacienciaTotal * URGENTE.paciencia));
+  return {
+    ...p,
+    id: `urgente-${p.id}`,
+    urgente: true,
+    assunto: `URGENTE: ${p.assunto}`,
+    recompensa: Math.round(p.recompensa * URGENTE.pagamento),
+    tempo,
+    tempoRestante: tempo,
+    paciencia,
+    pacienciaTotal: paciencia,
   };
 }
 

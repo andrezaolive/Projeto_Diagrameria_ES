@@ -9,6 +9,30 @@
   background: var(--c-mist);
   border-right: var(--px) solid var(--c-ink);
 }
+/* abas dos pedidos aceitos (quando há mais de um) */
+.abas-pedidos { display: flex; flex-wrap: wrap; gap: 4px; }
+.aba-pedido {
+  display: flex;
+  flex: 1 1 64px;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 4px;
+  font-family: var(--f-texto);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--c-ink);
+  background: var(--c-lilac);
+  border: 3px solid var(--c-ink);
+  cursor: pointer;
+}
+.aba-pedido .nome { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aba-pedido .tempo { font-size: 16px; color: var(--c-plum); }
+.aba-pedido:hover { background: var(--c-butter); }
+.aba-pedido.ativa { background: var(--c-lavender); box-shadow: inset 3px 3px 0 var(--c-grape); }
+.aba-pedido.urgente { border-color: var(--c-rose); background: var(--c-blush); }
+.aba-pedido.urgente.ativa { box-shadow: inset 3px 3px 0 var(--c-rose); }
+.aba-pedido.acabando .tempo { color: var(--c-rose); }
+.editor-requisitos .aviso-vazio { margin: 0; font-size: 18px; line-height: 1; text-align: center; color: var(--c-plum); }
 .editor-requisitos h4 { margin: 4px 0 0; font-family: var(--f-titulo); font-size: 11px; line-height: 1.4; }
 .editor-requisitos .assunto { font-size: 22px; color: var(--c-plum); }
 .editor-requisitos .lista { flex: 1; min-height: 0; font-size: 21px; line-height: 1; padding: 4px 8px; background: var(--c-cream); border: 3px solid var(--c-ink); }
@@ -122,3 +146,44 @@
   border: var(--px) solid var(--c-ink);
   cursor: pointer;
 }
+
+/* pedido urgente: painel de requisitos em vermelho */
+.editor-requisitos.pedido-urgente { background: var(--c-blush); box-shadow: inset 8px 0 0 var(--c-rose); }
+.editor-requisitos .relogio-pedido .tag-urgente { margin: 0 0 0 8px; }
+
+/* seções da paleta: casos de uso / classes / estados */
+.secoes-paleta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-bottom: 4px; }
+.secao-paleta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 3px;
+  font-family: var(--f-texto);
+  font-size: 15px;
+  line-height: 1;
+  color: var(--c-ink);
+  background: var(--c-cream);
+  border: 3px solid var(--c-ink);
+  cursor: pointer;
+}
+.secao-paleta svg { width: 22px; height: 22px; }
+.secao-paleta:hover { background: var(--c-butter); }
+.secao-paleta.ativa { background: var(--c-lavender); box-shadow: inset 3px 3px 0 var(--c-grape); }
+
+/* escrita direto na caixa da classe (por cima do texto desenhado) */
+.escrita-classe {
+  position: absolute;
+  z-index: 3;
+  box-sizing: border-box;
+  margin: 0;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-cream);
+  border: 2px solid var(--c-sky);
+  outline: none;
+  resize: none;
+  overflow: hidden;
+  white-space: pre;
+}
+.escrita-classe.nome { text-align: center; font-weight: bold; background: var(--c-lilac); }

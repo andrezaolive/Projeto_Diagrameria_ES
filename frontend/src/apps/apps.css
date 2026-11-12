@@ -207,4 +207,161 @@
 .debug-refresh button { padding: 4px 8px 2px; font-family: var(--f-titulo); font-size: 11px; background: var(--c-sky); border: 3px solid var(--c-ink); cursor: pointer; }
 .debug-refresh button:hover { background: var(--c-butter); }
 .debug-refresh span { font-size: 16px; color: var(--c-grape); }
+/* painel Dev (só em npm run dev) */
+.painel-dev { display: flex; flex-direction: column; gap: 14px; height: 100%; padding: 14px 18px; overflow: auto; }
+.painel-dev h4 { margin: 0 0 4px; font-family: var(--f-titulo); font-size: 12px; }
+.painel-dev .atual { margin: 0 0 6px; font-size: 20px; color: var(--c-grape); }
+.painel-dev .linha { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.painel-dev .px-campo { width: 140px; }
 .debug-id { margin-right: 4px; font-family: var(--f-texto); color: var(--c-grape); }
+
+/* ---------------------------------------------------------- pedido urgente (tons de vermelho) */
+.tag-urgente {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px 0;
+  font-family: var(--f-titulo);
+  font-size: 10px;
+  font-weight: normal;
+  color: var(--c-cream);
+  background: var(--c-rose);
+  border: 2px solid var(--c-ink);
+  vertical-align: 2px;
+}
+.email-item.urgente { background: var(--c-blush); border-left: 8px solid var(--c-rose); }
+.email-item.urgente:hover { background: var(--c-butter); }
+.email-item.urgente.sel { background: var(--c-rose); }
+.email-item.urgente.sel .tag-urgente { background: var(--c-ink); }
+.email-item.urgente .assunto { color: var(--c-ink); }
+.email-leitura.urgente header { background: var(--c-blush); border-bottom-color: var(--c-rose); }
+.email-leitura.urgente .corpo { background: var(--c-mist); }
+.selo.selo-urgente { background: var(--c-rose); color: var(--c-cream); }
+.aviso-urgente { padding: 6px 10px 4px; color: var(--c-ink); background: var(--c-blush); border: var(--px) solid var(--c-rose); }
+.email-item.perdido.sel { box-shadow: inset 0 0 0 3px var(--c-cream); }
+/* pedido entregue: verde (qualquer nota), no fim da lista */
+.email-item.concluido,
+.email-item.concluido.urgente { background: var(--c-mint); border-left: var(--px) solid var(--c-ink); }
+.email-item.concluido:hover { background: var(--c-butter); }
+.email-item.concluido.sel { background: var(--c-mint); box-shadow: inset 0 0 0 4px var(--c-grape); }
+.email-item.concluido .assunto { color: var(--c-ink); }
+
+/* ---------------------------------------------------------- músicas (lojinha e toca-fitas) */
+.musica-item .disco-mini { display: grid; place-items: center; width: 100%; max-width: 256px; height: 128px; background: var(--c-plum); }
+.musica-item .disco-mini .disco { width: 96px; height: 96px; }
+.disco { image-rendering: pixelated; }
+.disco.girando { animation: disco-gira 1.2s steps(8) infinite; }
+@keyframes disco-gira { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .disco.girando { animation: none; } }
+.musica-acoes { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.selo-comprada { padding: 4px 8px 2px; font-family: var(--f-titulo); font-size: 9px; background: var(--c-mint); border: 3px solid var(--c-ink); }
+.aviso-loja { margin: 0; padding: 10px 16px; font-size: 22px; text-align: center; color: var(--c-plum); background: var(--c-butter); border-top: var(--px) solid var(--c-ink); }
+.toca-fitas { height: 100%; display: flex; flex-direction: column; }
+.toca-fitas .loja-grade { grid-template-columns: repeat(3, 1fr); }
+.toca-fitas .loja-item .px-btn { white-space: nowrap; }
+.disco-mini .aleatoria { font-family: var(--f-titulo); font-size: 40px; color: var(--c-lavender); }
+
+/* ---------------------------------------------------------- debug: todos os pedidos */
+.todos-pedidos { height: 100%; display: flex; flex-direction: column; }
+.todos-filtros { display: flex; gap: 8px; padding: 12px 16px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
+.todos-lista { flex: 1; min-height: 0; list-style: none; margin: 0; padding: 12px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+.todos-item {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px 8px;
+  text-align: left;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-cream);
+  border: var(--px) solid var(--c-ink);
+  cursor: pointer;
+}
+.todos-item:hover { background: var(--c-butter); }
+.todos-cabeca { display: flex; justify-content: space-between; gap: 8px; font-size: 22px; }
+.todos-cabeca code { font-size: 16px; color: var(--c-grape); }
+.todos-assunto { font-size: 18px; color: var(--c-plum); }
+.todos-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.todos-tag { padding: 1px 6px 0; font-size: 16px; background: var(--c-lilac); border: 2px solid var(--c-ink); }
+.todos-tag.principal { background: var(--c-sky); font-weight: bold; }
+
+/* dificuldade do pedido */
+.tag-nivel { padding: 2px 8px 0; font-family: var(--f-titulo); font-size: 9px; color: var(--c-ink); border: 3px solid var(--c-ink); white-space: nowrap; }
+.tag-nivel.facil { background: var(--c-mint); }
+.tag-nivel.medio { background: var(--c-butter); }
+.tag-nivel.dificil { background: var(--c-rose); color: var(--c-cream); }
+.todos-cabeca { align-items: center; }
+.todos-cabeca b { flex: 1; }
+
+/* ---------------------------------------------------------- guia dos diagramas */
+.guia { height: 100%; display: flex; flex-direction: column; }
+.guia-abas { display: flex; gap: 8px; padding: 10px 16px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
+.guia-aba {
+  display: flex; align-items: center; gap: 8px; padding: 6px 14px 4px;
+  font-family: var(--f-titulo); font-size: 12px; color: var(--c-ink);
+  background: var(--c-cream); border: var(--px) solid var(--c-ink); cursor: pointer;
+}
+.guia-aba:hover { background: var(--c-butter); }
+.guia-aba.ativa { background: var(--c-lavender); box-shadow: inset 3px 3px 0 var(--c-grape); }
+.guia-corpo { flex: 1; min-height: 0; padding: 14px 22px 22px; font-size: 22px; background: var(--c-cream); }
+.guia-resumo { margin: 0 0 6px; padding: 10px 14px 8px; background: var(--c-lilac); border-left: 8px solid var(--c-grape); }
+.guia-titulo { margin: 18px 0 8px; font-family: var(--f-titulo); font-size: 13px; color: var(--c-grape); }
+.guia-pecas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.guia-peca { display: flex; gap: 10px; padding: 8px 10px; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.guia-peca b { font-family: var(--f-titulo); font-size: 11px; }
+.guia-peca p { margin: 2px 0 0; font-size: 19px; line-height: 1.1; }
+.guia-peca .guia-uso { color: var(--c-plum); }
+.guia-icone { flex: none; width: 52px; height: 44px; display: grid; place-items: center; background: var(--c-cream); border: 3px solid var(--c-ink); }
+.guia-icone code { font-size: 14px; white-space: nowrap; }
+.guia-exemplo { display: grid; grid-template-columns: 340px 1fr; gap: 12px; align-items: stretch; }
+.guia-email { margin: 0; padding: 10px 14px; font-size: 20px; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.guia-email p { margin: 6px 0 0; line-height: 1.1; }
+.guia-de { font-weight: bold; color: var(--c-grape); }
+.guia-diagrama { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.guia-diagrama svg { width: 100%; height: 300px; background: var(--c-cream); border: 3px solid var(--c-ink); }
+.guia-diagrama figcaption { font-size: 17px; text-align: center; color: var(--c-plum); }
+.guia-passos { margin: 0; padding-left: 26px; display: grid; gap: 6px; font-size: 20px; line-height: 1.15; }
+.guia-passos .guia-frase { color: var(--c-grape); }
+
+/* ---------------------------------------------------------- café: aba da loja e janela da cafeteira */
+.capsula-info { font-size: 18px; color: var(--c-grape); text-align: center; }
+.cafeteira { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; }
+.cafeteira-botoes { display: flex; gap: 16px; }
+.capsula-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 160px;
+  padding: 10px 6px 8px;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-mist);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset -4px -4px 0 var(--c-lavender);
+  cursor: pointer;
+}
+.capsula-btn:hover:not(:disabled) { background: var(--c-butter); }
+.capsula-btn:active:not(:disabled) { box-shadow: inset 4px 4px 0 var(--c-lavender); }
+.capsula-btn:disabled { cursor: not-allowed; filter: grayscale(0.7); opacity: 0.7; }
+/* número de cápsulas no centro do ícone */
+.capsula-icone { position: relative; display: grid; place-items: center; width: 80px; height: 80px; }
+.capsula-icone img { width: 80px; height: 80px; }
+.capsula-qtd {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding-top: 14px;
+  font-family: var(--f-titulo);
+  font-size: 18px;
+  color: var(--c-cream);
+  text-shadow: 2px 2px 0 var(--c-ink), -2px 2px 0 var(--c-ink), 2px -2px 0 var(--c-ink), -2px -2px 0 var(--c-ink);
+}
+.capsula-nome { font-family: var(--f-titulo); font-size: 11px; }
+.capsula-efeito { font-size: 18px; color: var(--c-grape); }
+.cafeteira-status { margin: 0; padding: 6px 12px; font-size: 22px; background: var(--c-cream); border: 3px solid var(--c-ink); }
+.cafeteira-status.preparando { background: var(--c-peach); }
+.cafeteira-status.pronto { background: var(--c-mint); }
+.cafeteira-efeito { margin: 0; font-size: 20px; color: var(--c-plum); }
+.cafeteira .aviso-loja { align-self: stretch; border: 3px solid var(--c-ink); }

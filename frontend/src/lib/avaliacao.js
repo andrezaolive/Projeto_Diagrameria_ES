@@ -1,9 +1,33 @@
 // Compara o diagrama do jogador com o gabarito do pedido.
 import { normalizarMult } from './multiplicidade.js';
-export const TIPOS_AVALIADOS = ['ator', 'casoDeUso', 'classe'];
+import { foraDoLugar } from './grid.js';
+import { avaliarMembros } from './membros.js';
+// O sistema (fronteira) conta como elemento: tipo e nome (o e-mail diz como ele se chama)
+export const TIPOS_AVALIADOS = ['ator', 'casoDeUso', 'classe', 'sistema', 'estadoInicial', 'estado', 'estadoFinal', 'decisao'];
+
+// Transição (diagrama de estados): vale com o evento certo; associação não tem sentido
+export const chaveRelacao = (tipo, a, b, evento) => {
+  if (tipo === 'associacao') return `${tipo}|${[a, b].sort().join('|')}`;
+  if (tipo === 'transicao') return `${tipo}|${a}|${b}|${normalizarEvento(evento)}`;
+  return `${tipo}|${a}|${b}`;
+};
+
+// Fronteira do sistema (só em pedidos cujo gabarito tem sistema): fração dos casos de uso do jogador
+// que estão dentro de um sistema + atores que estão fora. null = o pedido não cobra fronteira.
+export function avaliarFronteira(jogador, esperado) {
+  if (!esperado.nodes.some((n) => n.tipo === 'sistema')) return null;
+  const conferidos = jogador.nodes.filter((n) => n.tipo === 'casoDeUso' || n.tipo === 'ator');
+  if (!conferidos.length) return 0;
+  const temSistema = jogador.nodes.some((n) => n.tipo === 'sistema');
+  // sem sistema nenhum: os casos de uso estão todos fora (atores, por definição, também estão fora)
+  const errados = temSistema ? foraDoLugar(jogador.nodes).length : conferidos.filter((n) => n.tipo === 'casoDeUso').length;
+  return (conferidos.length - errados) / conferidos.length;
+}
 
 export const normalizar = (s = '') =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+// Evento/condição da transição: os colchetes da condição são opcionais ("[sim]" = "sim")
+export const normalizarEvento = (s = '') => normalizar(s.replace(/[[\]]/g, ' '));
 
 function contar(lista, chave, filtro = () => true) {
   const out = {};
@@ -43,11 +67,7 @@ export function avaliar(jogador, esperado) {
 
   // Relações: mesmo tipo e mesmas pontas (pelos rótulos); associação vale nos dois sentidos
   const rot = (nodes, id) => normalizar(nodes.find((x) => x.id === id)?.rotulo);
-  const chave = (nodes, ed) => {
-    const a = rot(nodes, ed.de), b = rot(nodes, ed.para);
-    const [p, q] = ed.tipo === 'associacao' ? [a, b].sort() : [a, b];
-    return `${ed.tipo}|${p}|${q}`;
-  };
+  const chave = (nodes, ed) => chaveRelacao(ed.tipo, rot(nodes, ed.de), rot(nodes, ed.para), ed.rotulo);
   const restantes = jogador.edges.map((ed) => ({ ed, k: chave(jogador.nodes, ed) }));
   let relOk = 0;
   // Multiplicidades: cada ponta pedida no gabarito vale um ponto, conferida só nas relações certas
@@ -68,11 +88,22 @@ export function avaliar(jogador, esperado) {
   // null = o pedido não cobra multiplicidade (a nota segue a fórmula de sempre)
   const multiplicidades = multTotal ? multOk / multTotal : null;
 
-  const nota =
-    multiplicidades == null
-      ? Math.round(100 * (0.4 * estrutura + 0.3 * rotulos + 0.3 * relacoes))
-      : Math.round(100 * (0.35 * estrutura + 0.25 * rotulos + 0.25 * relacoes + 0.15 * multiplicidades));
-  return { nota, estrutura, rotulos, relacoes, multiplicidades };
+  const fronteira = avaliarFronteira(jogador, esperado);
+  const membros = avaliarMembros(jogador, esperado);
+  const nota = calcularNota({ estrutura, rotulos, relacoes, multiplicidades, fronteira, membros });
+  return { nota, estrutura, rotulos, relacoes, multiplicidades, fronteira, membros };
+}
+
+// Pesos: base 40/30/30 (estrutura/nomes/relações). Cada extra cobrado pelo pedido entra com o seu
+// peso e a base encolhe na mesma proporção: multiplicidade ou sistema 15% (35/25/25 + 15 na prática),
+// atributos e métodos 30% (28/21/21 + 30).
+export const PESO_EXTRA = { multiplicidades: 0.15, fronteira: 0.15, membros: 0.3 };
+export function calcularNota(partes) {
+  const extras = Object.keys(PESO_EXTRA).filter((k) => partes[k] != null);
+  const pesoExtras = extras.reduce((t, k) => t + PESO_EXTRA[k], 0);
+  const base = 0.4 * partes.estrutura + 0.3 * partes.rotulos + 0.3 * partes.relacoes;
+  const extra = extras.reduce((t, k) => t + PESO_EXTRA[k] * partes[k], 0);
+  return Math.round(100 * ((1 - pesoExtras) * base + extra));
 }
 
 export function pagamento(recompensa, nota, atrasado) {

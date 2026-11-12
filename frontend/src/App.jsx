@@ -8,10 +8,10 @@ import Modos from './screens/Modos.jsx';
 import Calendario from './screens/Calendario.jsx';
 import Jogo from './screens/Jogo.jsx';
 import { useGame } from './state/GameContext.jsx';
-import { EXCESSO_MENU_DB, LOOP_MENU, pararMusica, tocarMusica } from './lib/musica.js';
+import { EXCESSO_MENU_DB, LOOP_MENU, tocarMusica } from './lib/musica.js';
 import musicaMenu from './assets/audio/musica-menu.mp3';
 
-// telas que tocam a música do menu (o jogo em si fica em silêncio por enquanto)
+// telas que tocam a música do menu (no jogo, Jogo.jsx toca as trilhas de gameplay)
 const TELAS_MENU = ['menu', 'nome', 'conta', 'modos', 'calendario'];
 
 // Fluxo: splash -> (nome, na primeira vez) -> menu -> modos -> (calendário ->) jogo (escritório <-> computador)
@@ -23,11 +23,10 @@ export default function App() {
 
   useEffect(() => {
     if (TELAS_MENU.includes(tela)) tocarMusica(musicaMenu, { loop: LOOP_MENU, excessoDb: EXCESSO_MENU_DB });
-    else if (tela !== 'splash') pararMusica();
   }, [tela]);
 
   const iniciar = (modo, dia) => {
-    dispatch({ type: 'INICIAR_SESSAO', modo, dia });
+    dispatch({ type: 'INICIAR_SESSAO', modo, dia, sorteio: Math.random() });
     setTela('jogo');
   };
   const abrirConta = (modo) => {

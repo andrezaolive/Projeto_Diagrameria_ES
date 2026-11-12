@@ -148,5 +148,6 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Áudio original (master WAV); o jogo usa o MP3 em frontend/src/assets/audio/
+# Áudio original (WAV da música e pasta de sfx); o jogo usa as cópias em frontend/src/assets/
 /audio/
+/sfx/

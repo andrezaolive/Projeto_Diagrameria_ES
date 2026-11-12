@@ -27,3 +27,19 @@ export const PELES = [
   { id: 'morena', nome: 'Morena', base: '#8d5a43', sombra: '#6e4234' },
   { id: 'escura', nome: 'Escura', base: '#5c3a30', sombra: '#432a26' },
 ];
+
+// Tintas das canetas do pote (lojinha → Pote de canetas) e do rabisco no papel. Segunda exceção à
+// paleta, como as PELES: verde, ciano, laranja e um vermelho/azul vivos não existem nas 16 cores.
+// Tons suaves para combinar com o resto; branco, preto, roxo, rosa e amarelo saem da paleta.
+export const TINTAS = {
+  branco: '#fbf7ff',
+  preto: '#1e1a2e',
+  azul: '#5b7fd1',
+  roxo: '#7d6a9e',
+  vermelho: '#d0505f',
+  rosa: '#f4b6c8',
+  laranja: '#ef9a55',
+  amarelo: '#f2d45c',
+  verde: '#6cb877',
+  ciano: '#6ccfd9',
+};
