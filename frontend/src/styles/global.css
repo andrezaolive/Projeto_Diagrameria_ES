@@ -121,6 +121,10 @@ button { font: inherit; color: inherit; }
 .px-btn.claro { --bg: var(--c-mist); --hi: var(--c-cream); --lo: var(--c-lavender); --fg: var(--c-ink); }
 .px-btn.claro:hover:not(:disabled) { --bg: var(--c-cream); --hi: var(--c-cream); --lo: var(--c-lilac); }
 .px-btn.ativo { --bg: var(--c-butter); --hi: var(--c-cream); --lo: var(--c-peach); --fg: var(--c-ink); }
+/* desativado vence as cores das variantes (o .ativo desativado continua amarelo: "Em uso", "Tocando") */
+.px-btn.rosa:disabled,
+.px-btn.menta:disabled,
+.px-btn.claro:disabled { --bg: var(--c-plum); --hi: var(--c-grape); --lo: var(--c-night); --fg: var(--c-violet); }
 
 /* ---------------------------------------------------------------- janelas */
 .janela {

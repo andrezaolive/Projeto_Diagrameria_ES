@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Botao, Dinheiro } from '../components/ui.jsx';
 import { ITENS_LOJA } from '../data/loja.js';
 import { FAIXAS_JOGO, temTocaFitas } from '../data/musicas.js';
+import { CAPSULAS, EFEITO_SEGUNDOS, iconeCapsula, temCafeteira } from '../data/cafe.js';
 import { pararPrevia, tocarPrevia, PREVIA } from '../lib/musica.js';
 import Disco from '../components/Disco.jsx';
 import { useGame } from '../state/GameContext.jsx';
@@ -13,7 +14,38 @@ const ABAS = [
   { id: 'mesa', nome: 'Mesa' },
   { id: 'parede', nome: 'Parede' },
   { id: 'musicas', nome: 'Músicas' },
+  { id: 'cafe', nome: 'Cafeteira' }, // (sem É: a fonte dos botões não tem maiúsculas acentuadas)
 ];
+
+// Aba Café: cápsulas compradas uma a uma (precisa da cafeteira), com quantas o jogador já tem
+function Capsulas({ state, onComprar }) {
+  const pode = temCafeteira(state);
+  return (
+    <>
+      {CAPSULAS.map((c) => (
+        <div key={c.id} className="loja-item capsula-item">
+          <div className="miniatura objeto-loja">
+            <img src={iconeCapsula(c.id)} alt="" className="pixel" style={{ width: 96, height: 96 }} />
+          </div>
+          <strong>{c.nome}</strong>
+          <span className="capsula-info">
+            Relógio {Math.round(c.lentidao * 100)}% mais lento por {EFEITO_SEGUNDOS} s · tem {state.cafe.capsulas[c.id] ?? 0}
+          </span>
+          <Botao
+            tamanho="pequeno"
+            variante="rosa"
+            disabled={!pode || state.dinheiro < c.preco}
+            title={pode ? 'Compra 1 cápsula' : 'Compre a cafeteira primeiro'}
+            onClick={() => onComprar(c)}
+            som=""
+          >
+            R$ {c.preco}
+          </Botao>
+        </div>
+      ))}
+    </>
+  );
+}
 
 // Miniatura do objeto ampliada por um fator inteiro (pixel art sem borrar)
 function Miniatura({ item }) {
@@ -96,7 +128,7 @@ export default function Loja() {
           </Botao>
         ))}
         <span style={{ flex: 1 }} />
-        {(aba === 'mesa' || aba === 'parede') && (
+        {(aba === 'mesa' || aba === 'parede' || aba === 'cafe') && (
           <span className="com-dica">
             <Botao tamanho="pequeno" variante="claro" onClick={() => dispatch({ type: 'ARRUMAR_ESCRITORIO' })} aria-describedby="dica-arrumar">
               Arrumar
@@ -148,7 +180,24 @@ export default function Loja() {
             </div>
           );
         })}
+        {aba === 'cafe' && (
+          <Capsulas
+            state={state}
+            onComprar={(c) => {
+              if (state.dinheiro < c.preco) return sfx.erro();
+              sfx.moeda();
+              dispatch({ type: 'COMPRAR_CAPSULA', tipo: c.id });
+            }}
+          />
+        )}
       </div>
+      )}
+      {aba === 'cafe' && (
+        <p className="aviso-loja">
+          {temCafeteira(state)
+            ? 'Ponha a caneca na cafeteira do escritório e clique nela para fazer café. Clique na caneca cheia para beber.'
+            : 'Compre a cafeteira para poder usar as cápsulas.'}
+        </p>
       )}
     </div>
   );

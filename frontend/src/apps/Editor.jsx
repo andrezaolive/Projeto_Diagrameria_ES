@@ -1,13 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Botao } from '../components/ui.jsx';
-import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES, secaoDoDiagrama } from '../editor/Formas.jsx';
+import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES } from '../editor/Formas.jsx';
 import { MULTIPLICIDADES, TEM_MULTIPLICIDADE } from '../lib/multiplicidade.js';
 import { REDIMENSIONAVEIS, TAMANHOS, TAMANHO_MINIMO, centro, contido, foraDoLugar, posicaoAoSoltar, redimensionar, retangulo, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
 import { avaliar, pagamento } from '../lib/avaliacao.js';
+import { diagramaVazio } from '../lib/feedback.js';
 import { modeloPorId } from '../data/pedidos.js';
 import { useGame } from '../state/GameContext.jsx';
-import { chaveDiagrama, diagramaDe } from '../state/reducer.js';
+import { chaveDiagrama, diagramaDe, pedidosAceitos } from '../state/reducer.js';
 import { formatarTempo } from '../screens/Computador.jsx';
 import { sfx } from '../lib/sfx.js';
 import { LINHA_MEMBRO, TOPO_CLASSE, medidasClasse } from '../lib/membros.js';
@@ -15,13 +16,14 @@ import './editor.css';
 
 const novoId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-export default function Editor({ focado, abrirApp, onEntregue }) {
+export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   const { state, dispatch } = useGame();
   const sessao = state.sessao;
   const chave = chaveDiagrama(sessao);
   const diagrama = diagramaDe(state, chave);
   const pedido = sessao?.pedidos.find((p) => p.id === sessao.ativo);
   const modelo = pedido && modeloPorId(pedido.modelo);
+  const aceitos = pedidosAceitos(sessao);
 
   const areaRef = useRef(null);
   const [view, setView] = useState({ x: 40, y: 40, zoom: 1 });
@@ -36,12 +38,9 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
   const eventoRef = useRef(null); // campo "Evento" da transição selecionada
   // edição direto na caixa da classe: { id, campo: 'rotulo' | 'atributos' | 'metodos' }
   const [escrevendo, setEscrevendo] = useState(null);
-  // Seção da paleta (casos de uso / classes / estados): abre na do pedido em andamento
-  const [secao, setSecao] = useState(() => secaoDoDiagrama(modelo?.esperado) ?? secaoDoDiagrama(diagrama) ?? 'casos');
-  useEffect(() => {
-    const s = secaoDoDiagrama(modelo?.esperado);
-    if (s) setSecao(s);
-  }, [modelo?.id]);
+  // Seção da paleta (casos de uso / classes / estados): sempre começa em casos de uso, ao abrir o
+  // editor e ao aceitar/trocar de pedido (descobrir o tipo de diagrama faz parte do desafio)
+  const [secao, setSecao] = useState('casos');
   const secaoAtual = SECOES.find((s) => s.id === secao);
   const trocarSecao = (id) => {
     setSecao(id);
@@ -49,6 +48,11 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
     setOrigem(null);
     setFantasma(null);
   };
+  useEffect(() => {
+    trocarSecao('casos');
+    setSel(null);
+    setEscrevendo(null);
+  }, [abertura, pedido?.id]);
 
   // refs com o valor mais recente, para os listeners de janela
   const viewRef = useRef(view);
@@ -319,7 +323,10 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
   });
 
   // ------------------------------------------------------------ entrega
+  // área de montagem vazia: não dá para entregar (nada para avaliar nem aprender com o feedback)
+  const vazio = diagramaVazio(diagrama);
   const entregar = () => {
+    if (vazio) return;
     const r = avaliar(diagrama, modelo.esperado);
     const atrasado = pedido.tempoRestante === 0;
     const valor = pagamento(pedido.recompensa, r.nota, atrasado);
@@ -372,6 +379,24 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
     <div className="editor">
       {/* ---------- requisitos */}
       <aside className={`editor-requisitos ${pedido?.urgente ? 'pedido-urgente' : ''}`}>
+        {/* mais de um pedido aceito: abas para trocar qual está no editor (cada um guarda o seu diagrama) */}
+        {aceitos.length > 1 && (
+          <div className="abas-pedidos" role="tablist" aria-label="Pedidos aceitos">
+            {aceitos.map((p) => (
+              <button
+                key={p.id}
+                role="tab"
+                aria-selected={p.id === pedido?.id}
+                className={`aba-pedido ${p.id === pedido?.id ? 'ativa' : ''} ${p.urgente ? 'urgente' : ''} ${p.tempoRestante <= 30 ? 'acabando' : ''}`}
+                onClick={() => p.id !== pedido?.id && dispatch({ type: 'ATIVAR', id: p.id })}
+                title={`${p.cliente}: ${p.assunto}`}
+              >
+                <span className="nome">{p.cliente.split(' ')[0]}</span>
+                <span className="tempo">{formatarTempo(p.tempoRestante)}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {pedido ? (
           <>
             <div className={`etiqueta relogio-pedido ${pedido.tempoRestante <= 30 || pedido.urgente ? 'urgente' : ''}`}>
@@ -385,7 +410,10 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
             </div>
             {pedido.tempoRestante === 0 && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
             <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>
-            <Botao variante="rosa" som="" onClick={entregar}>Entregar</Botao>
+            <Botao variante="rosa" som="" onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
+              Entregar
+            </Botao>
+            {vazio && <p className="aviso-vazio">Monte o diagrama na área ao lado para poder entregar.</p>}
           </>
         ) : (
           <>
@@ -405,7 +433,7 @@ export default function Editor({ focado, abrirApp, onEntregue }) {
               <input
                 ref={eventoRef}
                 value={transicao.rotulo ?? ''}
-                placeholder="ex.: pagar (vazio no início/fim)"
+                placeholder="ex.: pagar, [sim] (vazio no início/fim)"
                 maxLength={28}
                 onChange={(e) => mudarEvento(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}

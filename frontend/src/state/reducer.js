@@ -2,6 +2,7 @@ import { MODELOS, TOTAL_PEDACOS, URGENTE, criarPedido, criarPedidoUrgente, inter
 import { ALEATORIA, faixasDoJogador, temTocaFitas } from '../data/musicas.js';
 import { avatarPadrao } from '../lib/avatar.js';
 import { niveisNoInfinito, nivelDoModelo } from '../lib/dificuldade.js';
+import { CAPSULAS, EFEITO_SEGUNDOS, cafeInicial, motivoSemCafe, ritmoDoJogo, temCafeteira, tempoDePreparo } from '../data/cafe.js';
 import { conteudoDe, ehPorta, grupoDoObjeto, membrosDoGrupo, moverComConteudo, soltarDependentes } from '../lib/decoracao.js';
 
 export const DIAS_CAMPANHA = 23; // dias úteis de um mês de 31 dias começando na segunda
@@ -37,6 +38,7 @@ export const estadoInicial = () => ({
   // posicoes[objeto]: ver lib/decoracao.js (sem entrada = posição padrão)
   // guardados: objetos-base guardados no inventário (os da loja usam loja.moveis)
   escritorio: { posicoes: {}, guardados: [] },
+  cafe: cafeInicial(), // cafeteira: cápsulas, preparo, caneca cheia e efeito (ver data/cafe.js)
   computador: { icones: {} }, // posição dos ícones da área de trabalho ({ id: { col, lin } }, ver lib/areaTrabalho.js)
   sessao: null,
   diagramas: {},
@@ -52,6 +54,7 @@ export function migrar(salvo) {
     ...salvo,
     loja: { ...loja, possui: renomear(loja.possui), moveis: renomear(loja.moveis) },
     escritorio: { ...base.escritorio, ...salvo.escritorio },
+    cafe: { ...base.cafe, ...salvo.cafe, capsulas: { ...base.cafe.capsulas, ...salvo.cafe?.capsulas } },
     computador: { ...base.computador, ...salvo.computador, icones: { ...salvo.computador?.icones } },
     perfil: { ...base.perfil, ...salvo.perfil, avatar: { ...base.perfil.avatar, ...salvo.perfil?.avatar } },
     estatisticas: {
@@ -101,7 +104,13 @@ const atualizarPedido = (sessao, id, f) => ({
 // Pedidos que já não pedem nada do jogador
 export const FINALIZADOS = ['entregue', 'recusado', 'expirado'];
 // Relógio do jogo precisa correr? (pedido em andamento ou cliente esperando resposta)
-export const temRelogio = (sessao) => Boolean(sessao?.ativo || sessao?.pedidos.some((p) => p.status === 'novo' && p.paciencia != null));
+export const temRelogio = (sessao) =>
+  Boolean(sessao?.pedidos.some((p) => p.status === 'aceito' || (p.status === 'novo' && p.paciencia != null)));
+
+// Vários pedidos podem estar aceitos ao mesmo tempo; `sessao.ativo` é o que está aberto no editor.
+// Quando ele sai (entregue/recusado), o editor passa para outro aceito (o mais antigo), se houver.
+export const pedidosAceitos = (sessao) => sessao?.pedidos.filter((p) => p.status === 'aceito') ?? [];
+const proximoAtivo = (sessao) => pedidosAceitos(sessao)[0]?.id ?? null;
 
 // O dia só acaba quando todos os pedidos chegaram (fila vazia) e terminaram
 export const diaEncerrado = (sessao) =>
@@ -151,16 +160,27 @@ export function reducer(state, action) {
       const e = state.estatisticas;
       const estatisticas = { ...e, jogos: e.jogos + 1, jogosPorModo: { ...e.jogosPorModo, [modo]: (e.jogosPorModo[modo] ?? 0) + 1 } };
       const chegada = fila.length ? { fila, proximoEm: intervaloChegada(action.sorteio) } : {};
-      return { ...state, diagramas, estatisticas, sessao: { modo, dia, pedidos, ativo: null, ganho: 0, notas: [], seq, segundos: 0, ...chegada } };
+      // o efeito do café não passa de uma partida para outra
+      const cafe = { ...state.cafe, efeito: null };
+      return { ...state, diagramas, estatisticas, cafe, sessao: { modo, dia, pedidos, ativo: null, ganho: 0, notas: [], seq, segundos: 0, ...chegada } };
     }
 
     case 'ENCERRAR_SESSAO':
       return { ...state, sessao: null };
 
+    // Aceitar não exige terminar o atual: o aceito vira o pedido aberto no editor, e os outros
+    // aceitos continuam correndo o prazo (troca-se entre eles com ATIVAR)
     case 'ACEITAR': {
       const s = state.sessao;
-      if (!s || s.ativo) return state;
+      if (s?.pedidos.find((p) => p.id === action.id)?.status !== 'novo') return state;
       return { ...state, sessao: { ...atualizarPedido(s, action.id, () => ({ status: 'aceito' })), ativo: action.id } };
+    }
+
+    // Escolhe qual dos pedidos aceitos fica aberto no editor
+    case 'ATIVAR': {
+      const s = state.sessao;
+      if (s?.pedidos.find((p) => p.id === action.id)?.status !== 'aceito') return state;
+      return { ...state, sessao: { ...s, ativo: action.id } };
     }
 
     // DEBUG: troca os pedidos ainda não aceitos pelos próximos modelos da lista, em sequência
@@ -173,9 +193,20 @@ export function reducer(state, action) {
       const novo = criarPedido(action.modelo, s.seq, s.dia ?? 1);
       const existe = s.pedidos.some((p) => p.id === action.alvo);
       const pedidos = existe ? s.pedidos.map((p) => (p.id === action.alvo ? novo : p)) : [...s.pedidos, novo];
-      const sessao = { ...s, pedidos, seq: s.seq + 1, ativo: s.ativo === action.alvo ? null : s.ativo };
+      let sessao = { ...s, pedidos, seq: s.seq + 1 };
+      if (s.ativo === action.alvo) sessao = { ...sessao, ativo: proximoAtivo(sessao) };
       return { ...state, sessao, diagramas: semDiagrama(state.diagramas, action.alvo) };
     }
+
+    // DEBUG (painel "⚙ Dev" do e-mail, só em npm run dev): define o saldo (pode ser negativo)
+    case 'DEBUG_DINHEIRO':
+      if (!Number.isFinite(action.valor)) return state;
+      return { ...state, dinheiro: Math.round(action.valor) };
+
+    // DEBUG: para/continua o relógio da partida (Jogo.jsx não manda TICK enquanto `relogioParado`)
+    case 'DEBUG_PARAR_RELOGIO':
+      if (!state.sessao) return state;
+      return { ...state, sessao: { ...state.sessao, relogioParado: Boolean(action.parado) } };
 
     case 'DEBUG_REFRESH_PEDIDOS': {
       const s = state.sessao;
@@ -204,7 +235,7 @@ export function reducer(state, action) {
       const estatisticas = { ...state.estatisticas, recusados: state.estatisticas.recusados + 1, multas: (state.estatisticas.multas ?? 0) + multa };
       let sessao = atualizarPedido(s, action.id, () => ({ status: 'recusado', multa }));
       sessao = { ...sessao, ganho: s.ganho - multa };
-      if (s.ativo === action.id) sessao = { ...sessao, ativo: null };
+      if (s.ativo === action.id) sessao = { ...sessao, ativo: proximoAtivo(sessao) };
       if (s.modo === 'infinito') sessao = { ...sessao, pedidos: [...sessao.pedidos, novoPedidoAleatorio(sessao)], seq: s.seq + 1 };
       sessao = liberarFila(sessao, action.sorteio);
       return concluirDiaSeFor({ ...state, dinheiro: state.dinheiro - multa, estatisticas, sessao, diagramas: semDiagrama(state.diagramas, action.id) });
@@ -221,12 +252,21 @@ export function reducer(state, action) {
     }
 
     case 'TICK': {
-      const s = state.sessao;
+      let s = state.sessao;
       if (!s) return state;
+      // café: o relógio anda mais devagar. Cada TICK (1 s real) avança só `ritmo` de um segundo de jogo;
+      // o segundo de jogo só passa quando a fração acumulada (`sessao.passo`) chega a 1.
+      const ritmo = ritmoDoJogo(state.cafe);
+      if (ritmo < 1) {
+        const passo = (s.passo ?? 0) + ritmo;
+        if (passo < 1 - 1e-9) return { ...state, sessao: { ...s, passo } };
+        s = { ...s, passo: passo - 1 };
+      } else if (s.passo) s = { ...s, passo: 0 };
       let foram = 0;
       let multas = 0;
       const pedidos = s.pedidos.map((p) => {
-        if (p.id === s.ativo) return { ...p, tempoRestante: Math.max(0, p.tempoRestante - 1) };
+        // o prazo corre para todos os aceitos, não só para o que está aberto no editor
+        if (p.status === 'aceito') return { ...p, tempoRestante: Math.max(0, p.tempoRestante - 1) };
         if (p.status !== 'novo' || p.paciencia == null) return p; // saves antigos não têm paciência
         if (p.paciencia > 1) return { ...p, paciencia: p.paciencia - 1 };
         // cliente foi embora: multa (menor se o saldo já estiver negativo, contando as multas deste segundo)
@@ -261,7 +301,8 @@ export function reducer(state, action) {
       // o diagrama entregue fica no pedido, para o resumo do dia mostrar de novo (com o esperado e o feedback)
       const entrega = action.diagrama ? { diagrama: action.diagrama, atrasado: Boolean(action.atrasado) } : {};
       let sessao = atualizarPedido(s, id, () => ({ status: 'entregue', nota, valor, ...entrega }));
-      sessao = { ...sessao, ativo: null, ganho: s.ganho + valor, notas: [...s.notas, nota] };
+      sessao = { ...sessao, ganho: s.ganho + valor, notas: [...s.notas, nota] };
+      sessao = { ...sessao, ativo: s.ativo === id ? proximoAtivo(sessao) : s.ativo };
       if (s.modo === 'infinito') sessao = { ...sessao, pedidos: [...sessao.pedidos, novoPedidoAleatorio(sessao)], seq: s.seq + 1 };
       sessao = liberarFila(sessao, action.sorteio);
       const e = state.estatisticas;
@@ -275,6 +316,40 @@ export function reducer(state, action) {
         historico: [...e.historico, { nota, valor }].slice(-MAX_HISTORICO),
       };
       return concluirDiaSeFor({ ...state, dinheiro: state.dinheiro + valor, estatisticas, sessao, diagramas: semDiagrama(state.diagramas, id) });
+    }
+
+    // Cafeteira (data/cafe.js). Cápsulas: compradas uma a uma, ficam guardadas na cafeteira.
+    case 'COMPRAR_CAPSULA': {
+      const c = CAPSULAS.find((x) => x.id === action.tipo);
+      if (!c || !temCafeteira(state) || state.dinheiro < c.preco) return state;
+      const capsulas = { ...state.cafe.capsulas, [c.id]: (state.cafe.capsulas[c.id] ?? 0) + 1 };
+      return { ...state, dinheiro: state.dinheiro - c.preco, cafe: { ...state.cafe, capsulas } };
+    }
+
+    // Fazer café: gasta uma cápsula; fica pronto em 5–10 s (`sorteio` escolhe o tempo)
+    case 'FAZER_CAFE': {
+      const { tipo } = action;
+      if (!CAPSULAS.some((c) => c.id === tipo) || motivoSemCafe(state, tipo)) return state;
+      const capsulas = { ...state.cafe.capsulas, [tipo]: state.cafe.capsulas[tipo] - 1 };
+      return { ...state, cafe: { ...state.cafe, capsulas, preparando: { tipo, falta: tempoDePreparo(action.sorteio) } } };
+    }
+
+    // Um segundo real com o jogo correndo: avança o preparo e o efeito do café
+    case 'CAFE_TICK': {
+      const { preparando, efeito } = state.cafe;
+      if (!preparando && !efeito) return state;
+      let cafe = { ...state.cafe };
+      if (preparando)
+        cafe = preparando.falta > 1 ? { ...cafe, preparando: { ...preparando, falta: preparando.falta - 1 } } : { ...cafe, preparando: null, xicara: preparando.tipo };
+      if (efeito) cafe = { ...cafe, efeito: efeito.falta > 1 ? { ...efeito, falta: efeito.falta - 1 } : null };
+      return { ...state, cafe };
+    }
+
+    // Beber o café da caneca: o efeito começa (outro café por cima recomeça a contagem com o novo tipo)
+    case 'BEBER_CAFE': {
+      const { xicara } = state.cafe;
+      if (!xicara) return state;
+      return { ...state, cafe: { ...state.cafe, xicara: null, efeito: { tipo: xicara, falta: EFEITO_SEGUNDOS } } };
     }
 
     case 'COMPRAR': {

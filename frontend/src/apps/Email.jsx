@@ -4,6 +4,7 @@ import { useGame } from '../state/GameContext.jsx';
 import { MODELOS, modeloPorId, multaPedido } from '../data/pedidos.js';
 import { formatarTempo } from '../screens/Computador.jsx';
 import TodosPedidos from './TodosPedidos.jsx';
+import PainelDev from './PainelDev.jsx';
 import { nivelDoModelo } from '../lib/dificuldade.js';
 import './apps.css';
 
@@ -48,8 +49,8 @@ export default function Email({ abrirApp }) {
   const [selId, setSelId] = useState(pedidos[0]?.id);
   const sel = pedidos.find((p) => p.id === selId) ?? pedidos[0];
   const modelo = sel && modeloPorId(sel.modelo);
-  const ocupado = Boolean(state.sessao?.ativo);
   const [vendoTodos, setVendoTodos] = useState(false); // debug: lista de todos os pedidos
+  const [painelDev, setPainelDev] = useState(false); // debug: dinheiro e relógio
 
   return (
     <div className="email">
@@ -71,6 +72,9 @@ export default function Email({ abrirApp }) {
             </button>
             <button onClick={() => setVendoTodos(true)} title="Debug: escolhe qualquer pedido do jogo para o lugar do primeiro e-mail">
               ☰ Ver todos os pedidos
+            </button>
+            <button onClick={() => setPainelDev(true)} title="Debug: editar dinheiro e pausar o relógio do jogo">
+              ⚙ Dev{state.sessao.relogioParado ? ' · ⏸ timer' : ''}
             </button>
             <span>
               debug · próximo: {MODELOS[state.sessao.debugIndice ?? 0].id} ({(state.sessao.debugIndice ?? 0) + 1}/{MODELOS.length})
@@ -106,6 +110,8 @@ export default function Email({ abrirApp }) {
         />
       )}
 
+      {import.meta.env.DEV && painelDev && <PainelDev onFechar={() => setPainelDev(false)} />}
+
       {sel && (
         <article className={`email-leitura ${sel.urgente ? 'urgente' : ''}`}>
           <header>
@@ -138,19 +144,13 @@ export default function Email({ abrirApp }) {
                 >
                   Recusar (−R$ {multaPedido(sel, state.dinheiro)})
                 </Botao>
-                <Botao
-                  variante="menta"
-                  disabled={ocupado}
-                  title={ocupado ? 'Termine o pedido em andamento primeiro' : ''}
-                  onClick={() => { dispatch({ type: 'ACEITAR', id: sel.id }); abrirApp('editor'); }}
-                >
+                <Botao variante="menta" onClick={() => { dispatch({ type: 'ACEITAR', id: sel.id }); abrirApp('editor'); }}>
                   Aceitar
                 </Botao>
               </>
             )}
-            {sel.status === 'aceito' && <Botao variante="rosa" onClick={() => abrirApp('editor')}>Abrir no editor</Botao>}
+            {sel.status === 'aceito' && <Botao variante="rosa" onClick={() => { dispatch({ type: 'ATIVAR', id: sel.id }); abrirApp('editor'); }}>Abrir no editor</Botao>}
             {sel.status === 'expirado' && <span className="aviso">{sel.cliente} cansou de esperar uma resposta e procurou outra agência.</span>}
-            {ocupado && sel.status === 'novo' && <span className="aviso">Termine o pedido em andamento antes de aceitar outro.</span>}
           </footer>
         </article>
       )}

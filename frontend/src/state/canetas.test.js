@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { estadoInicial, reducer } from './reducer.js';
-import { ANGULO_MAX_POTE, acertou, anguloAleatorio, membrosDoGrupo, ordemDeDesenho, posicoesDoGrupo, pousar, resolverCena } from '../lib/decoracao.js';
+import { ANGULO_MAX_POTE, ANGULO_MIN_POTE, acertou, anguloAleatorio, membrosDoGrupo, ordemDeDesenho, posicoesDoGrupo, pousar, resolverCena } from '../lib/decoracao.js';
 import { TINTAS } from '../art/palette.js';
+import OBJETOS from '../art/objetos.json';
 import { FOLHA, coresDisponiveis, posicaoDoCursor } from '../screens/Rascunho.jsx';
 
 const rodar = (s, ...acoes) => acoes.reduce(reducer, s);
@@ -15,27 +16,49 @@ describe('pote de canetas', () => {
     expect(CANETAS).toEqual(Object.keys(TINTAS).map((c) => `caneta-${c}`));
   });
 
-  it('as canetas começam dentro do pote, inclinadas no máximo 30°, e o pote cobre a ponta', () => {
+  it('as canetas começam dentro do pote, no centro do fundo, inclinadas de 10° a 30°, e o pote cobre a ponta', () => {
     const cena = resolverCena(GRUPO, {});
+    const pote = cena.find((o) => o.nome === 'pote-canetas');
     for (const c of cena.filter((o) => o.nome.startsWith('caneta-'))) {
       expect(c.dentro).toBe(true);
-      expect(Math.abs(c.entrada.angulo)).toBeLessThanOrEqual(ANGULO_MAX_POTE);
+      expect(c.x, c.nome).toBe(pote.x + (pote.meta.w - c.meta.w) / 2);
+      expect(Math.abs(c.entrada.angulo), c.nome).toBeGreaterThanOrEqual(ANGULO_MIN_POTE);
+      expect(Math.abs(c.entrada.angulo), c.nome).toBeLessThanOrEqual(ANGULO_MAX_POTE);
     }
     const ordem = ordemDeDesenho(cena).map((o) => o.nome);
     expect(ordem.at(-1)).toBe('pote-canetas'); // desenhado por último, na frente das canetas
   });
 
-  it('caneta solta sobre o pote entra nele; longe dele, fica na mesa', () => {
+  it('caneta solta sobre o pote entra nele, no centro inferior; longe dele, fica na mesa', () => {
     const cena = resolverCena(['pote-canetas'], {});
     const pote = cena[0];
-    expect(pousar('caneta-azul', false, pote.x + 5, pote.y - 18, cena).entrada.sobre).toBe('pote-canetas');
+    const meio = pote.x + (pote.meta.w - 3) / 2;
+    for (const x of [pote.x - 1, pote.x + 5, pote.x + pote.meta.w - 3]) {
+      const r = pousar('caneta-azul', false, x, pote.y - 18, cena);
+      expect(r.entrada).toEqual({ x: meio, sobre: 'pote-canetas' }); // sempre o mesmo ponto, onde quer que solte
+      expect(r.y + 22).toBe(pote.y + pote.meta.fundo); // a base no fundo do pote
+    }
     expect(pousar('caneta-azul', false, 40, 150, cena).entrada.sobre).not.toBe('pote-canetas');
   });
 
-  it('ângulo sorteado ao devolver: nunca passa de 30° para cada lado', () => {
-    expect(anguloAleatorio(() => 0)).toBe(-30);
+  it('ângulo sorteado ao devolver: de 10° a 30°, para um lado ou para o outro', () => {
+    expect(anguloAleatorio(() => 0)).toBe(-10);
     expect(anguloAleatorio(() => 0.9999)).toBe(30);
-    for (let i = 0; i < 50; i++) expect(Math.abs(anguloAleatorio())).toBeLessThanOrEqual(30);
+    const vistos = new Set();
+    for (let i = 0; i < 200; i++) {
+      const a = anguloAleatorio();
+      expect(Math.abs(a)).toBeGreaterThanOrEqual(ANGULO_MIN_POTE);
+      expect(Math.abs(a)).toBeLessThanOrEqual(ANGULO_MAX_POTE);
+      vistos.add(Math.sign(a));
+    }
+    expect(vistos).toEqual(new Set([-1, 1]));
+  });
+
+  it('com a base no centro do fundo e até 30°, a caneta não vaza pelas laterais do pote', () => {
+    const pote = resolverCena(['pote-canetas'], {})[0];
+    const sobra = pote.meta.w / 2; // da base (centro) até a parede do pote
+    // na altura da boca (fundo px acima da base) o meio da caneta se afasta fundo·sen(30°) do centro
+    expect(pote.meta.fundo * Math.sin((ANGULO_MAX_POTE * Math.PI) / 180) + 1.5).toBeLessThanOrEqual(sobra);
   });
 
   it('pote cheio tirado do baú: vai inteiro para onde o jogador soltar, com as canetas na mesma ordem', () => {
@@ -47,10 +70,18 @@ describe('pote de canetas', () => {
     expect(s.loja.moveis).toContain('obj-canetas');
     const cena = resolverCena(GRUPO, s.escritorio.posicoes);
     const pote = cena.find((o) => o.nome === 'pote-canetas');
-    expect(pote.x).toBe(100);
-    const xs = cena.filter((o) => o.nome.startsWith('caneta-')).map((o) => o.x);
-    expect(xs).toEqual([...xs].sort((a, b) => a - b)); // mesma ordem, da esquerda para a direita
-    expect(xs.every((x) => x >= 99 && x <= 100 + 15)).toBe(true);
+    const folga = OBJETOS['pote-canetas'].x - OBJETOS.canetas.x; // o leque é mais largo que o pote
+    expect(pote.x).toBe(100 + folga);
+    const canetas = cena.filter((o) => o.nome.startsWith('caneta-'));
+    expect(canetas.every((o) => o.x === pote.x + 6)).toBe(true); // todas no centro do pote
+    const angulos = canetas.map((o) => o.entrada.angulo);
+    expect(angulos).toEqual([...angulos].sort((a, b) => a - b)); // mesmo leque, na mesma ordem
+  });
+
+  it('save antigo com a caneta fora do centro: dentro do pote ela volta para o centro', () => {
+    const cena = resolverCena(GRUPO, { 'caneta-azul': { x: 263, sobre: 'pote-canetas', angulo: -24 } });
+    const pote = cena.find((o) => o.nome === 'pote-canetas');
+    expect(cena.find((o) => o.nome === 'caneta-azul').x).toBe(pote.x + 6);
   });
 
   it('a pilha de livros também vai inteira para onde for solta', () => {
@@ -101,7 +132,7 @@ describe('pote de canetas', () => {
 
   it('o clique acerta a caneta onde ela aparece (inclinada), não onde estaria reta', () => {
     const cena = resolverCena(GRUPO, {});
-    const ciano = cena.find((o) => o.nome === 'caneta-ciano'); // 24° para a direita
+    const ciano = cena.find((o) => o.nome === 'caneta-ciano'); // 30° para a direita
     const r = (ciano.entrada.angulo * Math.PI) / 180;
     const cx = ciano.x + ciano.meta.w / 2, cy = ciano.y + ciano.meta.h;
     // ponta (2px abaixo do topo, no meio) depois de girar em volta da base

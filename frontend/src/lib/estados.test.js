@@ -5,10 +5,11 @@ import { MODELOS, modeloPorId } from '../data/pedidos.js';
 import { ELEMENTOS, RELACOES, SECOES, secaoDoDiagrama } from '../editor/Formas.jsx';
 
 const copia = (d) => JSON.parse(JSON.stringify(d));
-const ESTADOS = ['rastreio', 'semaforo', 'catraca', 'player', 'chamado'];
+const COM_DECISAO = ['login-app', 'pagamento', 'devolucao', 'encomenda', 'caixa-eletronico'];
+const ESTADOS = ['rastreio', 'semaforo', 'catraca', 'player', 'chamado', ...COM_DECISAO];
 
 describe('diagramas de estados', () => {
-  it('5 pedidos, cada um com um início, pelo menos um fim e transições com os eventos do e-mail', () => {
+  it('10 pedidos, cada um com um início, pelo menos um fim e transições com os eventos do e-mail', () => {
     for (const id of ESTADOS) {
       const m = modeloPorId(id);
       const nos = m.esperado.nodes;
@@ -16,7 +17,7 @@ describe('diagramas de estados', () => {
       expect(nos.some((x) => x.tipo === 'estadoFinal'), id).toBe(true);
       expect(m.esperado.edges.every((e) => e.tipo === 'transicao'), id).toBe(true);
       const texto = m.corpo.join(' ');
-      for (const x of nos.filter((n) => n.tipo === 'estado')) expect(texto, id).toContain(`"${x.rotulo}"`);
+      for (const x of nos.filter((n) => n.tipo === 'estado' || n.tipo === 'decisao')) expect(texto, id).toContain(`"${x.rotulo}"`);
       for (const e of m.esperado.edges) if (e.rotulo) expect(texto, id).toContain(`"${e.rotulo}"`);
       // do início não sai evento; no fim só chega
       const inicio = nos.find((x) => x.tipo === 'estadoInicial').id;
@@ -63,5 +64,31 @@ describe('diagramas de estados', () => {
     }
     expect(secaoDoDiagrama(modeloPorId('catraca').esperado)).toBe('estados');
     expect(secaoDoDiagrama({ nodes: [], edges: [] })).toBeNull();
+  });
+
+  it('decisão: 5 pedidos usam o losango, com uma entrada com evento e saídas [sim]/[não]', () => {
+    for (const id of COM_DECISAO) {
+      const { nodes, edges } = modeloPorId(id).esperado;
+      const decisoes = nodes.filter((x) => x.tipo === 'decisao');
+      expect(decisoes.length, id).toBeGreaterThan(0);
+      for (const d of decisoes) {
+        const entram = edges.filter((e) => e.para === d.id), saem = edges.filter((e) => e.de === d.id);
+        expect(entram.every((e) => e.rotulo && !e.rotulo.startsWith('[')), id).toBe(true);
+        expect(saem.map((e) => e.rotulo).sort(), id).toEqual(['[não]', '[sim]']);
+      }
+      expect(secaoDoDiagrama(modeloPorId(id).esperado), id).toBe('estados');
+    }
+  });
+
+  it('a condição vale com ou sem colchetes; decisão no lugar de estado é tipo errado', () => {
+    const esp = modeloPorId('pagamento').esperado;
+    const jog = copia(esp);
+    for (const e of jog.edges) if (e.rotulo?.startsWith('[')) e.rotulo = e.rotulo.slice(1, -1).toUpperCase();
+    expect(avaliar(jog, esp).nota).toBe(100);
+    const troca = copia(esp);
+    troca.nodes.find((x) => x.tipo === 'decisao').tipo = 'estado';
+    const fb = gerarFeedback(troca, esp);
+    expect(fb.problemas).toEqual([expect.objectContaining({ tipo: 'tipoErrado', usado: 'estado', certo: 'decisao' })]);
+    expect(fb.conceitos).toContain('decisao');
   });
 });

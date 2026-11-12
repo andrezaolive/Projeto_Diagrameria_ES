@@ -9,6 +9,30 @@
   background: var(--c-mist);
   border-right: var(--px) solid var(--c-ink);
 }
+/* abas dos pedidos aceitos (quando há mais de um) */
+.abas-pedidos { display: flex; flex-wrap: wrap; gap: 4px; }
+.aba-pedido {
+  display: flex;
+  flex: 1 1 64px;
+  flex-direction: column;
+  align-items: center;
+  padding: 2px 4px;
+  font-family: var(--f-texto);
+  font-size: 18px;
+  line-height: 1;
+  color: var(--c-ink);
+  background: var(--c-lilac);
+  border: 3px solid var(--c-ink);
+  cursor: pointer;
+}
+.aba-pedido .nome { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aba-pedido .tempo { font-size: 16px; color: var(--c-plum); }
+.aba-pedido:hover { background: var(--c-butter); }
+.aba-pedido.ativa { background: var(--c-lavender); box-shadow: inset 3px 3px 0 var(--c-grape); }
+.aba-pedido.urgente { border-color: var(--c-rose); background: var(--c-blush); }
+.aba-pedido.urgente.ativa { box-shadow: inset 3px 3px 0 var(--c-rose); }
+.aba-pedido.acabando .tempo { color: var(--c-rose); }
+.editor-requisitos .aviso-vazio { margin: 0; font-size: 18px; line-height: 1; text-align: center; color: var(--c-plum); }
 .editor-requisitos h4 { margin: 4px 0 0; font-family: var(--f-titulo); font-size: 11px; line-height: 1.4; }
 .editor-requisitos .assunto { font-size: 22px; color: var(--c-plum); }
 .editor-requisitos .lista { flex: 1; min-height: 0; font-size: 21px; line-height: 1; padding: 4px 8px; background: var(--c-cream); border: 3px solid var(--c-ink); }

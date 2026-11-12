@@ -10,7 +10,7 @@ export const TIPOS_DIAGRAMA = [
 
 export function tipoDoDiagrama(esperado) {
   const tipos = new Set(esperado.nodes.map((n) => n.tipo));
-  if (['estado', 'estadoInicial', 'estadoFinal'].some((t) => tipos.has(t))) return 'estados';
+  if (['estado', 'estadoInicial', 'estadoFinal', 'decisao'].some((t) => tipos.has(t))) return 'estados';
   if (['ator', 'casoDeUso', 'sistema'].some((t) => tipos.has(t))) return 'casos';
   return 'classes';
 }
@@ -31,6 +31,7 @@ export function categoriasDoModelo(modelo) {
   const tipo = tipoDoDiagrama(modelo.esperado);
   const out = [TIPOS_DIAGRAMA.find((t) => t.id === tipo).nome];
   if (nodes.some((n) => n.tipo === 'sistema')) out.push('Sistema');
+  if (nodes.some((n) => n.tipo === 'decisao')) out.push('Decisão');
   const usadas = new Set(edges.map((e) => e.tipo));
   for (const [t, nome] of Object.entries(RELACOES)) if (usadas.has(t)) out.push(nome);
   if (edges.some((e) => e.multDe || e.multPara)) out.push('Multiplicidade');

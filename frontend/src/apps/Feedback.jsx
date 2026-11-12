@@ -5,14 +5,15 @@ import './apps.css';
 
 // Trecho errado, em vermelho
 const Errado = ({ children }) => <mark className="fb-errado">{children}</mark>;
+// O que faltou (não está no diagrama do jogador), em verde sublinhado, como diz a legenda
+const Faltou = ({ children }) => <u className="fb-faltou">{children}</u>;
 const Nome = ({ children }) => <b>"{children}"</b>;
 
 // Relação escrita como no diagrama: A — B, A → «include» → B, A → herda de → B...
-function Relacao({ r, errada = false }) {
-  if (r.tipo === 'transicao') {
-    const t = `"${r.ra}" —${r.ev ? ` ${r.ev} ` : ''}→ "${r.rb}"`;
-    return errada ? <Errado>{t}</Errado> : <span className="fb-certo">{t}</span>;
-  }
+// errada = está no diagrama mas não devia (vermelho); faltou = devia estar e não está (verde sublinhado)
+function Relacao({ r, errada = false, faltou = false }) {
+  const marcar = (t) => (errada ? <Errado>{t}</Errado> : faltou ? <Faltou>{t}</Faltou> : <span className="fb-certo">{t}</span>);
+  if (r.tipo === 'transicao') return marcar(`"${r.ra}" —${r.ev ? ` ${r.ev} ` : ''}→ "${r.rb}"`);
   const meio = {
     associacao: ' — ',
     include: ' → «include» → ',
@@ -22,8 +23,7 @@ function Relacao({ r, errada = false }) {
     agregacao: ' ◇— agrega — ',
     composicao: ' ◆— é composto de — ',
   }[r.tipo] ?? ` → ${NOME_TIPO[r.tipo] ?? r.tipo} → `;
-  const texto = `"${r.ra}"${meio}"${r.rb}"`;
-  return errada ? <Errado>{texto}</Errado> : <span className="fb-certo">{texto}</span>;
+  return marcar(`"${r.ra}"${meio}"${r.rb}"`);
 }
 
 // Por que o sentido importa, por tipo de relação
@@ -67,7 +67,7 @@ function Problema({ p }) {
     case 'faltando':
       return (
         <p>
-          Faltou {NOME_TIPO[p.esperado.tipo]}: <Errado>"{p.esperado.rotulo}"</Errado>
+          Faltou {NOME_TIPO[p.esperado.tipo]}: <Faltou>"{p.esperado.rotulo}"</Faltou>
         </p>
       );
     case 'sobrando':
@@ -97,7 +97,7 @@ function Problema({ p }) {
     case 'membroFaltando':
       return (
         <p>
-          Na classe <Nome>{p.classe}</Nome> faltou o {p.tipoMembro === 'metodo' ? 'método' : 'atributo'} <Errado>{p.membro.texto}</Errado>.
+          Na classe <Nome>{p.classe}</Nome> faltou o {p.tipoMembro === 'metodo' ? 'método' : 'atributo'} <Faltou>{p.membro.texto}</Faltou>.
         </p>
       );
     case 'membroNoLugarErrado':
@@ -113,7 +113,7 @@ function Problema({ p }) {
       return (
         <>
           <p>
-            Em <Nome>{p.classe}</Nome>, o {p.tipoMembro === 'metodo' ? 'retorno de' : 'tipo de'} <b>{p.membro.nome}</b> deveria ser <b>{p.membro.tipo}</b>, mas você usou{' '}
+            Em <Nome>{p.classe}</Nome>, o {p.tipoMembro === 'metodo' ? 'retorno de' : 'tipo de'} <b>{p.membro.nome}</b> deveria ser {p.usado.tipo ? <b>{p.membro.tipo}</b> : <Faltou>{p.membro.tipo}</Faltou>}, mas você usou{' '}
             {p.usado.tipo ? <Errado>{p.usado.tipo}</Errado> : <Errado>nenhum</Errado>}.
           </p>
           <p className="fb-sugestao">O tipo vem depois dos dois-pontos: "- saldo: float", "+ consultarSaldo(): float".</p>
@@ -134,7 +134,7 @@ function Problema({ p }) {
       return (
         <>
           <p>
-            Na transição de <Nome>{p.certa.ra}</Nome> para <Nome>{p.certa.rb}</Nome> o evento deveria ser <b>{p.certa.ev ? `"${p.certa.ev}"` : '(nenhum)'}</b>, mas você{' '}
+            Na transição de <Nome>{p.certa.ra}</Nome> para <Nome>{p.certa.rb}</Nome> o evento deveria ser {p.certa.ev ? (p.usado ? <b>"{p.certa.ev}"</b> : <Faltou>"{p.certa.ev}"</Faltou>) : <b>(nenhum)</b>}, mas você{' '}
             {p.usado ? <>escreveu <Errado>"{p.usado}"</Errado></> : <Errado>não escreveu nenhum</Errado>}.
           </p>
           <p className="fb-sugestao">Selecione a seta no editor e escreva o evento no campo "Evento" da barra de cima.</p>
@@ -156,7 +156,7 @@ function Problema({ p }) {
       return (
         <>
           <p>
-            Faltou a relação: <Relacao r={p.certa} errada />
+            Faltou a relação: <Relacao r={p.certa} faltou />
           </p>
           <p className="fb-sugestao">Releia o e-mail: cada frase com "participa", "inclui", "estende", "herda", "agrega", "é composto de" ou "vai para ... com o evento" vira uma ligação.</p>
         </>
@@ -165,7 +165,7 @@ function Problema({ p }) {
       return (
         <>
           <p>
-            Na relação <Relacao r={p.certa} />, do lado de <Nome>{p.lado}</Nome> a multiplicidade deveria ser <b>{p.esperado}</b>, mas você{' '}
+            Na relação <Relacao r={p.certa} />, do lado de <Nome>{p.lado}</Nome> a multiplicidade deveria ser {p.usado ? <b>{p.esperado}</b> : <Faltou>{p.esperado}</Faltou>}, mas você{' '}
             {p.usado ? <>colocou <Errado>{p.usado}</Errado></> : <Errado>não colocou nenhuma</Errado>}.
           </p>
           <p className="fb-sugestao">
@@ -235,7 +235,7 @@ export default function Feedback({ diagrama, esperado, onFechar }) {
         </div>
         <div className="feedback-rodape">
           <span className="legenda">
-            <mark className="fb-errado">vermelho</mark> = o que está errado · <u className="fb-faltou">sublinhado</u> = o que faltou
+            <mark className="fb-errado">vermelho</mark> = o que está errado · <u className="fb-faltou">verde sublinhado</u> = o que faltou
           </span>
           <Botao variante="menta" onClick={onFechar} autoFocus>
             Entendi

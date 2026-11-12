@@ -15,6 +15,7 @@ export const NOME_TIPO = {
   estadoInicial: 'estado inicial',
   estado: 'estado',
   estadoFinal: 'estado final',
+  decisao: 'decisão',
   transicao: 'transição',
   associacao: 'associação',
   include: 'include',
@@ -93,6 +94,13 @@ export const CONCEITOS = {
     titulo: 'Estado final',
     texto: 'Bolinha preta dentro de um anel: onde o ciclo de vida termina. Só chegam setas nele, nenhuma sai.',
     exemplo: '"Entregue" → ◉.',
+  },
+  decisao: {
+    titulo: 'Decisão (losango)',
+    texto:
+      'Um ponto em que o caminho se divide conforme uma condição. É um losango com a pergunta dentro; chega nele uma seta (com o evento) e saem várias, ' +
+      'cada uma com a sua condição entre colchetes. Só uma das condições pode ser verdadeira por vez.',
+    exemplo: '"Em análise" —avaliar→ ◇ "Aprovado?" —[sim]→ "Pago" e —[não]→ "Recusado".',
   },
   transicao: {
     titulo: 'Transição',

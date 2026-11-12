@@ -106,12 +106,38 @@ describe('campanha', () => {
     expect(s.campanha.desbloqueado).toBe(2);
   });
 
-  it('só um pedido em andamento por vez', () => {
+  it('aceita vários pedidos ao mesmo tempo: o último aceito abre no editor, e dá para trocar', () => {
     let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'infinito' });
     const [a, b] = s.sessao.pedidos;
     s = rodar(s, { type: 'ACEITAR', id: a.id }, { type: 'ACEITAR', id: b.id });
+    expect(s.sessao.pedidos.map((p) => p.status)).toEqual(['aceito', 'aceito']);
+    expect(s.sessao.ativo).toBe(b.id);
+    s = rodar(s, { type: 'ATIVAR', id: a.id });
     expect(s.sessao.ativo).toBe(a.id);
-    expect(s.sessao.pedidos[1].status).toBe('novo');
+    expect(rodar(s, { type: 'ACEITAR', id: a.id })).toBe(s); // já aceito: nada muda
+    // o prazo corre para os dois, não só para o aberto no editor
+    const antes = s.sessao.pedidos.map((p) => p.tempoRestante);
+    s = rodar(s, { type: 'TICK' });
+    expect(s.sessao.pedidos.slice(0, 2).map((p) => p.tempoRestante)).toEqual(antes.map((t) => t - 1));
+  });
+
+  it('ao entregar ou recusar o pedido aberto, o editor passa para o outro aceito', () => {
+    let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'infinito' });
+    const [a, b] = s.sessao.pedidos;
+    s = rodar(s, { type: 'ACEITAR', id: a.id }, { type: 'ACEITAR', id: b.id });
+    s = rodar(s, { type: 'ENTREGAR', id: b.id, nota: 80, valor: 8 });
+    expect(s.sessao.ativo).toBe(a.id);
+    s = rodar(s, { type: 'RECUSAR', id: a.id });
+    expect(s.sessao.ativo).toBe(null);
+    // entregar um que não está aberto não troca o aberto
+    const [c, d] = s.sessao.pedidos.filter((p) => p.status === 'novo');
+    s = rodar(s, { type: 'ACEITAR', id: c.id }, { type: 'ACEITAR', id: d.id }, { type: 'ENTREGAR', id: c.id, nota: 50, valor: 5 });
+    expect(s.sessao.ativo).toBe(d.id);
+  });
+
+  it('ATIVAR só vale para pedido aceito', () => {
+    let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'infinito' });
+    expect(rodar(s, { type: 'ATIVAR', id: s.sessao.pedidos[0].id })).toBe(s);
   });
 
   it('modo infinito sempre traz um pedido novo após entregar', () => {

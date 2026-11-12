@@ -3,10 +3,10 @@ import { FAIXAS_JOGO, faixaInicial, faixasDoJogador, sortearFaixa, temTocaFitas 
 
 describe('músicas do jogo', () => {
   it('Game 1 vem de graça; as outras custam de 100 a 200', () => {
-    expect(FAIXAS_JOGO.map((f) => f.nome)).toEqual(['Game 1', 'Game 2', 'Game 3', 'Game 4', 'Menu']);
+    expect(FAIXAS_JOGO.map((f) => f.nome)).toEqual(['Game 1', 'Game 2', 'Game 3', 'Game 4', 'Game 5', 'Game 6', 'Menu']);
     expect(FAIXAS_JOGO[0].preco).toBe(0);
     for (const f of FAIXAS_JOGO.slice(1)) expect(f.preco).toBeGreaterThanOrEqual(100), expect(f.preco).toBeLessThanOrEqual(200);
-    for (const f of FAIXAS_JOGO) expect(f.loop).toBeGreaterThan(40);
+    for (const f of FAIXAS_JOGO) expect(f.loop).toBeGreaterThan(30);
   });
 
   it('o jogador só tem as de graça e as compradas', () => {

@@ -211,12 +211,57 @@
   },
   "caneca": {
     "x": 240,
-    "y": 114,
+    "y": 126,
     "w": 16,
-    "h": 26,
+    "h": 14,
     "zona": "mesa",
     "elevavel": true,
+    "xicara": true,
     "rotulo": "Caneca"
+  },
+  "caneca-cheia-descafeinado": {
+    "x": 240,
+    "y": 126,
+    "w": 16,
+    "h": 14,
+    "zona": "mesa",
+    "variante": true
+  },
+  "caneca-cheia-normal": {
+    "x": 240,
+    "y": 126,
+    "w": 16,
+    "h": 14,
+    "zona": "mesa",
+    "variante": true
+  },
+  "caneca-cheia-forte": {
+    "x": 240,
+    "y": 126,
+    "w": 16,
+    "h": 14,
+    "zona": "mesa",
+    "variante": true
+  },
+  "vapor": {
+    "x": 245,
+    "y": 114,
+    "w": 5,
+    "h": 11,
+    "zona": "mesa",
+    "variante": true
+  },
+  "cafeteira": {
+    "x": 211,
+    "y": 120,
+    "w": 24,
+    "h": 30,
+    "zona": "mesa",
+    "bandeja": {
+      "x": 2,
+      "base": 26
+    },
+    "rotulo": "Cafeteira"
   },
   "papeis": {
     "x": 36,
@@ -343,9 +388,9 @@
     "sobrePadrao": "pilha-menta"
   },
   "canetas": {
-    "x": 262,
+    "x": 258,
     "y": 133,
-    "w": 15,
+    "w": 23,
     "h": 25,
     "zona": "mesa",
     "soLoja": true,
@@ -364,7 +409,7 @@
     "grupo": "obj-canetas"
   },
   "caneta-branco": {
-    "x": 263,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -375,10 +420,10 @@
     "tinta": "branco",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": -24
+    "anguloPadrao": -30
   },
   "caneta-preto": {
-    "x": 264,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -389,10 +434,10 @@
     "tinta": "preto",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": -17
+    "anguloPadrao": -26
   },
   "caneta-azul": {
-    "x": 265,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -403,10 +448,10 @@
     "tinta": "azul",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": -11
+    "anguloPadrao": -21
   },
   "caneta-roxo": {
-    "x": 266,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -417,10 +462,10 @@
     "tinta": "roxo",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": -6
+    "anguloPadrao": -16
   },
   "caneta-vermelho": {
-    "x": 267,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -431,10 +476,10 @@
     "tinta": "vermelho",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": -2
+    "anguloPadrao": -11
   },
   "caneta-rosa": {
-    "x": 269,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -445,10 +490,10 @@
     "tinta": "rosa",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": 3
+    "anguloPadrao": 11
   },
   "caneta-laranja": {
-    "x": 270,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -459,10 +504,10 @@
     "tinta": "laranja",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": 8
+    "anguloPadrao": 16
   },
   "caneta-amarelo": {
-    "x": 271,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -473,10 +518,10 @@
     "tinta": "amarelo",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": 13
+    "anguloPadrao": 21
   },
   "caneta-verde": {
-    "x": 272,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -487,10 +532,10 @@
     "tinta": "verde",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": 18
+    "anguloPadrao": 26
   },
   "caneta-ciano": {
-    "x": 273,
+    "x": 268,
     "y": 133,
     "w": 3,
     "h": 22,
@@ -501,7 +546,7 @@
     "tinta": "ciano",
     "grupo": "obj-canetas",
     "sobrePadrao": "pote-canetas",
-    "anguloPadrao": 24
+    "anguloPadrao": 30
   },
   "fone": {
     "x": 224,

@@ -19,6 +19,7 @@ export const TAMANHOS = {
   estadoInicial: { w: 40, h: 40 },
   estado: { w: 160, h: 60 },
   estadoFinal: { w: 40, h: 40 },
+  decisao: { w: 120, h: 100 },
 };
 
 // Formas arredondadas: a seta para na borda da elipse/círculo, não no retângulo em volta
@@ -39,6 +40,11 @@ export const tamanho = (node) => {
   if (node.tipo === 'estado') {
     const p = TAMANHOS.estado;
     return { w: Math.max(p.w, Math.ceil(((node.rotulo ?? '').length * 11 + 28) / GRID) * GRID), h: p.h };
+  }
+  // a decisão (losango) alarga para a pergunta caber na faixa do meio (com 100 de altura, ~75% da largura é útil)
+  if (node.tipo === 'decisao') {
+    const p = TAMANHOS.decisao;
+    return { w: Math.max(p.w, Math.ceil(((node.rotulo ?? '').length * 10 + 20) / 0.75 / GRID) * GRID), h: p.h };
   }
   const p = TAMANHOS[node.tipo];
   return { w: node.w ?? p.w, h: node.h ?? p.h };
@@ -134,6 +140,18 @@ export function pontoNaBordaDe(node, origem, alvo) {
     const a = ux * ux + uy * uy, b = 2 * (ox * ux + oy * uy), k = ox * ox + oy * oy - 1;
     const t = (-b + Math.sqrt(Math.max(0, b * b - 4 * a * k))) / (2 * a);
     return { x: origem.x + dx * t, y: origem.y + dy * t };
+  }
+  // losango: |x − cx|/(w/2) + |y − cy|/(h/2) = 1; essa soma cresce ao longo do raio, então bisseção
+  if (node.tipo === 'decisao') {
+    const f = (t) => Math.abs(origem.x + dx * t - c.x) / (w / 2) + Math.abs(origem.y + dy * t - c.y) / (h / 2);
+    let lo = 0, hi = 1;
+    while (f(hi) < 1 && hi < 1e6) hi *= 2;
+    for (let i = 0; i < 40; i++) {
+      const m = (lo + hi) / 2;
+      if (f(m) < 1) lo = m;
+      else hi = m;
+    }
+    return { x: origem.x + dx * lo, y: origem.y + dy * lo };
   }
   // retângulo: o primeiro lado que o raio atinge
   const tx = dx > 0 ? (c.x + w / 2 - origem.x) / dx : dx < 0 ? (c.x - w / 2 - origem.x) / dx : Infinity;

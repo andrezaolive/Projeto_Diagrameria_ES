@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import EfeitoCafe from '../components/EfeitoCafe.jsx';
 import iEditor from '../assets/ui/icon-editor-16.png';
 import iEmail from '../assets/ui/icon-email-16.png';
 import iDicas from '../assets/ui/icon-dicas-16.png';
@@ -98,7 +99,9 @@ export default function Computador({ desligando, onDesligar, onEntregue }) {
     sfx.clique();
     setJanelas((j) => {
       const a = APPS[id];
-      return { ...j, [id]: { x: j[id]?.x ?? a.x, y: j[id]?.y ?? a.y, z: ++zTopo.current, min: false } };
+      // `aberturas` conta quantas vezes o app foi aberto (ícone ou outro app): o editor volta para a
+      // seção de casos de uso a cada abertura
+      return { ...j, [id]: { x: j[id]?.x ?? a.x, y: j[id]?.y ?? a.y, z: ++zTopo.current, min: false, aberturas: (j[id]?.aberturas ?? 0) + 1 } };
     });
   };
   const fechar = (id) => setJanelas(({ [id]: _, ...resto }) => resto);
@@ -170,7 +173,7 @@ export default function Computador({ desligando, onDesligar, onEntregue }) {
             onMinimizar={() => minimizar(id)}
             onFechar={() => fechar(id)}
           >
-            <Comp abrirApp={abrir} focado={focoId === id} onEntregue={onEntregue} />
+            <Comp abrirApp={abrir} focado={focoId === id} onEntregue={onEntregue} abertura={j.aberturas} />
           </Janela>
         );
       })}
@@ -203,6 +206,7 @@ export default function Computador({ desligando, onDesligar, onEntregue }) {
             {formatarTempo(ativo.tempoRestante)}
           </span>
         )}
+        <EfeitoCafe />
         <Dinheiro valor={state.dinheiro} />
       </footer>
     </div>

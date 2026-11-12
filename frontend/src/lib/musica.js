@@ -38,6 +38,7 @@ export const FADE_IN_JOGO = { de: 0.4, dur: 1 }; // trilhas de gameplay
 
 let ctx = null;
 let mestre = null; // volume da configuração
+let fundo = null; // música de fundo (menu/jogo): abafada enquanto toca a música do café
 let volume = 0.6;
 const buffers = new Map(); // url -> Promise<AudioBuffer>
 let atual = null; // { url, ganho, emenda, fontes, proximo, loop, compensar, timer }
@@ -50,6 +51,8 @@ function contexto() {
     mestre = ctx.createGain();
     mestre.gain.value = volume;
     mestre.connect(ctx.destination);
+    fundo = ctx.createGain();
+    fundo.connect(mestre);
     // navegadores só liberam áudio depois de um gesto do jogador
     const destravar = () => {
       // durante a prévia a música do jogo fica suspensa de propósito: não destrava por clique
@@ -92,7 +95,7 @@ function agendar(faixa) {
     faixa.repeticoes++;
     fonte.onended = () => {
       faixa.fontes.delete(fonte);
-      if (atual === faixa) agendar(faixa);
+      if (faixa.viva) agendar(faixa);
     };
     faixa.fontes.add(fonte);
     faixa.proximo += faixa.loop;
@@ -100,6 +103,7 @@ function agendar(faixa) {
 }
 
 function encerrar(faixa, fade = FADE) {
+  faixa.viva = false;
   clearInterval(faixa.timer);
   const t = ctx.currentTime;
   faixa.ganho.gain.cancelScheduledValues(t);
@@ -121,8 +125,23 @@ export async function tocarMusica(url, { loop, excessoDb, fadeIn = FADE_IN } = {
   if (previa) pararPrevia(); // trocou de música/tela no meio da prévia
   if (atual?.url === url) return;
   if (atual) encerrar(atual);
-  const faixa = {
+  const faixa = novaFaixa(url, excessoDb);
+  atual = faixa;
+  try {
+    faixa.buffer = await carregar(url);
+  } catch {
+    if (atual === faixa) atual = null;
+    return;
+  }
+  if (atual !== faixa) return; // trocou de tela enquanto carregava
+  // fade in leve (menu: 30% → 100% em 2 s; gameplay: 40% → 100% em 1 s)
+  comecar(faixa, fundo, loop, fadeIn);
+}
+
+function novaFaixa(url, excessoDb) {
+  return {
     url,
+    viva: true, // enquanto viva, as repetições continuam sendo agendadas
     fontes: new Set(),
     ganho: ctx.createGain(), // fade de entrada/saída
     emenda: ctx.createGain(), // compensação do volume na emenda do loop
@@ -133,18 +152,13 @@ export async function tocarMusica(url, { loop, excessoDb, fadeIn = FADE_IN } = {
     compensar: excessoDb ? curvaCompensacao(excessoDb) : null,
     timer: 0,
   };
-  atual = faixa;
-  try {
-    faixa.buffer = await carregar(url);
-  } catch {
-    if (atual === faixa) atual = null;
-    return;
-  }
-  if (atual !== faixa) return; // trocou de tela enquanto carregava
+}
+
+// liga a faixa (já carregada) em `destino` e começa o loop com fade in
+function comecar(faixa, destino, loop, fadeIn) {
   faixa.loop = loop ?? faixa.buffer.duration;
-  faixa.emenda.connect(faixa.ganho).connect(mestre);
+  faixa.emenda.connect(faixa.ganho).connect(destino);
   const t = ctx.currentTime;
-  // fade in leve (menu: 30% → 100% em 2 s; gameplay: 40% → 100% em 1 s)
   faixa.ganho.gain.setValueAtTime(fadeIn.de, t);
   faixa.ganho.gain.linearRampToValueAtTime(1, t + fadeIn.dur);
   faixa.proximo = t;
@@ -154,8 +168,48 @@ export async function tocarMusica(url, { loop, excessoDb, fadeIn = FADE_IN } = {
 
 export function pararMusica(fade = FADE) {
   if (!atual) return;
-  if (ctx && atual.buffer) encerrar(atual, fade);
+  if (ctx) encerrar(atual, fade);
   atual = null;
+}
+
+// ------------------------------------------------------------------ música do café
+// Enquanto o café faz efeito toca a música do tipo bebido: a música de fundo sai com fade de 1 s e
+// fica muda (continua tocando, sem som) até o efeito acabar; a do café entra com fade in de 1 s.
+// Outro café do mesmo tipo: a música continua. De outro tipo: a anterior sai com fade e a nova entra.
+export const FADE_CAFE = 1;
+let cafe = null; // faixa do café tocando
+
+function abafarFundo(mudo) {
+  const t = ctx.currentTime;
+  fundo.gain.cancelScheduledValues(t);
+  fundo.gain.setValueAtTime(fundo.gain.value, t);
+  fundo.gain.linearRampToValueAtTime(mudo ? 0 : 1, t + FADE_CAFE);
+}
+
+/** Toca a música do café `url` em loop por cima da de fundo (que fica muda). Não reinicia se já estiver tocando. */
+export async function tocarCafe(url, { loop } = {}) {
+  if (!contexto()) return;
+  if (cafe?.url === url) return;
+  if (cafe) encerrar(cafe, FADE_CAFE);
+  else abafarFundo(true);
+  const faixa = novaFaixa(url);
+  cafe = faixa;
+  try {
+    faixa.buffer = await carregar(url);
+  } catch {
+    if (cafe === faixa) pararCafe();
+    return;
+  }
+  if (cafe !== faixa) return; // o efeito acabou ou trocou enquanto carregava
+  comecar(faixa, mestre, loop, { de: 0, dur: FADE_CAFE });
+}
+
+/** O efeito acabou: a música do café sai com fade e a de fundo volta. */
+export function pararCafe() {
+  if (!cafe || !ctx) return;
+  encerrar(cafe, FADE_CAFE);
+  cafe = null;
+  abafarFundo(false);
 }
 
 export function setVolumeMusica(v) {

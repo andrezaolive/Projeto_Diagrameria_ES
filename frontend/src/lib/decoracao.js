@@ -113,10 +113,14 @@ export function resolverCena(nomes, posicoes = {}) {
     } else if (entradas[entrada.sobre] && !visitando.has(entrada.sobre)) {
       visitando.add(nome);
       const s = calcular(entrada.sobre, visitando);
-      // dentro de um porta-objetos (pote de canetas): a ponta afunda `fundo` px abaixo da boca
+      // dentro de um porta-objetos (pote de canetas): base no centro do fundo (vale também para saves
+      // antigos com outro x), a ponta afunda `fundo` px abaixo da boca
       r = s.meta.porta
-        ? { x: entrada.x, y: s.y + s.meta.fundo - meta.h, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1, dentro: true }
-        : { x: entrada.x, y: s.y - meta.h + 1, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1 };
+        ? { x: s.x + Math.round((s.meta.w - meta.w) / 2), y: s.y + s.meta.fundo - meta.h, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1, dentro: true }
+        : s.meta.bandeja
+          ? // na bandeja da cafeteira (a caneca): lugar fixo, debaixo do bico
+            { x: s.x + s.meta.bandeja.x, y: s.y + s.meta.bandeja.base - meta.h, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1 }
+          : { x: entrada.x, y: s.y - meta.h + 1, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1 };
     } else {
       // apoio sumiu: cai na mesa, no fundo
       r = { x: entrada.x, y: BASE_MIN_NA_MESA - meta.h, raiz: 'mesa', chao: BASE_MIN_NA_MESA, nivel: 0 };
@@ -169,13 +173,19 @@ export function pousar(nome, deitado, x, y, cena) {
   const centro = x + meta.w / 2;
   const base = y + meta.h;
 
-  // caneta solta sobre a boca do pote: entra no pote (o ângulo é sorteado por quem solta, no escritório)
+  // caneta solta sobre a boca do pote: entra no pote com snap no centro inferior dele (a base fica no
+  // meio do fundo; o ângulo é sorteado por quem solta, no escritório). Pode ficar por cima de outra caneta.
   if (meta.caneta) {
     const pote = cena.find((o) => o.meta.porta && centro >= o.x && centro <= o.x + o.meta.w && base >= o.y - 12 && base <= o.y + o.meta.h + 4);
     if (pote) {
-      const px = limitar(Math.round(x), pote.x - 1, pote.x + pote.meta.w - meta.w + 1);
+      const px = pote.x + Math.round((pote.meta.w - meta.w) / 2);
       return { entrada: { x: px, sobre: pote.nome }, x: px, y: pote.y + pote.meta.fundo - meta.h };
     }
+  }
+  // caneca solta sobre a cafeteira: encaixa na bandeja, debaixo do bico
+  if (meta.xicara) {
+    const maquina = cena.find((o) => o.meta.bandeja && centro >= o.x && centro <= o.x + o.meta.w && base >= o.y && base <= o.y + o.meta.h + 4);
+    if (maquina) return { entrada: { x: maquina.x + maquina.meta.bandeja.x, sobre: maquina.nome }, x: maquina.x + maquina.meta.bandeja.x, y: maquina.y + maquina.meta.bandeja.base - meta.h };
   }
   let raiz = 'mesa';
   let chao = limitar(Math.round(base), BASE_MIN_NA_MESA, SCENE_H);
@@ -265,9 +275,14 @@ export function objetoNoPonto(objsOrdenados, mascaras, ax, ay) {
   return null;
 }
 
-// Ângulo de uma caneta posta de volta no pote: levemente bagunçado, nunca mais que 30° para cada lado
+// Ângulo de uma caneta posta de volta no pote: de 10° a 30°, para a esquerda ou para a direita.
+// Com a base no centro do fundo, até 30° a caneta sai pela boca sem vazar pelas laterais do pote.
+export const ANGULO_MIN_POTE = 10;
 export const ANGULO_MAX_POTE = 30;
-export const anguloAleatorio = (aleatorio = Math.random) => Math.round((aleatorio() * 2 - 1) * ANGULO_MAX_POTE);
+export function anguloAleatorio(aleatorio = Math.random) {
+  const lado = aleatorio() < 0.5 ? -1 : 1;
+  return lado * Math.round(ANGULO_MIN_POTE + aleatorio() * (ANGULO_MAX_POTE - ANGULO_MIN_POTE));
+}
 
 // Grupo (pilha de livros, pote com canetas) solto de uma vez: `conjunto` é a imagem do grupo inteiro
 // (sprite soLoja) e `entrada`/`x` dizem onde ela pousou. Cada membro vai para a mesma posição relativa
@@ -288,10 +303,10 @@ export function conteudoDe(nome, posicoes, presentes) {
   return presentes.filter((n) => n !== nome && OBJETOS[n] && normalizarEntrada(n, posicoes[n]).sobre === nome);
 }
 
-// Move um objeto; se ele guarda coisas dentro (pote), elas vão junto, na mesma posição dentro dele
+// Move um objeto; se ele guarda coisas dentro (pote) ou em cima da bandeja (cafeteira), elas vão junto
 export function moverComConteudo(posicoes, nome, nova) {
   const novas = { ...posicoes, [nome]: nova };
-  if (!OBJETOS[nome]?.porta) return novas;
+  if (!OBJETOS[nome]?.porta && !OBJETOS[nome]?.bandeja) return novas;
   const dx = nova.x - normalizarEntrada(nome, posicoes[nome]).x;
   for (const n of Object.keys(OBJETOS)) {
     if (n === nome || OBJETOS[n].zona !== 'mesa' || OBJETOS[n].variante) continue;

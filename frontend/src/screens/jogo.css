@@ -481,3 +481,40 @@
 .rascunho-cor span { display: block; width: 100%; height: 100%; background: var(--tinta); border: 2px solid var(--c-ink); }
 .rascunho-cor:hover { background: var(--c-butter); }
 .rascunho-cor.ativa { background: var(--c-grape); box-shadow: 0 -4px 0 var(--c-grape); transform: translateY(-4px); }
+
+/* ---------------------------------------------------------- café (data/cafe.js) */
+/* vapor da caneca cheia: sobe e some, em passos (sem suavizar o pixel art) */
+.objeto.vapor { animation: vapor 1.6s steps(4) infinite; }
+@keyframes vapor {
+  0% { transform: translateY(0); opacity: 0.9; }
+  100% { transform: translateY(-8px); opacity: 0.2; }
+}
+/* fio de café caindo do bico enquanto a cafeteira prepara */
+.cafe-gotejando {
+  position: absolute;
+  width: 4px;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, var(--c-plum) 0 8px, transparent 8px 12px);
+  animation: gotejar 0.4s steps(3) infinite;
+}
+@keyframes gotejar {
+  from { background-position: 0 0; }
+  to { background-position: 0 12px; }
+}
+.efeito-cafe { gap: 6px; color: var(--c-ink); background: var(--c-peach); }
+.barra-tarefas .efeito-cafe { margin-right: 8px; }
+
+/* Café: linhas de velocidade estilo anime sobre a tela inteira (components/VelocidadeCafe.jsx).
+   Canvas 320×180 ampliado sem suavização; 50% de transparência; não bloqueia cliques. */
+.velocidade-cafe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 860;
+  opacity: 0.5;
+  pointer-events: none;
+  image-rendering: pixelated;
+  animation: velocidade-entra 0.4s steps(4) both;
+}
+@keyframes velocidade-entra { from { opacity: 0; } to { opacity: 0.5; } }

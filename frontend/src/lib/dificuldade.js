@@ -15,6 +15,7 @@ export const BONUS_CONCEITO = {
   sistema: 0.5,
   multiplicidade: 2,
   membros: 1,
+  decisao: 1,
 };
 
 export const NIVEIS = [
@@ -31,7 +32,7 @@ export function pontuacao(modelo) {
   const conceitos = new Set();
   for (const n of nodes) {
     pts += PESO_NO[n.tipo] ?? 1;
-    if (n.tipo === 'sistema') conceitos.add('sistema');
+    if (n.tipo === 'sistema' || n.tipo === 'decisao') conceitos.add(n.tipo);
     const membros = (n.atributos?.length ?? 0) + (n.metodos?.length ?? 0);
     if (membros) conceitos.add('membros');
     pts += membros;

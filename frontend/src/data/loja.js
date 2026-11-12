@@ -55,6 +55,8 @@ export const ITENS_LOJA = [
   obj('fone', 'Fone de ouvido', 140),
   obj('radio', 'Toca-fitas', 180),
   obj('gato', 'Gato', 250),
+  // aba Café: a cafeteira (as cápsulas ficam em data/cafe.js, compradas uma a uma)
+  { ...obj('cafeteira', 'Cafeteira', 120), categoria: 'cafe' },
 
   obj('relogio', 'Relógio', 110),
   obj('poster', 'Pôster', 120),

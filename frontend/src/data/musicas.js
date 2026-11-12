@@ -4,6 +4,11 @@ import game1 from '../assets/audio/musica-game-1.mp3';
 import game2 from '../assets/audio/musica-game-2.mp3';
 import game3 from '../assets/audio/musica-game-3.mp3';
 import game4 from '../assets/audio/musica-game-4.mp3';
+import game5 from '../assets/audio/musica-game-5.mp3';
+import game6 from '../assets/audio/musica-game-6.mp3';
+import cafeDescafeinado from '../assets/audio/cafe-descafeinado.mp3';
+import cafeNormal from '../assets/audio/cafe-normal.mp3';
+import cafeForte from '../assets/audio/cafe-forte.mp3';
 import menu from '../assets/audio/musica-menu.mp3';
 import { EXCESSO_MENU_DB, LOOP_MENU } from '../lib/musica.js';
 
@@ -15,6 +20,8 @@ export const FAIXAS_JOGO = [
   { id: 'musica-game-2', nome: 'Game 2', url: game2, loop: 2490353 / 44100, preco: 150, cor: 'var(--c-blush)' },
   { id: 'musica-game-3', nome: 'Game 3', url: game3, loop: 1992282 / 44100, preco: 200, cor: 'var(--c-sky)' },
   { id: 'musica-game-4', nome: 'Game 4', url: game4, loop: 2228211 / 44100, preco: 180, cor: 'var(--c-peach)' },
+  { id: 'musica-game-5', nome: 'Game 5', url: game5, loop: 2199273 / 44100, preco: 190, cor: 'var(--c-lilac)' },
+  { id: 'musica-game-6', nome: 'Game 6', url: game6, loop: 1739836 / 44100, preco: 200, cor: 'var(--c-rose)' },
   // a do menu tem emenda própria (cauda por cima do início), igual à do menu
   { id: 'musica-menu', nome: 'Menu', url: menu, loop: LOOP_MENU, excessoDb: EXCESSO_MENU_DB, preco: 100, cor: 'var(--c-butter)' },
 ];
@@ -42,3 +49,10 @@ export function faixaInicial(loja, aleatorio = Math.random) {
   if (temTocaFitas(loja?.possui) && disponivel) return escolhida;
   return sortearFaixa(loja?.possui, aleatorio);
 }
+
+// Música que toca durante o efeito de cada café (tipos de data/cafe.js), em loop pelo arquivo inteiro
+export const MUSICAS_CAFE = {
+  descafeinado: { url: cafeDescafeinado, loop: 481091 / 44100 },
+  normal: { url: cafeNormal, loop: 512129 / 44100 },
+  forte: { url: cafeForte, loop: 604800 / 44100 },
+};

@@ -117,6 +117,7 @@ export const SECOES_GUIA = [
       { tipo: 'estadoInicial', nome: 'Início', funcao: 'Onde tudo começa. Só existe um.', uso: 'Dele sai uma seta, sem evento, para o primeiro estado.' },
       { tipo: 'estado', nome: 'Estado', funcao: 'Uma situação em que o objeto fica até algo acontecer.', uso: 'Nome de situação, sem verbo: "No forno", "Pausado".' },
       { tipo: 'transicao', nome: 'Transição', funcao: 'A mudança de um estado para outro, causada por um evento.', uso: 'Seta do estado atual para o próximo. Selecione a seta e escreva o EVENTO no campo "Evento".' },
+      { tipo: 'decisao', nome: 'Decisão', funcao: 'Um ponto em que o caminho se divide conforme uma condição.', uso: 'Losango com a pergunta dentro ("Aprovado?"). Cada seta que sai leva a condição entre colchetes: [sim], [não].' },
       { tipo: 'estadoFinal', nome: 'Fim', funcao: 'Onde a vida do objeto termina.', uso: 'Só chegam setas nele (sem evento quando o fim é natural).' },
     ],
     pedido: {

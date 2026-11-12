@@ -3,12 +3,12 @@ import { normalizarMult } from './multiplicidade.js';
 import { foraDoLugar } from './grid.js';
 import { avaliarMembros } from './membros.js';
 // O sistema (fronteira) conta como elemento: tipo e nome (o e-mail diz como ele se chama)
-export const TIPOS_AVALIADOS = ['ator', 'casoDeUso', 'classe', 'sistema', 'estadoInicial', 'estado', 'estadoFinal'];
+export const TIPOS_AVALIADOS = ['ator', 'casoDeUso', 'classe', 'sistema', 'estadoInicial', 'estado', 'estadoFinal', 'decisao'];
 
 // Transição (diagrama de estados): vale com o evento certo; associação não tem sentido
 export const chaveRelacao = (tipo, a, b, evento) => {
   if (tipo === 'associacao') return `${tipo}|${[a, b].sort().join('|')}`;
-  if (tipo === 'transicao') return `${tipo}|${a}|${b}|${normalizar(evento)}`;
+  if (tipo === 'transicao') return `${tipo}|${a}|${b}|${normalizarEvento(evento)}`;
   return `${tipo}|${a}|${b}`;
 };
 
@@ -26,6 +26,8 @@ export function avaliarFronteira(jogador, esperado) {
 
 export const normalizar = (s = '') =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+// Evento/condição da transição: os colchetes da condição são opcionais ("[sim]" = "sim")
+export const normalizarEvento = (s = '') => normalizar(s.replace(/[[\]]/g, ' '));
 
 function contar(lista, chave, filtro = () => true) {
   const out = {};

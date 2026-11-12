@@ -9,10 +9,13 @@ import { Botao, Dinheiro, Modal, formatarReais } from '../components/ui.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { DIAS_CAMPANHA, MEDIA_MINIMA, diaEncerrado, temRelogio } from '../state/reducer.js';
 import { sfx } from '../lib/sfx.js';
-import { FADE_IN_JOGO, tocarMusica } from '../lib/musica.js';
-import { ALEATORIA, faixaInicial, faixaPorId, sortearFaixa } from '../data/musicas.js';
+import { FADE_IN_JOGO, pararCafe, tocarCafe, tocarMusica } from '../lib/musica.js';
+import { ALEATORIA, MUSICAS_CAFE, faixaInicial, faixaPorId, sortearFaixa } from '../data/musicas.js';
 import TocaFitas from './TocaFitas.jsx';
 import Rascunho from './Rascunho.jsx';
+import Cafeteira from './Cafeteira.jsx';
+import EfeitoCafe from '../components/EfeitoCafe.jsx';
+import VelocidadeCafe from '../components/VelocidadeCafe.jsx';
 import './jogo.css';
 
 // Fases: escritorio -> entrando (zoom no monitor) -> computador -> saindo -> escritorio
@@ -34,10 +37,19 @@ export default function Jogo({ onMenu, onCalendario }) {
   const [aviso, setAviso] = useState(null);
   const [tocaFitas, setTocaFitas] = useState(false);
   const [rascunho, setRascunho] = useState(false); // folha do papel da mesa
+  const [cafeteira, setCafeteira] = useState(false); // botões das cápsulas
   useEffect(() => {
     const f = faixaPorId(faixa);
     if (f) tocarMusica(f.url, { loop: f.loop, excessoDb: f.excessoDb, fadeIn: FADE_IN_JOGO });
   }, [faixa]);
+  // Café fazendo efeito: toca a música do tipo bebido (a de fundo fica muda até o efeito acabar)
+  const tipoCafe = state.cafe.efeito?.tipo ?? null;
+  useEffect(() => {
+    const m = MUSICAS_CAFE[tipoCafe];
+    if (m) tocarCafe(m.url, { loop: m.loop });
+    else pararCafe();
+  }, [tipoCafe]);
+  useEffect(() => () => pararCafe(), []); // saiu do jogo (menu): devolve a música de fundo
   const escolherMusica = (id) => {
     dispatch({ type: 'ESCOLHER_MUSICA', id });
     const nova = id === ALEATORIA ? sortearFaixa(state.loja.possui, Math.random, faixa) : id;
@@ -69,13 +81,23 @@ export default function Jogo({ onMenu, onCalendario }) {
 
   // Relógio do jogo: prazo do pedido ativo e paciência dos clientes esperando.
   // Para quando pausado, com resultado aberto ou no fim do dia.
-  const relogio = temRelogio(sessao);
+  // (DEBUG: o painel Dev pode parar o relógio, `sessao.relogioParado`)
+  const relogio = temRelogio(sessao) && !sessao?.relogioParado;
   useEffect(() => {
     if (pausado || resultado || fimDoDia || !relogio) return;
     // `sorteio`: chance de chegar um pedido urgente a cada minuto (ver sortearUrgente no reducer)
     const t = setInterval(() => dispatch({ type: 'TICK', sorteio: Math.random(), sorteioChegada: Math.random() }), 1000);
     return () => clearInterval(t);
   }, [pausado, resultado, fimDoDia, relogio, dispatch]);
+
+  // Café (data/cafe.js): o preparo e o efeito contam segundos reais, parando junto com o jogo.
+  // O efeito em si fica no TICK (relógio mais lento).
+  const cafeAtivo = Boolean(state.cafe.preparando || state.cafe.efeito);
+  useEffect(() => {
+    if (pausado || resultado || fimDoDia || !cafeAtivo) return;
+    const t = setInterval(() => dispatch({ type: 'CAFE_TICK' }), 1000);
+    return () => clearInterval(t);
+  }, [pausado, resultado, fimDoDia, cafeAtivo, dispatch]);
 
   // Aviso no topo quando o jogador recusa um pedido, com a multa.
   // (Cliente impaciente e cliente que foi embora viram pop-ups no canto: ver Alertas.jsx)
@@ -114,7 +136,7 @@ export default function Jogo({ onMenu, onCalendario }) {
     <div className="tela">
       {!noComputador && (
         <div className={`camada-escritorio ${fase === 'entrando' || fase === 'voltando' ? 'zoom' : ''}`}>
-          <Escritorio onComputador={entrar} onTocaFitas={() => setTocaFitas(true)} onPapel={() => setRascunho(true)} desativado={fase !== 'escritorio'} />
+          <Escritorio onComputador={entrar} onTocaFitas={() => setTocaFitas(true)} onPapel={() => setRascunho(true)} onCafeteira={() => setCafeteira(true)} desativado={fase !== 'escritorio'} />
           {aviso && <div key={aviso.id} className="aviso-musica" role="status">{aviso.texto}</div>}
         </div>
       )}
@@ -124,6 +146,7 @@ export default function Jogo({ onMenu, onCalendario }) {
           <div className="hud">
             <span className="etiqueta">{sessao.modo === 'campanha' ? `DIA ${sessao.dia}` : 'MODO INFINITO'}</span>
             <Dinheiro valor={state.dinheiro} />
+            <EfeitoCafe />
             <span className="espaco" />
             <Botao tamanho="pequeno" variante="claro" onClick={() => setPausado(true)}>Pausa (Esc)</Botao>
           </div>
@@ -135,6 +158,9 @@ export default function Jogo({ onMenu, onCalendario }) {
         <Computador desligando={fase === 'saindo'} onDesligar={sair} onPausa={() => setPausado(true)} onEntregue={setResultado} />
       )}
 
+      {/* linhas de velocidade enquanto o café faz efeito (por cima da tela, abaixo das janelas) */}
+      <VelocidadeCafe />
+
       <Alertas pedidos={sessao.pedidos} />
 
       {saiu && (
@@ -144,6 +170,7 @@ export default function Jogo({ onMenu, onCalendario }) {
       )}
 
       {rascunho && <Rascunho onFechar={() => setRascunho(false)} />}
+      {cafeteira && <Cafeteira onFechar={() => setCafeteira(false)} />}
 
       {tocaFitas && (
         <TocaFitas

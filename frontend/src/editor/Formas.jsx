@@ -12,6 +12,8 @@ export const ELEMENTOS = [
   { tipo: 'estadoInicial', nome: 'Início', rotulo: 'Início', fixo: true },
   { tipo: 'estado', nome: 'Estado', rotulo: 'Estado' },
   { tipo: 'estadoFinal', nome: 'Fim', rotulo: 'Fim', fixo: true },
+  // decisão (losango): a pergunta fica dentro; as setas que saem levam a condição, ex.: [sim] / [não]
+  { tipo: 'decisao', nome: 'Decisão', rotulo: 'Decisão?' },
 ];
 export const ROTULO_FIXO = Object.fromEntries(ELEMENTOS.filter((e) => e.fixo).map((e) => [e.tipo, e.rotulo]));
 
@@ -49,7 +51,7 @@ export const SECOES = [
     nome: 'Estados',
     curto: 'Estados',
     icone: 'estado',
-    elementos: ['estadoInicial', 'estado', 'estadoFinal', 'nota'],
+    elementos: ['estadoInicial', 'estado', 'decisao', 'estadoFinal', 'nota'],
     relacoes: ['transicao'],
   },
 ];
@@ -57,7 +59,7 @@ export const SECOES = [
 // Seção que combina com um diagrama (pelo tipo dos elementos); null se não der para saber
 export function secaoDoDiagrama(diagrama) {
   const tipos = new Set((diagrama?.nodes ?? []).map((n) => n.tipo));
-  if (['estado', 'estadoInicial', 'estadoFinal'].some((t) => tipos.has(t))) return 'estados';
+  if (['estado', 'estadoInicial', 'estadoFinal', 'decisao'].some((t) => tipos.has(t))) return 'estados';
   if (['ator', 'casoDeUso', 'sistema'].some((t) => tipos.has(t))) return 'casos';
   if (tipos.has('classe')) return 'classes';
   return null;
@@ -184,6 +186,13 @@ export function Forma({ node, selecionado, destaque, alerta }) {
           <>
             <rect x={0} y={0} width={w} height={h} rx={18} fill="var(--c-cream)" stroke={contorno} strokeWidth={T} />
             <Texto x={w / 2} y={h / 2}>{node.rotulo}</Texto>
+          </>
+        );
+      case 'decisao':
+        return (
+          <>
+            <path d={`M${w / 2} 1.5 L${w - 1.5} ${h / 2} L${w / 2} ${h - 1.5} L1.5 ${h / 2} Z`} fill="var(--c-cream)" stroke={contorno} strokeWidth={T} strokeLinejoin="miter" />
+            <Texto x={w / 2} y={h / 2} tamanho={20}>{node.rotulo}</Texto>
           </>
         );
       case 'sistema':
@@ -335,6 +344,7 @@ export function IconePaleta({ tipo }) {
     estado: <rect x="2" y="6" width="20" height="12" rx="5" {...s} fill="var(--c-cream)" shapeRendering="auto" />,
     estadoFinal: (<g shapeRendering="auto"><circle cx="12" cy="12" r="8" fill="var(--c-cream)" stroke={INK} strokeWidth="2.5" /><circle cx="12" cy="12" r="4.5" fill={INK} /></g>),
     transicao: (<g {...s}><path d="M2 12h18" /><path d="M15 7l6 5-6 5" /></g>),
+    decisao: <path d="M12 3l9 9-9 9-9-9z" {...s} fill="var(--c-cream)" />,
   };
   return <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true">{icones[tipo]}</svg>;
 }
