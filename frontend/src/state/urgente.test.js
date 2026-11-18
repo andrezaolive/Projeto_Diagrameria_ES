@@ -24,7 +24,7 @@ describe('pedido urgente', () => {
     expect(u.id).not.toBe(n.id);
   });
 
-  it('o sorteio só acontece a cada minuto e com chance de 1 em 3', () => {
+  it('o sorteio só acontece a cada minuto e com chance de 1 em 5', () => {
     const s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'infinito' }).sessao;
     expect(sortearUrgente(s, 59, 0)).toBeNull(); // fora do minuto
     expect(sortearUrgente(s, 60, URGENTE.chance)).toBeNull(); // perdeu o sorteio

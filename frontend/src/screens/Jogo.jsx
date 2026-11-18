@@ -207,7 +207,7 @@ export default function Jogo({ onMenu, onCalendario }) {
             <Botao variante="claro" tamanho="pequeno" onClick={() => setVendoResumo(true)}>Ver resumo do dia</Botao>
             <div className="botoes-fim">
               {!sessao.relatorio?.aprovado && (
-                <Botao variante="claro" onClick={() => dispatch({ type: 'INICIAR_SESSAO', modo: 'campanha', dia: sessao.dia, sorteio: Math.random() })}>Tentar de novo</Botao>
+                <Botao variante="claro" onClick={() => dispatch({ type: 'INICIAR_SESSAO', modo: 'campanha', dia: sessao.dia, sorteio: Math.random(), semente: Math.random() })}>Tentar de novo</Botao>
               )}
               <Botao variante="rosa" onClick={() => sairPara(onCalendario)}>Ir ao calendário</Botao>
             </div>

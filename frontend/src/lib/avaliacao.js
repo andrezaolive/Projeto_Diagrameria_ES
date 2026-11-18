@@ -109,3 +109,11 @@ export function calcularNota(partes) {
 export function pagamento(recompensa, nota, atrasado) {
   return Math.round(recompensa * (nota / 100) * (atrasado ? 0.5 : 1));
 }
+
+// Pedido JUMBO: cada diagrama é avaliado contra o seu gabarito e a nota final é a média das partes.
+// partes = [{ secao, esperado, diagrama }] → { nota, partes: [{ secao, esperado, diagrama, nota, estrutura, ... }] }
+export function avaliarPartes(partes) {
+  const avaliadas = partes.map((p) => ({ ...p, ...avaliar(p.diagrama, p.esperado) }));
+  const nota = Math.round(avaliadas.reduce((t, p) => t + p.nota, 0) / avaliadas.length);
+  return { nota, partes: avaliadas };
+}

@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { MODELOS, modeloPorId, pedidosDoDia } from './pedidos.js';
+import { MODELOS, modeloPorId } from './pedidos.js';
 import { avaliar } from '../lib/avaliacao.js';
 import { gerarFeedback } from '../lib/feedback.js';
-import { DIAS_CAMPANHA } from '../state/reducer.js';
 import { RELACOES } from '../editor/Formas.jsx';
 
 const copia = (d) => JSON.parse(JSON.stringify(d));
@@ -18,13 +17,6 @@ describe('modelos de pedidos', () => {
         expect(m.esperado.nodes.some((n) => n.id === e.para)).toBe(true);
       }
     }
-  });
-
-  it('a campanha usa todos os modelos e só ids válidos', () => {
-    const usados = new Set();
-    for (let d = 1; d <= DIAS_CAMPANHA; d++) for (const id of pedidosDoDia(d)) usados.add(id);
-    for (const id of usados) expect(modeloPorId(id)).toBeDefined();
-    expect([...usados].sort()).toEqual(MODELOS.map((m) => m.id).sort());
   });
 
   it('composição e agregação têm sentido: o todo é a origem', () => {

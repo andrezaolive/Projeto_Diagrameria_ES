@@ -584,5 +584,29 @@
     "w": 29,
     "h": 29,
     "zona": "parede"
+  },
+  "poster-vaporwave": {
+    "x": 20,
+    "y": 87,
+    "w": 36,
+    "h": 28,
+    "zona": "parede",
+    "rotulo": "Pôster vaporwave"
+  },
+  "poster-fita": {
+    "x": 60,
+    "y": 88,
+    "w": 34,
+    "h": 26,
+    "zona": "parede",
+    "rotulo": "Pôster fita cassete"
+  },
+  "poster-gato": {
+    "x": 294,
+    "y": 86,
+    "w": 24,
+    "h": 30,
+    "zona": "parede",
+    "rotulo": "Pôster gato e lua"
   }
 }

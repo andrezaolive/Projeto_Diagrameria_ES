@@ -26,7 +26,9 @@ export const NIVEIS = [
 
 const PESO_NO = { estadoInicial: 0.5, estadoFinal: 0.5, nota: 0 };
 
+// Pedido JUMBO (dois diagramas): a pontuação é a soma das partes, e o nível sai da média delas
 export function pontuacao(modelo) {
+  if (modelo.partes) return modelo.partes.reduce((t, p) => t + pontuacao({ esperado: p.esperado }), 0);
   const { nodes, edges } = modelo.esperado;
   let pts = 0;
   const conceitos = new Set();
@@ -50,30 +52,33 @@ export function pontuacao(modelo) {
 }
 
 export const nivelDaPontuacao = (pts) => NIVEIS.find((n) => pts <= n.max);
-export const nivelDoModelo = (modelo) => nivelDaPontuacao(pontuacao(modelo));
+export const nivelDoModelo = (modelo) => nivelDaPontuacao(pontuacao(modelo) / (modelo.partes?.length ?? 1));
 
-// Tipo de diagrama, para alternar na progressão (casos de uso → classes → estados)
-const tipoDe = ({ esperado }) => {
-  const t = new Set(esperado.nodes.map((n) => n.tipo));
-  if (t.has('estado') || t.has('estadoInicial')) return 'estados';
-  if (t.has('ator') || t.has('casoDeUso')) return 'casos';
-  return 'classes';
-};
-const ROTACAO = ['casos', 'classes', 'estados'];
-
-// Ordem da campanha: do mais fácil ao mais difícil, nível por nível. Dentro de cada nível os tipos de
-// diagrama se revezam (caso de uso, classes, estados...), cada fila em ordem de pontuação.
-export function ordemPorDificuldade(modelos) {
-  const ordem = [];
-  for (const nivel of NIVEIS) {
-    const filas = Object.fromEntries(ROTACAO.map((t) => [t, []]));
-    for (const m of modelos) if (nivelDoModelo(m) === nivel) filas[tipoDe(m)].push(m);
-    for (const t of ROTACAO) filas[t].sort((a, b) => pontuacao(a) - pontuacao(b) || a.id.localeCompare(b.id));
-    for (let rodada = 0; ROTACAO.some((t) => filas[t].length); rodada++)
-      for (const t of ROTACAO) if (filas[t].length) ordem.push(filas[t].shift());
-  }
-  return ordem.map((m) => m.id);
+// Campanha: quantos pedidos de cada nível chegam em cada dia. As faixas usam a DATA do calendário
+// (mês de 31 dias começando na segunda; sábados e domingos são folga), convertida em dia de campanha.
+const C = (facil, medio = 0, dificil = 0) => ({ facil, medio, dificil });
+const COMPOSICAO_POR_DATA = [
+  [[1, 3], C(2)], // dias 1 a 3: 2 fáceis
+  [[4, 8], C(3)], // dias 4, 5 e 8: 3 fáceis
+  [[9, 11], C(2, 1)], // dias 9 a 11: 2 fáceis e 1 médio
+  [[12, 17], C(1, 3)], // dias 12, 15, 16 e 17: 1 fácil e 3 médios
+  [[18, 22], C(1, 2, 1)], // dias 18, 19 e 22
+  [[23, 25], C(1, 2, 2)], // dias 23 a 25
+  [[26, 29], C(1, 2, 3)], // dias 26 e 29
+  [[30, 31], C(0, 2, 4)], // dias 30 e 31: 2 médios e 4 difíceis
+];
+// Data do calendário (1..31) do dia de campanha (1..23): pula os fins de semana
+export function dataDoDia(dia) {
+  let n = 0;
+  for (let d = 1; d <= 31; d++) if ((d - 1) % 7 < 5 && ++n === dia) return d;
+  return 31;
 }
+export function composicaoDoDia(dia) {
+  const data = dataDoDia(dia);
+  return (COMPOSICAO_POR_DATA.find(([[de, ate]]) => data >= de && data <= ate) ?? COMPOSICAO_POR_DATA.at(-1))[1];
+}
+// Níveis que aparecem no dia (os que têm pelo menos um pedido na composição)
+export const niveisDoDia = (dia) => Object.entries(composicaoDoDia(dia)).filter(([, q]) => q > 0).map(([id]) => id);
 
 // Modo infinito: a dificuldade sobe com o número de pedidos que já chegaram na sessão
 export function niveisNoInfinito(numeroDoPedido) {

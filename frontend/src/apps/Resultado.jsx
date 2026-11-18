@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Botao, Modal } from '../components/ui.jsx';
-import { DiagramaEstatico } from '../editor/Formas.jsx';
+import { DiagramaEstatico, SECOES } from '../editor/Formas.jsx';
 import { REACOES, reacaoMascote } from '../lib/mascote.js';
 import { diagramaVazio } from '../lib/feedback.js';
 import Feedback from './Feedback.jsx';
@@ -23,19 +23,26 @@ function Barra({ rotulo, valor }) {
   );
 }
 
+// Nome do diagrama de uma parte do pedido JUMBO: "Diagrama de casos de uso", "Diagrama de estados"...
+export const nomeDaParte = (secao) => `Diagrama de ${SECOES.find((s) => s.id === secao).nome.toLowerCase()}`;
+
 export default function Resultado({ resultado, onOk }) {
   const reacao = reacaoMascote(resultado.nota);
-  const { nota, estrutura, rotulos, relacoes, multiplicidades, fronteira, membros, valor, atrasado, pedido, diagrama, esperado } = resultado;
+  // pedido JUMBO: `partes` traz um resultado por diagrama; os botões escolhem qual mostrar
+  const [indiceParte, setIndiceParte] = useState(0);
+  const parte = resultado.partes?.[indiceParte];
+  const { nota, valor, atrasado, pedido } = resultado;
+  const { estrutura, rotulos, relacoes, multiplicidades, fronteira, membros, diagrama, esperado } = parte ?? resultado;
   const [vendoFeedback, setVendoFeedback] = useState(false);
   // entrega vazia: não há o que comentar, então não há botão de feedback
   const temFeedback = !diagramaVazio(diagrama);
   return (
     <>
-    <Modal titulo={`RESULTADO · ${pedido.cliente}`} w={1180} h={660}>
+    <Modal titulo={`RESULTADO · ${pedido.cliente}${resultado.partes ? ' · JUMBO' : ''}`} w={1180} h={660}>
       <div className="resultado">
         <div className="lado">
           <h4>SEU DIAGRAMA</h4>
-          <DiagramaEstatico diagrama={diagrama} prefixo="rj" />
+          <DiagramaEstatico key={indiceParte} diagrama={diagrama} prefixo={`rj${indiceParte}`} />
         </div>
         <div className="meio">
           <div className={`reacao reacao-${reacao}`}>
@@ -43,6 +50,7 @@ export default function Resultado({ resultado, onOk }) {
             <span className="fala">{REACOES[reacao].fala}</span>
           </div>
           <span className="nota">{nota}%</span>
+          {parte && <span className="nota-parte">{nomeDaParte(parte.secao)}: {parte.nota}%</span>}
           <Barra rotulo="Estrutura" valor={estrutura} />
           <Barra rotulo="Nomes" valor={rotulos} />
           <Barra rotulo="Relações" valor={relacoes} />
@@ -54,7 +62,7 @@ export default function Resultado({ resultado, onOk }) {
           <div className="acoes-resultado">
             {temFeedback && (
               <Botao variante="rosa" tamanho="pequeno" onClick={() => setVendoFeedback(true)}>
-                {nota === 100 ? 'Feedback' : 'Ver erros e dicas'}
+                {(parte ? parte.nota : nota) === 100 ? 'Feedback' : 'Ver erros e dicas'}
               </Botao>
             )}
             <Botao variante="menta" onClick={onOk} autoFocus>OK</Botao>
@@ -62,7 +70,24 @@ export default function Resultado({ resultado, onOk }) {
         </div>
         <div className="lado">
           <h4>ESPERADO</h4>
-          <DiagramaEstatico diagrama={esperado} prefixo="re" />
+          {resultado.partes && (
+            <div className="partes-jumbo" role="tablist" aria-label="Diagramas do pedido JUMBO">
+              {resultado.partes.map((p, i) => (
+                <Botao
+                  key={p.secao}
+                  role="tab"
+                  aria-selected={i === indiceParte}
+                  tamanho="pequeno"
+                  variante={i === indiceParte ? 'ativo' : 'claro'}
+                  onClick={() => setIndiceParte(i)}
+                  title={`Ver o ${nomeDaParte(p.secao).toLowerCase()} (o seu e o esperado)`}
+                >
+                  {nomeDaParte(p.secao)}
+                </Botao>
+              ))}
+            </div>
+          )}
+          <DiagramaEstatico key={indiceParte} diagrama={esperado} prefixo={`re${indiceParte}`} />
         </div>
       </div>
     </Modal>

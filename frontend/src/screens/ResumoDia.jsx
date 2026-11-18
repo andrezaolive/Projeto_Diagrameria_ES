@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import { Botao, Modal, formatarReais } from '../components/ui.jsx';
 import Resultado from '../apps/Resultado.jsx';
-import { avaliar } from '../lib/avaliacao.js';
-import { modeloPorId } from '../data/pedidos.js';
+import { avaliar, avaliarPartes } from '../lib/avaliacao.js';
+import { ehJumbo, modeloPorId } from '../data/pedidos.js';
 import { desempenhoDoPedido } from '../state/reducer.js';
 
 // Linha do resumo: o que aconteceu com o pedido
@@ -16,7 +17,13 @@ const naMedia = (p) => (p.urgente ? 'fora da média' : `conta ${desempenhoDoPedi
 
 // Monta o mesmo objeto que a tela de resultado recebe logo após a entrega
 export function resultadoDoPedido(pedido) {
-  const esperado = modeloPorId(pedido.modelo).esperado;
+  const modelo = modeloPorId(pedido.modelo);
+  // pedido JUMBO: uma avaliação por diagrama entregue (cada um com o seu gabarito)
+  if (pedido.partes) {
+    const partes = pedido.partes.map((p) => ({ ...p, esperado: modelo.partes.find((x) => x.secao === p.secao).esperado }));
+    return { ...avaliarPartes(partes), nota: pedido.nota, valor: pedido.valor, atrasado: pedido.atrasado, pedido };
+  }
+  const esperado = modelo.esperado;
   return { ...avaliar(pedido.diagrama, esperado), nota: pedido.nota, valor: pedido.valor, atrasado: pedido.atrasado, pedido, diagrama: pedido.diagrama, esperado };
 }
 
@@ -30,7 +37,7 @@ export default function ResumoDia({ pedidos, dia, onFechar }) {
         <div className="resumo-dia">
           <ul className="resumo-lista rolagem">
             {pedidos.map((p) => {
-              const revisavel = p.status === 'entregue' && Boolean(p.diagrama);
+              const revisavel = p.status === 'entregue' && Boolean(p.diagrama || p.partes);
               return (
                 <li key={p.id}>
                   <button
@@ -40,7 +47,9 @@ export default function ResumoDia({ pedidos, dia, onFechar }) {
                     title={revisavel ? 'Ver o diagrama entregue, o esperado e o feedback' : 'Pedido não entregue'}
                   >
                     <span className="cliente">
+                      <LogoEmpresa nome={p.cliente} tamanho={20} />
                       {p.urgente && <b className="tag-urgente">URGENTE</b>}
+                      {ehJumbo(modeloPorId(p.modelo)) && <b className="tag-jumbo">JUMBO</b>}
                       {p.cliente}
                     </span>
                     <span className="assunto">{p.urgente ? p.assunto.replace(/^URGENTE: /, '') : p.assunto}</span>

@@ -2,6 +2,9 @@ import porDoSol from '../assets/scenes/wallpaper-por-do-sol-320x180.png';
 import noiteChuvosa from '../assets/scenes/wallpaper-noite-chuvosa-320x180.png';
 import campoLavanda from '../assets/scenes/wallpaper-campo-lavanda-320x180.png';
 import aurora from '../assets/scenes/wallpaper-aurora-320x180.png';
+import gradeNeon from '../assets/scenes/wallpaper-grade-neon-320x180.png';
+import planetas from '../assets/scenes/wallpaper-planetas-320x180.png';
+import cerejeiras from '../assets/scenes/wallpaper-cerejeiras-320x180.png';
 import OBJETOS from '../art/objetos.json';
 import { chaveSprite, membrosDoGrupo, metaDe, podeDeitar } from '../lib/decoracao.js';
 
@@ -42,6 +45,9 @@ export const ITENS_LOJA = [
   fundo('noite-chuvosa', 'Noite chuvosa', 150, noiteChuvosa),
   fundo('campo-lavanda', 'Campo de lavanda', 200, campoLavanda),
   fundo('aurora', 'Aurora', 250, aurora),
+  fundo('grade-neon', 'Grade neon', 220, gradeNeon),
+  fundo('planetas', 'Planetas pastel', 260, planetas),
+  fundo('cerejeiras', 'Cerejeiras', 300, cerejeiras),
 
   obj('vela', 'Vela aromática', 50),
   obj('pato', 'Pato de borracha', 60),
@@ -63,6 +69,9 @@ export const ITENS_LOJA = [
   obj('cortica', 'Quadro de cortiça', 130),
   obj('luzinhas', 'Luzinhas', 150),
   obj('neon', 'Lua neon', 220),
+  obj('poster-vaporwave', 'Pôster vaporwave', 100),
+  obj('poster-fita', 'Pôster fita cassete', 90),
+  obj('poster-gato', 'Pôster gato e lua', 110),
 ];
 
 export const itemPorId = (id) => ITENS_LOJA.find((i) => i.id === id);

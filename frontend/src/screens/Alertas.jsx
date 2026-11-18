@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import iconeEmail from '../assets/ui/icon-email-16.png';
+import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import { detectarAlertas, sortearFrase, vistosIniciais } from '../lib/alertas.js';
 import { formatarTempo } from './Computador.jsx';
 import { sfx } from '../lib/sfx.js';
@@ -58,7 +58,7 @@ function Alerta({ alerta, pedido, onFechar }) {
     <div className={`alerta ${alerta.tipo}`} role={saiu || urgente ? 'alert' : 'status'}>
       {urgente && <span className="alerta-selo">PEDIDO URGENTE</span>}
       <div className="alerta-topo">
-        <img src={iconeEmail} alt="" className="pixel" />
+        <LogoEmpresa nome={pedido.cliente} tamanho={24} />
         <strong>{pedido.cliente}</strong>
         <button className="alerta-fechar" onClick={onFechar} aria-label="Fechar aviso">×</button>
       </div>

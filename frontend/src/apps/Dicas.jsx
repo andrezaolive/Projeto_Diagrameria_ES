@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import cadeado from '../assets/ui/icon-cadeado-16.png';
 import lampada from '../assets/ui/icon-dicas-16.png';
 import { Botao, Dinheiro } from '../components/ui.jsx';
 import { DiagramaEstatico } from '../editor/Formas.jsx';
-import { GRADE_PEDACOS, TOTAL_PEDACOS, modeloPorId, precoPedaco } from '../data/pedidos.js';
+import { GRADE_PEDACOS, TOTAL_PEDACOS, modeloPorId, partesDoModelo, precoPedaco } from '../data/pedidos.js';
+import { nomeDaParte } from './Resultado.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { sfx } from '../lib/sfx.js';
 import './apps.css';
@@ -12,6 +14,8 @@ export default function Dicas({ abrirApp }) {
   const { state, dispatch } = useGame();
   const sessao = state.sessao;
   const pedido = sessao?.pedidos.find((p) => p.id === sessao.ativo);
+  // pedido JUMBO: uma imagem-resposta por diagrama; a parte k usa os pedaços k*TOTAL_PEDACOS...
+  const [indiceParte, setIndiceParte] = useState(0);
 
   if (!pedido) {
     return (
@@ -25,13 +29,16 @@ export default function Dicas({ abrirApp }) {
   }
 
   const modelo = modeloPorId(pedido.modelo);
-  const revelados = pedido.pedacos ?? [];
+  const partes = partesDoModelo(modelo);
+  const k = Math.min(indiceParte, partes.length - 1);
+  const base = k * TOTAL_PEDACOS;
+  const revelados = (pedido.pedacos ?? []).filter((i) => i >= base && i < base + TOTAL_PEDACOS).map((i) => i - base);
   const preco = precoPedaco(pedido);
 
   const comprar = (indice) => {
     if (state.dinheiro < preco) return sfx.erro();
     sfx.moeda();
-    dispatch({ type: 'COMPRAR_PEDACO', indice });
+    dispatch({ type: 'COMPRAR_PEDACO', indice: base + indice });
   };
 
   return (
@@ -43,8 +50,17 @@ export default function Dicas({ abrirApp }) {
         <Dinheiro valor={state.dinheiro} />
       </div>
 
+      {partes.length > 1 && (
+        <div className="dicas-partes" role="tablist" aria-label="Diagramas do pedido JUMBO">
+          {partes.map((p, i) => (
+            <Botao key={p.secao} role="tab" aria-selected={i === k} tamanho="pequeno" variante={i === k ? 'ativo' : 'claro'} onClick={() => setIndiceParte(i)}>
+              {nomeDaParte(p.secao)}
+            </Botao>
+          ))}
+        </div>
+      )}
       <div className="dica-imagem">
-        <DiagramaEstatico diagrama={modelo.esperado} prefixo="dc" />
+        <DiagramaEstatico key={k} diagrama={partes[k].esperado} prefixo={`dc${k}`} />
         <div
           className="dica-tampas"
           style={{ gridTemplateColumns: `repeat(${GRADE_PEDACOS.colunas}, 1fr)`, gridTemplateRows: `repeat(${GRADE_PEDACOS.linhas}, 1fr)` }}

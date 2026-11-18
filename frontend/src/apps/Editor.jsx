@@ -1,14 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
+import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Botao } from '../components/ui.jsx';
 import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES } from '../editor/Formas.jsx';
 import { MULTIPLICIDADES, TEM_MULTIPLICIDADE } from '../lib/multiplicidade.js';
 import { REDIMENSIONAVEIS, TAMANHOS, TAMANHO_MINIMO, centro, contido, foraDoLugar, posicaoAoSoltar, redimensionar, retangulo, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
-import { avaliar, pagamento } from '../lib/avaliacao.js';
+import { avaliar, avaliarPartes, pagamento } from '../lib/avaliacao.js';
 import { diagramaVazio } from '../lib/feedback.js';
-import { modeloPorId } from '../data/pedidos.js';
+import { ehJumbo, modeloPorId } from '../data/pedidos.js';
 import { useGame } from '../state/GameContext.jsx';
-import { chaveDiagrama, diagramaDe, pedidosAceitos } from '../state/reducer.js';
+import { chaveDaParte, chaveDiagrama, diagramaDe, pedidosAceitos } from '../state/reducer.js';
 import { formatarTempo } from '../screens/Computador.jsx';
 import { sfx } from '../lib/sfx.js';
 import { LINHA_MEMBRO, TOPO_CLASSE, medidasClasse } from '../lib/membros.js';
@@ -19,10 +20,9 @@ const novoId = () => `n${Date.now().toString(36)}${Math.random().toString(36).sl
 export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   const { state, dispatch } = useGame();
   const sessao = state.sessao;
-  const chave = chaveDiagrama(sessao);
-  const diagrama = diagramaDe(state, chave);
   const pedido = sessao?.pedidos.find((p) => p.id === sessao.ativo);
   const modelo = pedido && modeloPorId(pedido.modelo);
+  const jumbo = ehJumbo(modelo); // dois diagramas, cada um montado (e salvo) na sua aba
   const aceitos = pedidosAceitos(sessao);
 
   const areaRef = useRef(null);
@@ -42,11 +42,19 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   // editor e ao aceitar/trocar de pedido (descobrir o tipo de diagrama faz parte do desafio)
   const [secao, setSecao] = useState('casos');
   const secaoAtual = SECOES.find((s) => s.id === secao);
+  // pedido JUMBO: cada aba (seção) tem o seu próprio diagrama, salvo em pedido:<id>:<secao>
+  const chave = jumbo ? chaveDaParte(pedido.id, secao) : chaveDiagrama(sessao);
+  const diagrama = diagramaDe(state, chave);
   const trocarSecao = (id) => {
     setSecao(id);
     setFerramenta(null);
     setOrigem(null);
     setFantasma(null);
+    if (jumbo) {
+      // a seleção era de outro diagrama
+      setSel(null);
+      setEscrevendo(null);
+    }
   };
   useEffect(() => {
     trocarSecao('casos');
@@ -324,11 +332,22 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
 
   // ------------------------------------------------------------ entrega
   // área de montagem vazia: não dá para entregar (nada para avaliar nem aprender com o feedback)
-  const vazio = diagramaVazio(diagrama);
+  // JUMBO: o diagrama de cada parte vem da aba dela; só não entrega se todas estiverem vazias
+  const partesJumbo = jumbo ? modelo.partes.map((p) => ({ ...p, diagrama: diagramaDe(state, chaveDaParte(pedido.id, p.secao)) })) : null;
+  const vazio = jumbo ? partesJumbo.every((p) => diagramaVazio(p.diagrama)) : diagramaVazio(diagrama);
   const entregar = () => {
     if (vazio) return;
-    const r = avaliar(diagrama, modelo.esperado);
     const atrasado = pedido.tempoRestante === 0;
+    if (jumbo) {
+      const r = avaliarPartes(partesJumbo);
+      const valor = pagamento(pedido.recompensa, r.nota, atrasado);
+      sfx.nota(r.nota);
+      onEntregue({ ...r, valor, atrasado, pedido });
+      dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, valor, partes: partesJumbo.map(({ secao: s, diagrama: d }) => ({ secao: s, diagrama: d })), atrasado, sorteio: Math.random() });
+      setSel(null);
+      return;
+    }
+    const r = avaliar(diagrama, modelo.esperado);
     const valor = pagamento(pedido.recompensa, r.nota, atrasado);
     sfx.nota(r.nota); // Excellent / Great / Ok / Bad / Worst
     onEntregue({ ...r, valor, atrasado, pedido, diagrama, esperado: modelo.esperado });
@@ -391,7 +410,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
                 onClick={() => p.id !== pedido?.id && dispatch({ type: 'ATIVAR', id: p.id })}
                 title={`${p.cliente}: ${p.assunto}`}
               >
-                <span className="nome">{p.cliente.split(' ')[0]}</span>
+                <span className="nome"><LogoEmpresa nome={p.cliente} tamanho={16} />{p.cliente.split(' ')[0]}</span>
                 <span className="tempo">{formatarTempo(p.tempoRestante)}</span>
               </button>
             ))}
@@ -402,18 +421,24 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             <div className={`etiqueta relogio-pedido ${pedido.tempoRestante <= 30 || pedido.urgente ? 'urgente' : ''}`}>
               <img src={iRelogio} alt="" className="pixel" /> {formatarTempo(pedido.tempoRestante)}
               {pedido.urgente && <b className="tag-urgente">URGENTE</b>}
+              {jumbo && <b className="tag-jumbo">JUMBO</b>}
             </div>
-            <h4>{pedido.cliente}</h4>
+            <h4 className="cliente-pedido"><LogoEmpresa nome={pedido.cliente} tamanho={32} />{pedido.cliente}</h4>
             <div className="assunto">{pedido.assunto}</div>
             <div className="lista rolagem">
               {modelo.corpo.map((l, i) => <p key={i}>{l}</p>)}
             </div>
+            {jumbo && (
+              <p className="aviso-jumbo">
+                Pedido JUMBO: monte cada diagrama na sua aba da paleta ({modelo.partes.map((p) => SECOES.find((x) => x.id === p.secao).nome).join(' + ')}). Cada aba guarda o seu.
+              </p>
+            )}
             {pedido.tempoRestante === 0 && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
             <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>
             <Botao variante="rosa" som="" onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
               Entregar
             </Botao>
-            {vazio && <p className="aviso-vazio">Monte o diagrama na área ao lado para poder entregar.</p>}
+            {vazio && <p className="aviso-vazio">{jumbo ? 'Monte os diagramas nas abas da paleta para poder entregar.' : 'Monte o diagrama na área ao lado para poder entregar.'}</p>}
           </>
         ) : (
           <>
@@ -557,6 +582,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             >
               <IconePaleta tipo={s.icone} />
               <span>{s.curto}</span>
+              {jumbo && !diagramaVazio(diagramaDe(state, chaveDaParte(pedido.id, s.id))) && <i className="secao-montada" title="Esta aba já tem um diagrama montado" />}
             </button>
           ))}
         </div>

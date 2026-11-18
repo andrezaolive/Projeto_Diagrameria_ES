@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Botao } from '../components/ui.jsx';
+import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import { useGame } from '../state/GameContext.jsx';
-import { MODELOS, modeloPorId, multaPedido } from '../data/pedidos.js';
+import { MODELOS, ehJumbo, modeloPorId, multaPedido } from '../data/pedidos.js';
 import { formatarTempo } from '../screens/Computador.jsx';
 import TodosPedidos from './TodosPedidos.jsx';
 import PainelDev from './PainelDev.jsx';
@@ -84,14 +85,17 @@ export default function Email({ abrirApp }) {
         {pedidos.map((p) => (
           <li key={p.id}>
             <button className={`email-item ${p.id === sel?.id ? 'sel' : ''} ${p.status === 'novo' ? 'nao-lido' : ''} ${p.urgente ? 'urgente' : ''} ${p.status === 'recusado' || p.status === 'expirado' ? 'perdido' : ''} ${p.status === 'entregue' ? 'concluido' : ''}`} onClick={() => setSelId(p.id)}>
-              <span className="bolinha" style={{ background: SELO[p.status].cor }} />
-              <span className="de">{p.cliente}</span>
-              <span className="assunto">
-                {import.meta.env.DEV && <code className="debug-id">[{p.modelo}]</code>}
-                {p.urgente && <b className="tag-urgente">URGENTE</b>}
-                {p.status === 'novo' && !p.urgente ? 'PEDIDO NOVO · ' : p.status === 'expirado' ? 'FOI EMBORA · ' : ''}{p.urgente ? p.assunto.replace(/^URGENTE: /, '') : p.assunto}
+              <LogoEmpresa nome={p.cliente} tamanho={80} className="logo-item" />
+              <span className="email-texto">
+                <span className="de"><span className="nome">{p.cliente}</span><span className="bolinha" style={{ background: SELO[p.status].cor }} /></span>
+                <span className="assunto">
+                  {import.meta.env.DEV && <code className="debug-id">[{p.modelo}]</code>}
+                  {p.urgente && <b className="tag-urgente">URGENTE</b>}
+                  {ehJumbo(modeloPorId(p.modelo)) && <b className="tag-jumbo">JUMBO</b>}
+                  {p.status === 'novo' && !p.urgente ? 'PEDIDO NOVO · ' : p.status === 'expirado' ? 'FOI EMBORA · ' : ''}{p.urgente ? p.assunto.replace(/^URGENTE: /, '') : p.assunto}
+                </span>
+                <Paciencia pedido={p} />
               </span>
-              <Paciencia pedido={p} />
             </button>
           </li>
         ))}
@@ -115,13 +119,14 @@ export default function Email({ abrirApp }) {
       {sel && (
         <article className={`email-leitura ${sel.urgente ? 'urgente' : ''}`}>
           <header>
-            <div className="linha"><b>De:</b> {sel.cliente}</div>
+            <div className="linha linha-de"><b>De:</b> <LogoEmpresa nome={sel.cliente} tamanho={32} /> {sel.cliente}</div>
             <div className="linha"><b>Assunto:</b> {sel.assunto}</div>
             <div className="linha meta">
               {sel.urgente && <span className="selo selo-urgente">URGENTE</span>}
+              {ehJumbo(modelo) && <span className="selo selo-jumbo" title="Pedido com dois diagramas de uma vez">JUMBO · 2 diagramas</span>}
               <span className="selo" style={{ background: SELO[sel.status].cor }}>{SELO[sel.status].txt}</span>
               <span className={`tag-nivel ${nivelDoModelo(modelo).id}`}>{nivelDoModelo(modelo).nome}</span>
-              <span>Pagamento: R$ {sel.recompensa}</span>
+              <span title={sel.repeticao ? 'Dia já concluído: os pedidos pagam metade' : undefined}>Pagamento: R$ {sel.recompensa}{sel.repeticao ? ' (½ · dia repetido)' : ''}</span>
               <span>Prazo: {formatarTempo(sel.tempo)}</span>
               {sel.nota != null && <span>Nota: {sel.nota}%</span>}
               {sel.multa != null && <span className="multa">Multa: −R$ {sel.multa}</span>}

@@ -141,6 +141,7 @@
   transform: rotate(-8deg);
   color: var(--c-ink);
 }
+.dia .repetir { position: absolute; right: 6px; top: 34px; font-family: var(--f-texto); font-size: 17px; color: var(--c-grape); }
 .dia .folga-txt { position: absolute; left: 8px; bottom: 6px; font-family: var(--f-texto); font-size: 18px; }
 .calendario .rodape { margin-top: 24px; display: flex; gap: 20px; align-items: center; }
 

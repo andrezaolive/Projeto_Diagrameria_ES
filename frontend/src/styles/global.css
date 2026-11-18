@@ -328,3 +328,13 @@ button { font: inherit; color: inherit; }
   filter: grayscale(1);
 }
 .perdido * { color: var(--c-lilac) !important; }
+
+/* Logo da empresa do pedido (components/LogoEmpresa.jsx) ao lado do nome */
+.logo-empresa { flex: none; display: inline-block; vertical-align: middle; image-rendering: pixelated; }
+.email-item .de,
+.email-leitura .linha-de,
+.cliente-pedido,
+.aba-pedido .nome,
+.todos-cabeca,
+.resumo-dia .cliente { display: inline-flex; align-items: center; gap: 8px; }
+.aba-pedido .nome { gap: 4px; }

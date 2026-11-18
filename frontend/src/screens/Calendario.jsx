@@ -3,7 +3,7 @@ import { Botao, Dinheiro, formatarReais } from '../components/ui.jsx';
 import { FundoMenu } from './Menu.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { DIAS_CAMPANHA, MEDIA_MINIMA } from '../state/reducer.js';
-import { pedidosDoDia } from '../data/pedidos.js';
+import { pedidosNoDia } from '../data/pedidos.js';
 import { sfx } from '../lib/sfx.js';
 
 const SEMANA = ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB', 'DOM'];
@@ -49,18 +49,19 @@ export default function Calendario({ onEscolher, onVoltar }) {
               const feito = concluidos[c.campanha];
               const liberado = c.campanha <= desbloqueado;
               const hoje = c.campanha === desbloqueado && !feito;
-              const qtd = pedidosDoDia(c.campanha).length;
+              const qtd = pedidosNoDia(c.campanha);
               return (
                 <button
                   key={c.data}
                   className={`dia ${liberado ? '' : 'bloqueado'} ${hoje ? 'hoje' : ''}`}
                   disabled={!liberado}
                   onClick={() => { sfx.clique(); onEscolher(c.campanha); }}
-                  title={liberado ? `Dia ${c.campanha}: ${qtd} pedido(s)` : `Conclua o dia anterior com ${MEDIA_MINIMA}% ou mais`}
+                  title={!liberado ? `Conclua o dia anterior com ${MEDIA_MINIMA}% ou mais` : feito ? `Dia ${c.campanha} já concluído: jogar de novo paga metade e só traz pedidos que você já desbloqueou` : `Dia ${c.campanha}: ${qtd} pedido(s)`}
                 >
                   {c.data}
                   {!liberado && <img src={cadeado} alt="bloqueado" className="pixel" />}
                   {feito && <span className="carimbo">OK {feito.media}%</span>}
+                  {feito && <span className="repetir">½ R$</span>}
                   {liberado && <span className="info">{feito ? formatarReais(feito.ganho) : `${qtd} pedido${qtd > 1 ? 's' : ''}`}</span>}
                 </button>
               );

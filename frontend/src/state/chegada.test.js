@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { diaEncerrado, estadoInicial, reducer } from './reducer.js';
-import { CHEGADA, intervaloChegada, pedidosDoDia } from '../data/pedidos.js';
+import { CHEGADA, intervaloChegada, pedidosNoDia } from '../data/pedidos.js';
 
 const rodar = (s, ...acoes) => acoes.reduce(reducer, s);
 const ticks = (s, n, sorteioChegada = 0.5) => {
@@ -17,7 +17,7 @@ describe('chegada dos pedidos do dia (campanha)', () => {
   });
 
   it('só o primeiro chega no começo; o segundo chega na hora sorteada', () => {
-    expect(pedidosDoDia(5).length).toBe(2);
+    expect(pedidosNoDia(5)).toBe(3);
     let s = iniciar(5, 0); // 45 s
     expect(s.sessao.pedidos).toHaveLength(1);
     expect(s.sessao.proximoEm).toBe(45);
@@ -32,7 +32,7 @@ describe('chegada dos pedidos do dia (campanha)', () => {
 
   it('entregar o anterior antes da hora traz o próximo na mesma hora', () => {
     let s = iniciar(9, 1); // 3 pedidos, 90 s de intervalo
-    expect(pedidosDoDia(9).length).toBe(3);
+    expect(pedidosNoDia(9)).toBe(3);
     const a = s.sessao.pedidos[0];
     s = rodar(s, { type: 'ACEITAR', id: a.id }, { type: 'ENTREGAR', id: a.id, nota: 80, valor: 1, sorteio: 0 });
     expect(s.sessao.pedidos).toHaveLength(2);
@@ -41,7 +41,7 @@ describe('chegada dos pedidos do dia (campanha)', () => {
   });
 
   it('o dia só acaba depois que todos chegaram e terminaram', () => {
-    let s = iniciar(5);
+    let s = iniciar(1); // 2 pedidos
     const a = s.sessao.pedidos[0];
     s = rodar(s, { type: 'RECUSAR', id: a.id }); // recusar também libera o próximo
     expect(s.sessao.pedidos).toHaveLength(2);

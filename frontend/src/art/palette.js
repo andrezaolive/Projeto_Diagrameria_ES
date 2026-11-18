@@ -43,3 +43,11 @@ export const TINTAS = {
   verde: '#6cb877',
   ciano: '#6ccfd9',
 };
+
+// Terceira exceção à paleta: metais das medalhas (broches) da coleção de pedidos (lib/colecao.js).
+// Ouro, prata e bronze não existem nas 16 cores; a fita usa o rose da paleta e o vermelho das TINTAS.
+export const METAIS = {
+  ouro: { brilho: '#fbe58a', base: '#f0c040', sombra: '#c8902a', numero: '#9a6418' },
+  prata: { brilho: '#f4f4f8', base: '#c9c9d4', sombra: '#9a9aaa', numero: '#6e6e84' },
+  bronze: { brilho: '#efb98c', base: '#cf8a55', sombra: '#a3643a', numero: '#74401f' },
+};
