@@ -1,8 +1,9 @@
 import { useState } from 'react';
+import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import { createPortal } from 'react-dom';
 import { Botao, Modal } from '../components/ui.jsx';
-import { MODELOS } from '../data/pedidos.js';
-import { TIPOS_DIAGRAMA, categoriasDoModelo, tipoDoDiagrama } from '../lib/categorias.js';
+import { TODOS_MODELOS } from '../data/pedidos.js';
+import { TIPOS_DIAGRAMA, categoriasDoModelo, tipoDoModelo } from '../lib/categorias.js';
 import { nivelDoModelo, pontuacao } from '../lib/dificuldade.js';
 
 // DEBUG (só em npm run dev): lista todos os modelos de pedido do jogo, com as categorias embaixo.
@@ -10,14 +11,16 @@ import { nivelDoModelo, pontuacao } from '../lib/dificuldade.js';
 export default function TodosPedidos({ onEscolher, onFechar }) {
   const [filtro, setFiltro] = useState('todos');
   // do mais fácil ao mais difícil
-  const lista = MODELOS.filter((m) => filtro === 'todos' || tipoDoDiagrama(m.esperado) === filtro).sort((a, b) => pontuacao(a) - pontuacao(b));
+  const FILTROS = [{ id: 'todos', nome: 'Todos' }, ...TIPOS_DIAGRAMA, { id: 'jumbo', nome: 'Jumbo' }];
+  const doTipo = (id) => TODOS_MODELOS.filter((m) => id === 'todos' || tipoDoModelo(m) === id);
+  const lista = doTipo(filtro).sort((a, b) => pontuacao(a) - pontuacao(b));
   const janela = (
-    <Modal titulo={`TODOS_OS_PEDIDOS.TXT · ${MODELOS.length}`} w={1000} h={640} onFechar={onFechar}>
+    <Modal titulo={`TODOS_OS_PEDIDOS.TXT · ${TODOS_MODELOS.length}`} w={1000} h={640} onFechar={onFechar}>
       <div className="todos-pedidos">
         <div className="todos-filtros">
-          {[{ id: 'todos', nome: 'Todos' }, ...TIPOS_DIAGRAMA].map((t) => (
+          {FILTROS.map((t) => (
             <Botao key={t.id} tamanho="pequeno" variante={filtro === t.id ? 'ativo' : 'claro'} onClick={() => setFiltro(t.id)}>
-              {t.nome} ({t.id === 'todos' ? MODELOS.length : MODELOS.filter((m) => tipoDoDiagrama(m.esperado) === t.id).length})
+              {t.nome} ({doTipo(t.id).length})
             </Botao>
           ))}
         </div>
@@ -26,6 +29,7 @@ export default function TodosPedidos({ onEscolher, onFechar }) {
             <li key={m.id}>
               <button className="todos-item" onClick={() => onEscolher(m.id)} title="Troca o primeiro pedido da caixa por este">
                 <span className="todos-cabeca">
+                  <LogoEmpresa nome={m.cliente} tamanho={20} />
                   <b>{m.cliente}</b>
                   <span className={`tag-nivel ${nivelDoModelo(m).id}`} title={`complexidade ${pontuacao(m)}`}>{nivelDoModelo(m).nome}</span>
                   <code>[{m.id}]</code>

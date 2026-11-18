@@ -26,7 +26,7 @@ export default function App() {
   }, [tela]);
 
   const iniciar = (modo, dia) => {
-    dispatch({ type: 'INICIAR_SESSAO', modo, dia, sorteio: Math.random() });
+    dispatch({ type: 'INICIAR_SESSAO', modo, dia, sorteio: Math.random(), semente: Math.random() });
     setTela('jogo');
   };
   const abrirConta = (modo) => {

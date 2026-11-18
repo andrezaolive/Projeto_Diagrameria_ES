@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { diaEncerrado, estadoInicial, reducer, temRelogio } from './reducer.js';
-import { MULTA, multaPedido, pacienciaDoDia } from '../data/pedidos.js';
+import { MULTA, multaPedido, pacienciaDoDia, pedidosNoDia } from '../data/pedidos.js';
 
 const rodar = (state, ...acoes) => acoes.reduce(reducer, state);
 const ticks = (state, n) => rodar(state, ...Array.from({ length: n }, () => ({ type: 'TICK' })));
@@ -35,8 +35,9 @@ describe('paciência dos clientes', () => {
 
   it('na campanha, cliente que foi embora conta como pedido encerrado do dia', () => {
     let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'campanha', dia: 1 });
-    const total = Math.max(...s.sessao.pedidos.map((p) => p.pacienciaTotal));
-    s = ticks(s, total);
+    // os pedidos chegam um de cada vez; espera todos irem embora
+    for (let i = 0; i < 5000 && !diaEncerrado(s.sessao); i++) s = ticks(s, 1);
+    expect(s.sessao.pedidos).toHaveLength(pedidosNoDia(1));
     expect(s.sessao.pedidos.every((p) => p.status === 'expirado')).toBe(true);
     expect(diaEncerrado(s.sessao)).toBe(true);
     // multas em sequência: 50% enquanto o saldo não é negativo, 25% depois

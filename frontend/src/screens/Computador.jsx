@@ -6,6 +6,7 @@ import iDicas from '../assets/ui/icon-dicas-16.png';
 import iLoja from '../assets/ui/icon-loja-16.png';
 import iEscritorio from '../assets/ui/icon-escritorio-16.png';
 import iGuia from '../assets/ui/icon-guia-16.png';
+import iColecao from '../assets/ui/icon-colecao-16.png';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Dinheiro, Janela } from '../components/ui.jsx';
 import Editor from '../apps/Editor.jsx';
@@ -13,6 +14,7 @@ import Email from '../apps/Email.jsx';
 import Dicas from '../apps/Dicas.jsx';
 import Loja from '../apps/Loja.jsx';
 import Guia from '../apps/Guia.jsx';
+import Colecao from '../apps/Colecao.jsx';
 import { itemPorId } from '../data/loja.js';
 import { useGame } from '../state/GameContext.jsx';
 import { sfx } from '../lib/sfx.js';
@@ -24,6 +26,7 @@ export const APPS = {
   dicas: { nome: 'Dicas', titulo: 'DICAS.EXE', icone: iDicas, x: 240, y: 70, w: 800, h: 520, Comp: Dicas },
   loja: { nome: 'Lojinha', titulo: 'MEBOL-LOJA VIRTUAL.EXE', icone: iLoja, x: 170, y: 40, w: 940, h: 590, Comp: Loja },
   guia: { nome: 'Guia', titulo: 'GUIA-DIAGRAMAS.EXE', icone: iGuia, x: 140, y: 30, w: 1000, h: 620, Comp: Guia },
+  colecao: { nome: 'Coleção', titulo: 'COLECAO-PEDIDOS.EXE', icone: iColecao, x: 110, y: 26, w: 1060, h: 630, Comp: Colecao },
 };
 
 // Ícones da área de trabalho: os apps e o "Voltar ao escritório"

@@ -1,4 +1,5 @@
-import { MODELOS, TOTAL_PEDACOS, URGENTE, criarPedido, criarPedidoUrgente, intervaloChegada, multaPedido, pedidosDoDia, precoPedaco } from '../data/pedidos.js';
+import { FATOR_REPETICAO, MODELOS, TODOS_MODELOS, TOTAL_PEDACOS, URGENTE, criarPedido, criarPedidoUrgente, ehJumbo, intervaloChegada, modeloPorId, multaPedido, partesDoModelo, precoPedaco, sortearPedidosDoDia } from '../data/pedidos.js';
+import { registrarEntrega } from '../lib/colecao.js';
 import { ALEATORIA, faixasDoJogador, temTocaFitas } from '../data/musicas.js';
 import { avatarPadrao } from '../lib/avatar.js';
 import { niveisNoInfinito, nivelDoModelo } from '../lib/dificuldade.js';
@@ -42,6 +43,7 @@ export const estadoInicial = () => ({
   computador: { icones: {} }, // posição dos ícones da área de trabalho ({ id: { col, lin } }, ver lib/areaTrabalho.js)
   sessao: null,
   diagramas: {},
+  colecao: {}, // pedidos já entregues: { [modeloId]: { entregas, melhorNota } } (ver lib/colecao.js)
 });
 
 // Junta um save antigo com o formato atual
@@ -54,6 +56,7 @@ export function migrar(salvo) {
     ...salvo,
     loja: { ...loja, possui: renomear(loja.possui), moveis: renomear(loja.moveis) },
     escritorio: { ...base.escritorio, ...salvo.escritorio },
+    colecao: { ...salvo.colecao },
     cafe: { ...base.cafe, ...salvo.cafe, capsulas: { ...base.cafe.capsulas, ...salvo.cafe?.capsulas } },
     computador: { ...base.computador, ...salvo.computador, icones: { ...salvo.computador?.icones } },
     perfil: { ...base.perfil, ...salvo.perfil, avatar: { ...base.perfil.avatar, ...salvo.perfil?.avatar } },
@@ -73,11 +76,14 @@ export function migrar(salvo) {
 
 const vazio = () => ({ nodes: [], edges: [] });
 
-// Modo infinito: os primeiros pedidos são fáceis, depois entram os médios e, mais adiante, os difíceis
+// Modo infinito: os primeiros pedidos são fáceis, depois entram os médios e, mais adiante, os difíceis.
+// Pedidos JUMBO (dois diagramas) só depois dos primeiros pedidos.
+export const JUMBO_A_PARTIR_DE = 4;
 function novoPedidoAleatorio(sessao) {
   const ultimo = sessao.pedidos.at(-1)?.modelo;
   const niveis = niveisNoInfinito(sessao.seq);
-  const opcoes = MODELOS.filter((m) => m.id !== ultimo && niveis.includes(nivelDoModelo(m).id));
+  const base = sessao.seq >= JUMBO_A_PARTIR_DE ? TODOS_MODELOS : MODELOS;
+  const opcoes = base.filter((m) => m.id !== ultimo && niveis.includes(nivelDoModelo(m).id));
   const m = opcoes[Math.floor(Math.random() * opcoes.length)];
   return criarPedido(m.id, sessao.seq, 1);
 }
@@ -93,8 +99,12 @@ export function sortearUrgente(sessao, segundos, sorteio) {
   const opcoes = MODELOS.filter((m) => !naFila.has(m.id));
   const lista = opcoes.length ? opcoes : MODELOS;
   const m = lista[Math.min(lista.length - 1, Math.floor((sorteio / URGENTE.chance) * lista.length))];
-  return criarPedidoUrgente(m.id, sessao.seq, sessao.modo === 'campanha' ? sessao.dia : 1);
+  return naSessao(sessao, criarPedidoUrgente(m.id, sessao.seq, sessao.modo === 'campanha' ? sessao.dia : 1));
 }
+
+// Dia já concluído jogado de novo: todo pedido que chega na sessão paga só FATOR_REPETICAO
+export const naSessao = (sessao, pedido) =>
+  sessao?.repeticao && pedido ? { ...pedido, recompensa: Math.round(pedido.recompensa * FATOR_REPETICAO), repeticao: true } : pedido;
 
 const atualizarPedido = (sessao, id, f) => ({
   ...sessao,
@@ -126,7 +136,7 @@ function liberarFila(sessao, sorteio) {
   const [id, ...fila] = sessao.fila;
   return {
     ...sessao,
-    pedidos: [...sessao.pedidos, criarPedido(id, sessao.seq, sessao.dia)],
+    pedidos: [...sessao.pedidos, naSessao(sessao, criarPedido(id, sessao.seq, sessao.dia))],
     seq: sessao.seq + 1,
     fila,
     proximoEm: fila.length ? segundos + intervaloChegada(sorteio) : null,
@@ -140,10 +150,13 @@ export function reducer(state, action) {
       let seq = 1;
       let pedidos;
       let fila = [];
+      // dia já concluído: pagamento pela metade e só pedidos já desbloqueados (na coleção)
+      const repeticao = modo === 'campanha' && Boolean(state.campanha.concluidos[dia]);
       if (modo === 'campanha') {
-        // só o primeiro chega agora; o resto entra pela fila (liberarFila)
-        const [primeiro, ...resto] = pedidosDoDia(dia);
-        pedidos = [criarPedido(primeiro, seq++, dia)];
+        // sorteio dos pedidos do dia (ver sortearPedidosDoDia); só o primeiro chega agora, o resto
+        // entra pela fila (liberarFila)
+        const [primeiro, ...resto] = sortearPedidosDoDia(dia, { colecao: state.colecao, repeticao, semente: action.semente ?? dia });
+        pedidos = [naSessao({ repeticao }, criarPedido(primeiro, seq++, dia))];
         fila = resto;
       } else {
         const s = { pedidos: [], seq };
@@ -162,7 +175,7 @@ export function reducer(state, action) {
       const chegada = fila.length ? { fila, proximoEm: intervaloChegada(action.sorteio) } : {};
       // o efeito do café não passa de uma partida para outra
       const cafe = { ...state.cafe, efeito: null };
-      return { ...state, diagramas, estatisticas, cafe, sessao: { modo, dia, pedidos, ativo: null, ganho: 0, notas: [], seq, segundos: 0, ...chegada } };
+      return { ...state, diagramas, estatisticas, cafe, sessao: { modo, dia, pedidos, ativo: null, ganho: 0, notas: [], seq, segundos: 0, ...(repeticao ? { repeticao } : {}), ...chegada } };
     }
 
     case 'ENCERRAR_SESSAO':
@@ -189,8 +202,8 @@ export function reducer(state, action) {
     // por um novo do `modelo` escolhido, na mesma posição. Sem alvo, o pedido entra na caixa.
     case 'DEBUG_TROCAR_PEDIDO': {
       const s = state.sessao;
-      if (!s || !MODELOS.some((m) => m.id === action.modelo)) return state;
-      const novo = criarPedido(action.modelo, s.seq, s.dia ?? 1);
+      if (!s || !modeloPorId(action.modelo)) return state;
+      const novo = naSessao(s, criarPedido(action.modelo, s.seq, s.dia ?? 1));
       const existe = s.pedidos.some((p) => p.id === action.alvo);
       const pedidos = existe ? s.pedidos.map((p) => (p.id === action.alvo ? novo : p)) : [...s.pedidos, novo];
       let sessao = { ...s, pedidos, seq: s.seq + 1 };
@@ -222,7 +235,7 @@ export function reducer(state, action) {
         indice++;
       }
       const removidos = new Set(s.pedidos.filter((p) => p.status === 'novo').map((p) => p.id));
-      const diagramas = Object.fromEntries(Object.entries(state.diagramas).filter(([k]) => !removidos.has(k.replace(/^pedido:/, ''))));
+      const diagramas = Object.fromEntries(Object.entries(state.diagramas).filter(([k]) => !removidos.has(pedidoDaChave(k))));
       return { ...state, diagramas, sessao: { ...s, pedidos: [...mantidos, ...novos], seq, debugIndice: indice % MODELOS.length } };
     }
 
@@ -299,7 +312,12 @@ export function reducer(state, action) {
       if (!s) return state;
       const { id, nota, valor } = action;
       // o diagrama entregue fica no pedido, para o resumo do dia mostrar de novo (com o esperado e o feedback)
-      const entrega = action.diagrama ? { diagrama: action.diagrama, atrasado: Boolean(action.atrasado) } : {};
+      // pedido JUMBO: `partes` = [{ secao, diagrama }] (um diagrama por aba do editor)
+      const entrega = action.partes
+        ? { partes: action.partes, atrasado: Boolean(action.atrasado) }
+        : action.diagrama
+          ? { diagrama: action.diagrama, atrasado: Boolean(action.atrasado) }
+          : {};
       let sessao = atualizarPedido(s, id, () => ({ status: 'entregue', nota, valor, ...entrega }));
       sessao = { ...sessao, ganho: s.ganho + valor, notas: [...s.notas, nota] };
       sessao = { ...sessao, ativo: s.ativo === id ? proximoAtivo(sessao) : s.ativo };
@@ -315,7 +333,10 @@ export function reducer(state, action) {
         ganhoTotal: e.ganhoTotal + valor,
         historico: [...e.historico, { nota, valor }].slice(-MAX_HISTORICO),
       };
-      return concluirDiaSeFor({ ...state, dinheiro: state.dinheiro + valor, estatisticas, sessao, diagramas: semDiagrama(state.diagramas, id) });
+      // coleção: o modelo fica desbloqueado, com a melhor nota (medalha)
+      const modelo = s.pedidos.find((p) => p.id === id)?.modelo;
+      const colecao = modelo ? registrarEntrega(state.colecao, modelo, nota) : state.colecao;
+      return concluirDiaSeFor({ ...state, dinheiro: state.dinheiro + valor, estatisticas, colecao, sessao, diagramas: semDiagrama(state.diagramas, id) });
     }
 
     // Cafeteira (data/cafe.js). Cápsulas: compradas uma a uma, ficam guardadas na cafeteira.
@@ -389,7 +410,9 @@ export function reducer(state, action) {
       const s = state.sessao;
       const p = s?.pedidos.find((x) => x.id === s.ativo);
       const { indice } = action;
-      if (!p || indice < 0 || indice >= TOTAL_PEDACOS) return state;
+      // pedido JUMBO: cada diagrama tem os seus pedaços (parte k usa os índices k*TOTAL_PEDACOS...)
+      const partes = p ? partesDoModelo(modeloPorId(p.modelo)).length : 1;
+      if (!p || indice < 0 || indice >= TOTAL_PEDACOS * partes) return state;
       const preco = precoPedaco(p);
       if ((p.pedacos ?? []).includes(indice) || state.dinheiro < preco) return state;
       return {
@@ -523,10 +546,11 @@ function reporGrupo(escritorio, membros, guardar) {
   return { ...e, posicoes, guardados: e.guardados.filter((g) => !membros.includes(g)), guardadosDentro };
 }
 
+// Tira os diagramas do pedido (o único dele ou, no JUMBO, um por aba: pedido:<id>:<secao>)
 function semDiagrama(diagramas, pedidoId) {
-  const { ['pedido:' + pedidoId]: _, ...resto } = diagramas;
-  return resto;
+  return Object.fromEntries(Object.entries(diagramas).filter(([k]) => pedidoDaChave(k) !== pedidoId));
 }
+const pedidoDaChave = (chave) => chave.replace(/^pedido:/, '').replace(/:(casos|classes|estados)$/, '');
 
 // Desempenho do dia: média de todos os pedidos normais do dia. Entregue vale a nota, recusado vale
 // DESEMPENHO_RECUSADO (10%) e perdido (cliente foi embora) vale 0%. Urgentes não entram na média.
@@ -561,4 +585,7 @@ function concluirDiaSeFor(state) {
 }
 
 export const chaveDiagrama = (sessao) => (sessao?.ativo ? `pedido:${sessao.ativo}` : 'livre');
+// Pedido JUMBO: cada diagrama fica salvo na aba (seção) do editor em que é montado
+export const chaveDaParte = (pedidoId, secao) => `pedido:${pedidoId}:${secao}`;
+export const pedidoEhJumbo = (pedido) => Boolean(pedido) && ehJumbo(modeloPorId(pedido.modelo));
 export const diagramaDe = (state, chave) => state.diagramas[chave] || vazio();

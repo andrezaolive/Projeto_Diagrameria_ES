@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MEDIA_MINIMA, desempenhoDoDia, estadoInicial, migrar, reducer } from './reducer.js';
 import { avaliar } from '../lib/avaliacao.js';
-import { MODELOS, TOTAL_PEDACOS, modeloPorId, pedidosDoDia, precoPedaco } from '../data/pedidos.js';
+import { MODELOS, TOTAL_PEDACOS, modeloPorId, pedidosNoDia, precoPedaco } from '../data/pedidos.js';
 
 const rodar = (state, ...acoes) => acoes.reduce(reducer, state);
 
@@ -33,15 +33,18 @@ describe('avaliação', () => {
 describe('campanha', () => {
   it('conclui o dia e libera o próximo quando todos os pedidos acabam', () => {
     let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'campanha', dia: 1 });
-    expect(s.sessao.pedidos).toHaveLength(pedidosDoDia(1).length);
+    expect(s.sessao.pedidos.length + s.sessao.fila.length).toBe(pedidosNoDia(1)); // o 1º chega, o resto na fila
     const id = s.sessao.pedidos[0].id;
     s = rodar(s, { type: 'ACEITAR', id }, { type: 'TICK' });
     expect(s.sessao.pedidos[0].tempoRestante).toBe(s.sessao.pedidos[0].tempo - 1);
     s = rodar(s, { type: 'ENTREGAR', id, nota: 80, valor: 50 });
-    expect(s.dinheiro).toBe(150);
+    expect(s.campanha.desbloqueado).toBe(1); // o segundo pedido chegou na hora e ainda falta
+    const id2 = s.sessao.pedidos[1].id;
+    s = rodar(s, { type: 'ACEITAR', id: id2 }, { type: 'ENTREGAR', id: id2, nota: 80, valor: 50 });
+    expect(s.dinheiro).toBe(200);
     expect(s.campanha.desbloqueado).toBe(2);
-    expect(s.campanha.concluidos[1]).toEqual({ ganho: 50, media: 80 });
-    expect(s.sessao.relatorio).toEqual({ media: 80, aprovado: true, ganho: 50 });
+    expect(s.campanha.concluidos[1]).toEqual({ ganho: 100, media: 80 });
+    expect(s.sessao.relatorio).toEqual({ media: 80, aprovado: true, ganho: 100 });
   });
 
   // entrega todos os pedidos do dia com as notas dadas (a última se repete) e recusa o resto
@@ -74,7 +77,7 @@ describe('campanha', () => {
   });
 
   it('recusado conta 10% na média do dia (e ainda multa)', () => {
-    const s = jogarDia(estadoInicial(), 5, [100, null]);
+    const s = jogarDia(estadoInicial(), 1, [100, null]); // 2 pedidos
     expect(s.sessao.relatorio).toMatchObject({ media: 55, aprovado: false }); // (100 + 10) / 2
     const multas = s.sessao.pedidos.reduce((t, p) => t + (p.multa ?? 0), 0);
     expect(multas).toBeGreaterThan(0);

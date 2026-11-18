@@ -584,6 +584,79 @@ function wallpaperAurora() {
   c.save(OUT + 'scenes/wallpaper-aurora-320x180.png');
 }
 
+
+// ------------------------------------------- pôsteres extras (lojinha → Parede)
+// Tema pastel / vaporwave / lo-fi. Posições padrão nos vãos livres da parede (abaixo da janela
+// e no canto direito); o jogador arrasta para onde quiser.
+function postersExtras() {
+  // sol listrado sobre a grade neon, com uma palmeira
+  objeto('poster-vaporwave', 'parede', (c) => {
+    const x = 20, y = 87, w = 36, h = 28;
+    c.box(x, y, w, h, 'mist');
+    const ix = x + 2, iy = y + 2, iw = w - 4;
+    c.rect(ix, iy, iw, 4, 'plum');
+    c.rect(ix, iy + 4, iw, 4, 'grape');
+    c.dither(ix, iy + 7, iw, 2, 'orchid');
+    c.rect(ix, iy + 9, iw, 5, 'orchid');
+    c.dither(ix, iy + 13, iw, 2, 'blush');
+    // sol
+    const sx = x + 18, sy = y + 14;
+    for (let j = sy - 7; j < sy; j++) {
+      if (j === sy - 2 || j === sy - 4) continue;
+      const half = Math.floor(Math.sqrt(49 - (j - sy) ** 2));
+      c.hline(sx - half, sx + half, j, j < sy - 4 ? 'butter' : 'peach');
+    }
+    // chão com a grade
+    c.rect(ix, sy, iw, y + h - 2 - sy, 'night');
+    for (const d of [1, 3, 6, 10]) if (sy + d < y + h - 2) c.hline(ix, ix + iw - 1, sy + d, 'orchid');
+    for (let k = -2; k <= 2; k++) c.line(sx, sy, sx + k * 7, y + h - 3, 'orchid');
+    // palmeira
+    const px = x + 7;
+    c.vline(px, sy - 6, sy - 1, 'ink');
+    c.px(px + 1, sy - 3, 'ink');
+    for (const [dx, dy] of [[-4, 2], [4, 2], [-3, -2], [3, -2]]) c.line(px, sy - 6, px + dx, sy - 6 + dy, 'ink');
+    c.px(sx, y + 1, 'rose');
+  }, { rotulo: 'Pôster vaporwave' });
+
+  // fita cassete lo-fi
+  objeto('poster-fita', 'parede', (c) => {
+    const x = 60, y = 88, w = 34, h = 26;
+    c.box(x, y, w, h, 'lilac');
+    c.dither(x + 1, y + 1, w - 2, 3, 'mist');
+    c.box(x + 4, y + 5, 26, 16, 'peach');
+    c.rect(x + 7, y + 7, 20, 5, 'cream');
+    c.hline(x + 9, x + 24, y + 9, 'blush');
+    c.rect(x + 10, y + 13, 14, 4, 'night');
+    c.rect(x + 11, y + 14, 2, 2, 'cream');
+    c.rect(x + 21, y + 14, 2, 2, 'cream');
+    c.hline(x + 9, x + 25, y + 19, 'grape');
+    // notinhas
+    c.sprite(['.k', '.k', 'kk'], x + 29, y + 1);
+    c.px(x + 3, y + 22, 'rose');
+    c.px(x + w / 2, y + 1, 'rose');
+  }, { rotulo: 'Pôster fita cassete' });
+
+  // gatinho na frente da lua
+  objeto('poster-gato', 'parede', (c) => {
+    const x = 294, y = 86, w = 24, h = 30;
+    c.box(x, y, w, h, 'plum');
+    c.dither(x + 1, y + 1, w - 2, 8, 'night');
+    for (const [i, j] of [[3, 3], [19, 5], [5, 14], [20, 16], [16, 2]]) c.px(x + i, y + j, 'cream');
+    c.circle(x + 12, y + 11, 6, 'butter');
+    c.px(x + 10, y + 8, 'peach');
+    c.px(x + 14, y + 12, 'peach');
+    c.rect(x + 1, y + h - 4, w - 2, 3, 'grape');
+    // gato sentado (silhueta)
+    c.ellipse(x + 12, y + 23, 4, 3, 'ink');
+    c.circle(x + 12, y + 18, 3, 'ink');
+    c.px(x + 10, y + 15, 'ink');
+    c.px(x + 14, y + 15, 'ink');
+    c.px(x + 11, y + 18, 'mint');
+    c.px(x + 13, y + 18, 'mint');
+    c.line(x + 16, y + 25, x + 19, y + 21, 'ink');
+  }, { rotulo: 'Pôster gato e lua' });
+}
+
 // -------------------------------------------------------- papéis de parede
 function bands(c, y0, colors, bandH) {
   colors.forEach((col, i) => {
@@ -687,8 +760,136 @@ function wallpaperLavender() {
   c.save(OUT + 'scenes/wallpaper-campo-lavanda-320x180.png');
 }
 
+
+// Vaporwave: sol listrado, grade neon até o horizonte e palmeiras
+function wallpaperGradeNeon() {
+  const c = new Canvas(W, H);
+  const r = rng(51);
+  bands(c, 0, ['night', 'plum', 'grape', 'orchid', 'blush'], 22);
+  for (let i = 0; i < 50; i++) c.px(r() * W, r() * 40, r() > 0.8 ? 'butter' : 'cream');
+  const cx = 160, hz = 110;
+  for (let j = hz - 46; j < hz; j++) {
+    if (j > hz - 26 && (hz - j) % 5 < 2) continue; // faixas do sol
+    const half = Math.sqrt(Math.max(0, 46 * 46 - (j - hz) ** 2));
+    c.hline(cx - half, cx + half, j, j < hz - 30 ? 'butter' : j < hz - 16 ? 'peach' : 'blush');
+  }
+  // montanhas em wireframe
+  for (const [px, alt, larg] of [[40, 26, 50], [90, 16, 40], [240, 22, 46], [290, 30, 50]]) {
+    for (let x = px - larg; x <= px + larg; x++) {
+      const y = hz - alt * (1 - Math.abs(x - px) / larg);
+      c.vline(x, y, hz, 'grape');
+      c.px(x, y, 'sky');
+    }
+  }
+  c.rect(0, hz, W, H - hz, 'night');
+  for (let i = 1; hz + i * i * 0.55 < H; i++) c.hline(0, W - 1, hz + Math.round(i * i * 0.55), 'orchid');
+  for (let k = -14; k <= 14; k++) c.line(cx, hz, cx + k * 34, H + 20, 'orchid');
+  c.hline(0, W - 1, hz, 'sky');
+  // palmeiras
+  for (const [px, base, alt] of [[26, 150, 52], [298, 158, 60]]) {
+    for (let k = 0; k < alt; k++) c.px(px + Math.round(Math.sin(k / 14) * 4), base - k, 'ink'), c.px(px + 1 + Math.round(Math.sin(k / 14) * 4), base - k, 'ink');
+    const tx = px + Math.round(Math.sin(alt / 14) * 4), ty = base - alt;
+    for (const [dx, dy] of [[-18, 8], [18, 8], [-14, -6], [14, -6], [-22, 2], [22, 2], [0, -10]]) {
+      c.line(tx, ty, tx + dx, ty + dy, 'ink');
+      c.line(tx, ty + 1, tx + dx, ty + dy + 1, 'ink');
+    }
+  }
+  c.save(OUT + 'scenes/wallpaper-grade-neon-320x180.png');
+}
+
+// Espaço pastel: planeta com anel, planetinha e lua
+function wallpaperPlanetas() {
+  const c = new Canvas(W, H);
+  const r = rng(61);
+  bands(c, 0, ['ink', 'night', 'plum'], 60);
+  for (let i = 0; i < 120; i++) c.px(r() * W, r() * H, ['cream', 'lilac', 'butter', 'sky'][i % 4]);
+  for (const [x, y] of [[40, 30], [280, 150], [150, 20], [20, 120]]) {
+    c.px(x, y, 'cream');
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.px(x + dx, y + dy, 'lilac');
+  }
+  const px = 220, py = 80, pr = 36;
+  const anel = (frente) => {
+    for (let t = 0; t < Math.PI * 2; t += 0.01) {
+      const ex = Math.cos(t) * 58, ey = Math.sin(t) * 11;
+      if ((ey > 0) !== frente) continue;
+      c.px(px + ex, py + ey, 'lilac');
+      c.px(px + ex, py + ey + 1, 'lavender');
+      c.px(px + ex * 0.88, py + ey * 0.88, 'mist');
+    }
+  };
+  anel(false);
+  c.circle(px, py, pr, 'blush');
+  for (let j = py - pr; j <= py + pr; j++) {
+    const half = Math.sqrt(Math.max(0, pr * pr - (j - py) ** 2));
+    if ((j - py + 40) % 12 < 3) c.hline(px - half, px + half, j, 'rose');
+    else if ((j - py + 40) % 12 < 5) c.hline(px - half, px + half, j, 'peach');
+  }
+  c.circle(px + 12, py + 12, pr - 14, 'rose', 'sparse');
+  anel(true);
+  c.circle(70, 128, 18, 'mint');
+  c.circle(76, 134, 12, 'sky', 'sparse');
+  for (const [dx, dy, rr] of [[-6, -5, 3], [5, 4, 2], [-2, 8, 2]]) c.circle(70 + dx, 128 + dy, rr, 'sky');
+  c.circle(110, 42, 7, 'lavender');
+  c.px(108, 40, 'lilac');
+  c.px(112, 44, 'orchid');
+  c.save(OUT + 'scenes/wallpaper-planetas-320x180.png');
+}
+
+// Lo-fi: cerejeira florida num morro, pétalas caindo
+function wallpaperCerejeiras() {
+  const c = new Canvas(W, H);
+  const r = rng(71);
+  bands(c, 0, ['sky', 'lilac', 'mist', 'blush'], 32);
+  c.circle(250, 44, 16, 'cream');
+  c.circle(250, 44, 20, 'mist', 'sparse');
+  for (let x = 0; x < W; x++) {
+    c.vline(x, 120 - Math.sin(x / 40) * 10 - 6, H, 'lavender');
+    c.vline(x, 138 - Math.sin(x / 28 + 2) * 8, H, 'orchid');
+    c.vline(x, 156 - Math.sin(x / 50 + 1) * 6, H, 'violet');
+  }
+  // tronco e galhos
+  const tx = 100;
+  for (let k = 0; k < 50; k++) c.hline(tx - 3 + Math.round(Math.sin(k / 9) * 2), tx + 3 + Math.round(Math.sin(k / 9) * 2) - Math.floor(k / 20), 156 - k, 'plum');
+  for (const [dx, dy] of [[-40, -30], [42, -26], [-20, -44], [24, -46], [0, -52]]) {
+    c.line(tx, 112, tx + dx, 112 + dy, 'plum');
+    c.line(tx + 1, 112, tx + dx + 1, 112 + dy, 'plum');
+  }
+  // copa
+  for (const [dx, dy, rr] of [[-42, -32, 18], [44, -28, 18], [-20, -48, 20], [24, -50, 20], [0, -58, 18], [0, -36, 22], [-34, -14, 12], [34, -12, 12]]) {
+    c.circle(tx + dx, 112 + dy, rr, 'blush');
+    c.circle(tx + dx + 3, 112 + dy + 4, rr - 5, 'rose', 'dither');
+    c.circle(tx + dx - 4, 112 + dy - 5, Math.max(3, rr - 12), 'cream', 'sparse');
+  }
+  // pétalas caindo
+  for (let i = 0; i < 70; i++) {
+    const x = Math.floor(r() * W), y = Math.floor(30 + r() * 145);
+    c.px(x, y, i % 3 ? 'blush' : 'rose');
+    if (i % 2) c.px(x + 1, y + 1, 'blush');
+  }
+  c.save(OUT + 'scenes/wallpaper-cerejeiras-320x180.png');
+}
+
 // ------------------------------------------------------------------ ícones
 const ICONS = {
+  // coleção: broche (medalha com o número 1 e fita)
+  colecao: [
+    '................',
+    '.....kkkkkk.....',
+    '....kyyyyyyk....',
+    '...kyccyeyyyk...',
+    '...kycyeeyyek...',
+    '...kyyyyeyyek...',
+    '...kyyyyeyyek...',
+    '...kyyyeeeyek...',
+    '....kyyyyyek....',
+    '.....kkkkkk.....',
+    '.....krrrrk.....',
+    '.....krrrrk.....',
+    '.....krrrrk.....',
+    '.....krkkrk.....',
+    '.....kk..kk.....',
+    '................',
+  ],
   // guia: livro aberto (app de ajuda da área de trabalho)
   guia: [
     '................',
@@ -1095,10 +1296,14 @@ function mascot() {
 
 office();
 officeItems();
+postersExtras();
 wallpaperSunset();
 wallpaperRain();
 wallpaperLavender();
 wallpaperAurora();
+wallpaperGradeNeon();
+wallpaperPlanetas();
+wallpaperCerejeiras();
 icons();
 mascot();
 writeFileSync(fileURLToPath(new URL('../src/art/objetos.json', import.meta.url)), JSON.stringify(OBJETOS, null, 2) + '\n');

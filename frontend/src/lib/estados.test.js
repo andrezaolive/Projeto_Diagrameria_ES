@@ -5,11 +5,15 @@ import { MODELOS, modeloPorId } from '../data/pedidos.js';
 import { ELEMENTOS, RELACOES, SECOES, secaoDoDiagrama } from '../editor/Formas.jsx';
 
 const copia = (d) => JSON.parse(JSON.stringify(d));
-const COM_DECISAO = ['login-app', 'pagamento', 'devolucao', 'encomenda', 'caixa-eletronico'];
-const ESTADOS = ['rastreio', 'semaforo', 'catraca', 'player', 'chamado', ...COM_DECISAO];
+const COM_DECISAO = ['login-app', 'pagamento', 'devolucao', 'encomenda', 'caixa-eletronico', 'correio', 'casa-de-cha', 'galeria'];
+const ESTADOS = [
+  'rastreio', 'semaforo', 'catraca', 'player', 'chamado',
+  'luminaria', 'chaleira', 'fliperama', 'estufa', 'pousada', 'bicicletas', 'mochi',
+  ...COM_DECISAO,
+];
 
 describe('diagramas de estados', () => {
-  it('10 pedidos, cada um com um início, pelo menos um fim e transições com os eventos do e-mail', () => {
+  it('20 pedidos, cada um com um início, pelo menos um fim e transições com os eventos do e-mail', () => {
     for (const id of ESTADOS) {
       const m = modeloPorId(id);
       const nos = m.esperado.nodes;
@@ -66,7 +70,7 @@ describe('diagramas de estados', () => {
     expect(secaoDoDiagrama({ nodes: [], edges: [] })).toBeNull();
   });
 
-  it('decisão: 5 pedidos usam o losango, com uma entrada com evento e saídas [sim]/[não]', () => {
+  it('decisão: 8 pedidos usam o losango, com uma entrada com evento e saídas [sim]/[não]', () => {
     for (const id of COM_DECISAO) {
       const { nodes, edges } = modeloPorId(id).esperado;
       const decisoes = nodes.filter((x) => x.tipo === 'decisao');
