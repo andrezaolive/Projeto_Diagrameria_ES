@@ -1,23 +1,9 @@
-import { composicaoDoDia, nivelDoModelo } from '../lib/dificuldade.js';
+import { composicaoDoDia, composicaoDoFimDeSemana, nivelDoModelo } from '../lib/dificuldade.js';
 import { tipoDoDiagrama } from '../lib/categorias.js';
+import { c, e, n, t } from './gabarito.js';
+import { COMPLEXOS } from './complexos.js';
 // Modelos de pedidos recebidos por e-mail. "esperado" é o diagrama-gabarito usado na avaliação.
 // Coordenadas do gabarito já estão no grid (múltiplos de 20).
-
-// w/h: só no sistema (fronteira), que tem tamanho próprio
-const n = (id, tipo, rotulo, x, y, w, h) => ({ id, tipo, rotulo, x, y, ...(w ? { w, h } : {}) });
-// multDe / multPara: multiplicidade em cada ponta (só associação, agregação e composição; ver lib/multiplicidade.js)
-const e = (tipo, de, para, multDe, multPara) => ({
-  id: `${de}-${tipo}-${para}`,
-  tipo,
-  de,
-  para,
-  ...(multDe ? { multDe } : {}),
-  ...(multPara ? { multPara } : {}),
-});
-// Classe com atributos e métodos (uma linha UML por membro: "- saldo: float", "+ sacar(valor: float): bool")
-const c = (id, rotulo, x, y, atributos = [], metodos = []) => ({ id, tipo: 'classe', rotulo, x, y, atributos, metodos });
-// Transição do diagrama de estados: `evento` vai no rótulo da seta (vazio saindo do início e chegando ao fim)
-const t = (de, para, evento = '') => ({ id: `${de}-transicao-${para}`, tipo: 'transicao', de, para, rotulo: evento });
 
 export const MODELOS = [
   {
@@ -1287,7 +1273,7 @@ export const MODELOS = [
       'Oi! Queremos um diagrama de classes dos empréstimos, com atributos e métodos.',
       'Classe "Livro" com "- titulo: String" e "- isbn: String".',
       'Classe "Leitor" com "- nome: String" e "- matricula: int".',
-      'Classe "Emprestimo" com os atributos "- dataRetirada: Date", "- livro: Livro" e "- leitor: Leitor", e os métodos "+ renovar(): bool" e "+ calcularMulta(dias: int): float".',
+      'Classe "Emprestimo" com os atributos "- dataRetirada: Date", "- livro: Livro" e "- leitor: Leitor", e os métodos "+ renovar(): bool" e "- calcularMulta(dias: int): float" (privado: só o próprio empréstimo calcula a multa, quando renova).',
       'Os atributos livro e leitor ligam Emprestimo a Livro e a Leitor por associação.',
     ],
     esperado: {
@@ -1296,7 +1282,7 @@ export const MODELOS = [
         c('k2', 'Leitor', 40, 280, ['- nome: String', '- matricula: int']),
         c('k3', 'Emprestimo', 400, 140,
           ['- dataRetirada: Date', '- livro: Livro', '- leitor: Leitor'],
-          ['+ renovar(): bool', '+ calcularMulta(dias: int): float']),
+          ['+ renovar(): bool', '- calcularMulta(dias: int): float']),
       ],
       edges: [e('associacao', 'k3', 'k1'), e('associacao', 'k3', 'k2')],
     },
@@ -1398,13 +1384,17 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 120,
     corpo: [
-      'Oi! Preciso de um diagrama de classes dos pedidos da lanchonete.',
-      'Classes: "Pedido" e "Item".',
+      'Oi! Preciso de um diagrama de classes dos pedidos da lanchonete, com atributos e métodos.',
+      'Classe "Pedido" com "- numero: int" e "- total: float", e os métodos "+ calcularTotal(): float" e "+ adicionarItem(item: Item)".',
+      'Classe "Item" com "- descricao: String", "- quantidade: int" e "- precoUnitario: float", e o método "+ subtotal(): float".',
       'O Pedido é composto de Itens: se o pedido some, os itens somem junto.',
       'Cada Pedido tem um ou mais Itens, e cada Item pertence a exatamente um Pedido.',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Pedido', 120, 80), n('k2', 'classe', 'Item', 420, 80)],
+      nodes: [
+        c('k1', 'Pedido', 80, 80, ['- numero: int', '- total: float'], ['+ calcularTotal(): float', '+ adicionarItem(item: Item)']),
+        c('k2', 'Item', 500, 80, ['- descricao: String', '- quantidade: int', '- precoUnitario: float'], ['+ subtotal(): float']),
+      ],
       edges: [e('composicao', 'k1', 'k2', '1', '1..*')],
     },
   },
@@ -1415,12 +1405,16 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 120,
     corpo: [
-      'Olá! Coordeno uma escola de idiomas e quero um diagrama de classes.',
-      'Classes: "Aluno" e "Curso", ligadas por uma associação.',
-      'Um Aluno cursa um ou mais Cursos, e um Curso pode ter nenhum ou vários Alunos.',
+      'Olá! Coordeno uma escola de idiomas e quero um diagrama de classes com atributos e métodos.',
+      'Classe "Aluno" com "- matricula: int" e "- nome: String", e o método "+ matricular(curso: Curso)".',
+      'Classe "Curso" com "- codigo: String", "- nome: String" e "- cargaHoraria: int".',
+      'Aluno e Curso se ligam por uma associação: um Aluno cursa um ou mais Cursos, e um Curso pode ter nenhum ou vários Alunos.',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Aluno', 80, 100), n('k2', 'classe', 'Curso', 400, 100)],
+      nodes: [
+        c('k1', 'Aluno', 80, 100, ['- matricula: int', '- nome: String'], ['+ matricular(curso: Curso)']),
+        c('k2', 'Curso', 480, 100, ['- codigo: String', '- nome: String', '- cargaHoraria: int']),
+      ],
       edges: [e('associacao', 'k1', 'k2', '0..*', '1..*')],
     },
   },
@@ -1431,13 +1425,17 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 120,
     corpo: [
-      'E aí! Estou montando um app de música. Preciso de um diagrama de classes.',
-      'Classes: "Playlist" e "Música".',
+      'E aí! Estou montando um app de música. Preciso de um diagrama de classes com atributos e métodos.',
+      'Classe "Playlist" com "- nome: String" e os métodos "+ adicionarMusica(musica: Música)" e "+ duracaoTotal(): int".',
+      'Classe "Música" com "- titulo: String" e "- duracaoSegundos: int".',
       'A Playlist agrega Músicas: a música continua existindo se a playlist sumir.',
       'Uma Playlist tem nenhuma ou várias Músicas, e uma Música pode estar em nenhuma ou várias Playlists.',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Playlist', 80, 100), n('k2', 'classe', 'Música', 400, 100)],
+      nodes: [
+        c('k1', 'Playlist', 60, 100, ['- nome: String'], ['+ adicionarMusica(musica: Música)', '+ duracaoTotal(): int']),
+        c('k2', 'Música', 520, 100, ['- titulo: String', '- duracaoSegundos: int']),
+      ],
       edges: [e('agregacao', 'k1', 'k2', '0..*', '0..*')],
     },
   },
@@ -1448,12 +1446,16 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 120,
     corpo: [
-      'Bom dia! Tenho uma cooperativa de crédito e preciso de um diagrama de classes.',
-      'Classes: "Cliente" e "Conta", ligadas por uma associação.',
-      'Cada Cliente possui uma ou mais Contas, e cada Conta pertence a exatamente um Cliente.',
+      'Bom dia! Tenho uma cooperativa de crédito e preciso de um diagrama de classes com atributos e métodos.',
+      'Classe "Cliente" com "- nome: String" e "- cpf: String".',
+      'Classe "Conta" com "- numero: int" e "- saldo: float", e os métodos "+ depositar(valor: float)" e "+ sacar(valor: float): bool" (o saque diz se deu certo).',
+      'Cliente e Conta se ligam por uma associação: cada Cliente possui uma ou mais Contas, e cada Conta pertence a exatamente um Cliente.',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Cliente', 80, 100), n('k2', 'classe', 'Conta', 400, 100)],
+      nodes: [
+        c('k1', 'Cliente', 80, 100, ['- nome: String', '- cpf: String']),
+        c('k2', 'Conta', 420, 100, ['- numero: int', '- saldo: float'], ['+ depositar(valor: float)', '+ sacar(valor: float): bool']),
+      ],
       edges: [e('associacao', 'k1', 'k2', '1', '1..*')],
     },
   },
@@ -1464,16 +1466,17 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 150,
     corpo: [
-      'Olá! Minha loja online precisa de um carrinho. Quero um diagrama de classes.',
-      'Classes: "Carrinho", "ItemCarrinho" e "Produto".',
+      'Olá! Minha loja online precisa de um carrinho. Quero um diagrama de classes com atributos e métodos.',
+      'Classe "Carrinho" com "- total: float" e os métodos "+ adicionar(item: ItemCarrinho)" e "+ calcularTotal(): float".',
+      'Classe "ItemCarrinho" com "- quantidade: int" e o método "+ subtotal(): float". Classe "Produto" com "- nome: String" e "- preco: float".',
       'O Carrinho é composto de ItemCarrinho (sem o carrinho, os itens não existem): cada Carrinho tem nenhum ou vários itens, e cada item é de exatamente um Carrinho.',
       'Cada ItemCarrinho se associa a exatamente um Produto, e um Produto pode estar em nenhum ou vários itens.',
     ],
     esperado: {
       nodes: [
-        n('k1', 'classe', 'Carrinho', 60, 100),
-        n('k2', 'classe', 'ItemCarrinho', 320, 100),
-        n('k3', 'classe', 'Produto', 580, 100),
+        c('k1', 'Carrinho', 40, 100, ['- total: float'], ['+ adicionar(item: ItemCarrinho)', '+ calcularTotal(): float']),
+        c('k2', 'ItemCarrinho', 480, 100, ['- quantidade: int'], ['+ subtotal(): float']),
+        c('k3', 'Produto', 800, 100, ['- nome: String', '- preco: float']),
       ],
       edges: [e('composicao', 'k1', 'k2', '1', '0..*'), e('associacao', 'k2', 'k3', '0..*', '1')],
     },
@@ -1485,17 +1488,18 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 150,
     corpo: [
-      'Olá! Administro uma clínica e preciso de um diagrama de classes.',
-      'Classes: "Pessoa", "Paciente", "Médico" e "Consulta".',
-      'Paciente e Médico são tipos de Pessoa (herdam de Pessoa).',
+      'Olá! Administro uma clínica e preciso de um diagrama de classes com atributos e métodos.',
+      'Classe "Pessoa" com "# nome: String" e "# cpf: String" (protegidos, para os filhos usarem).',
+      '"Paciente" e "Médico" são tipos de Pessoa (herdam de Pessoa). O Paciente tem "- convenio: String"; o Médico tem "- crm: String" e o método "+ atender(consulta: Consulta)".',
+      'Classe "Consulta" com "- data: String" e "- horario: String".',
       'Consulta se associa a Paciente e a Médico: cada Consulta tem exatamente um Paciente e exatamente um Médico, e cada um deles pode ter nenhuma ou várias Consultas.',
     ],
     esperado: {
       nodes: [
-        n('k1', 'classe', 'Pessoa', 300, 20),
-        n('k2', 'classe', 'Paciente', 120, 220),
-        n('k3', 'classe', 'Médico', 480, 220),
-        n('k4', 'classe', 'Consulta', 300, 420),
+        c('k1', 'Pessoa', 300, 20, ['# nome: String', '# cpf: String']),
+        c('k2', 'Paciente', 80, 220, ['- convenio: String']),
+        c('k3', 'Médico', 480, 220, ['- crm: String'], ['+ atender(consulta: Consulta)']),
+        c('k4', 'Consulta', 300, 420, ['- data: String', '- horario: String']),
       ],
       edges: [
         e('heranca', 'k2', 'k1'), e('heranca', 'k3', 'k1'),
@@ -1510,19 +1514,19 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 180,
     corpo: [
-      'Oi! Sou bibliotecária e preciso de um diagrama de classes do acervo.',
-      'Classes: "Usuário", "Aluno", "Professor", "Empréstimo" e "Livro".',
-      'Aluno e Professor são tipos de Usuário (herdam de Usuário).',
-      'Usuário se associa a Empréstimo: um Usuário faz nenhum ou vários Empréstimos, e cada Empréstimo é de exatamente um Usuário.',
-      'Empréstimo se associa a Livro: cada Empréstimo é de exatamente um Livro, e um Livro pode ter nenhum ou vários Empréstimos.',
+      'Oi! Sou bibliotecária e preciso de um diagrama de classes do acervo, com atributos e métodos.',
+      'Todo "Usuário" tem "# nome: String" e "# matricula: String" (protegidos, para quem herda usar) e sabe "+ limiteEmprestimos(): int".',
+      '"Aluno" e "Professor" são tipos de Usuário (herdam de Usuário). O Aluno tem "- curso: String" e o Professor tem "- departamento: String"; cada um calcula o próprio limite, então os dois também têm "+ limiteEmprestimos(): int".',
+      'Usuário se associa a "Empréstimo": um Usuário faz nenhum ou vários Empréstimos, e cada Empréstimo é de exatamente um Usuário. O empréstimo tem "- dataRetirada: Date" e "- dataDevolucao: Date" e sabe "+ estaAtrasado(): bool".',
+      'Empréstimo se associa a "Livro" ("- titulo: String", "- isbn: String"): cada Empréstimo é de exatamente um Livro, e um Livro pode ter nenhum ou vários Empréstimos.',
     ],
     esperado: {
       nodes: [
-        n('k1', 'classe', 'Usuário', 100, 60),
-        n('k2', 'classe', 'Aluno', 20, 260),
-        n('k3', 'classe', 'Professor', 240, 260),
-        n('k4', 'classe', 'Empréstimo', 480, 60),
-        n('k5', 'classe', 'Livro', 480, 280),
+        c('k1', 'Usuário', 160, 60, ['# nome: String', '# matricula: String'], ['+ limiteEmprestimos(): int']),
+        c('k2', 'Aluno', 20, 300, ['- curso: String'], ['+ limiteEmprestimos(): int']),
+        c('k3', 'Professor', 340, 300, ['- departamento: String'], ['+ limiteEmprestimos(): int']),
+        c('k4', 'Empréstimo', 560, 60, ['- dataRetirada: Date', '- dataDevolucao: Date'], ['+ estaAtrasado(): bool']),
+        c('k5', 'Livro', 700, 320, ['- titulo: String', '- isbn: String']),
       ],
       edges: [
         e('heranca', 'k2', 'k1'), e('heranca', 'k3', 'k1'),
@@ -2237,24 +2241,39 @@ export const JUMBOS = [
   },
 ];
 
-// Todos os modelos que chegam por e-mail (normais + JUMBO). Urgentes saem só de MODELOS.
-export const TODOS_MODELOS = [...MODELOS, ...JUMBOS];
+// Todos os modelos que chegam por e-mail (normais + JUMBO + complexos). Urgentes saem só de MODELOS.
+export const TODOS_MODELOS = [...MODELOS, ...JUMBOS, ...COMPLEXOS];
+export { COMPLEXOS };
 export const modeloPorId = (id) => TODOS_MODELOS.find((m) => m.id === id);
 export const ehJumbo = (modelo) => Boolean(modelo?.partes);
+// Pedido complexo (data/complexos.js): só nos fins de semana da campanha e no modo infinito
+export const ehComplexo = (modelo) => Boolean(modelo?.complexo);
 // Diagramas pedidos pelo modelo: [{ secao, esperado }] (pedido normal = uma parte só)
 export const partesDoModelo = (modelo) => modelo.partes ?? [{ secao: tipoDoDiagrama(modelo.esperado), esperado: modelo.esperado }];
 
 // Quantos pedidos chegam num dia da campanha (soma da composição do dia, `composicaoDoDia`)
 export const pedidosNoDia = (dia) => Object.values(composicaoDoDia(dia)).reduce((a, b) => a + b, 0);
-// Pedidos de um dia da campanha: para cada nível, a quantidade da composição do dia
+// Pedidos de um dia útil da campanha: para cada nível, a quantidade da composição do dia
 // (`composicaoDoDia`), sorteada entre os modelos daquele nível (JUMBO só a partir do dia
-// JUMBO_NA_CAMPANHA). Dia novo: em cada nível, primeiro os que o jogador ainda não tem na coleção
-// (nunca entregou), depois os outros. Dia já concluído jogado de novo (`repeticao`): só os
-// desbloqueados (já entregues); faltando do nível, completa com desbloqueados de outros níveis
+// JUMBO_NA_CAMPANHA; complexos nunca). Dia novo: em cada nível, primeiro os que o jogador ainda não
+// tem na coleção (nunca entregou), depois os outros. Dia já concluído jogado de novo (`repeticao`):
+// só os desbloqueados (já entregues); faltando do nível, completa com desbloqueados de outros níveis
 // (pode vir menos pedidos se não houver o bastante). A ordem de chegada também é sorteada.
 // `semente` torna o sorteio reproduzível (o reducer continua puro).
 export const JUMBO_NA_CAMPANHA = 5;
 export function sortearPedidosDoDia(dia, { colecao = {}, repeticao = false, semente = dia } = {}) {
+  const modelos = TODOS_MODELOS.filter((m) => !ehComplexo(m) && (dia >= JUMBO_NA_CAMPANHA || !ehJumbo(m)));
+  return sortearComposicao(composicaoDoDia(dia), modelos, { colecao, repeticao, semente });
+}
+
+// Fim de semana da campanha: só pedidos complexos, na composição da data (`composicaoDoFimDeSemana`),
+// com as mesmas regras de coleção e de dia repetido
+export function pedidosDoFimDeSemana(data, { colecao = {}, repeticao = false, semente = data } = {}) {
+  return sortearComposicao(composicaoDoFimDeSemana(data), COMPLEXOS, { colecao, repeticao, semente });
+}
+export const pedidosNoFimDeSemana = (data) => Object.values(composicaoDoFimDeSemana(data)).reduce((a, b) => a + b, 0);
+
+function sortearComposicao(composicao, modelos, { colecao, repeticao, semente }) {
   const sorteio = gerador(semente);
   const embaralhar = (lista) => {
     const l = [...lista];
@@ -2264,15 +2283,13 @@ export function sortearPedidosDoDia(dia, { colecao = {}, repeticao = false, seme
     }
     return l;
   };
-  const composicao = composicaoDoDia(dia);
-  const podeVir = TODOS_MODELOS.filter((m) => dia >= JUMBO_NA_CAMPANHA || !ehJumbo(m));
-  const doNivel = (nivel) => podeVir.filter((m) => nivelDoModelo(m).id === nivel);
+  const doNivel = (nivel) => modelos.filter((m) => nivelDoModelo(m).id === nivel);
   const tem = (m) => (colecao[m.id]?.entregas ?? 0) > 0;
-  const total = pedidosNoDia(dia);
-  let escolhidos = [];
-  if (repeticao && TODOS_MODELOS.some(tem)) {
+  const total = Object.values(composicao).reduce((a, b) => a + b, 0);
+  const escolhidos = [];
+  if (repeticao && modelos.some(tem)) {
     for (const [nivel, qtd] of Object.entries(composicao)) escolhidos.push(...embaralhar(doNivel(nivel).filter(tem)).slice(0, qtd));
-    const sobra = embaralhar(TODOS_MODELOS.filter((m) => tem(m) && !escolhidos.includes(m)));
+    const sobra = embaralhar(modelos.filter((m) => tem(m) && !escolhidos.includes(m)));
     escolhidos.push(...sobra.slice(0, total - escolhidos.length));
   } else {
     for (const [nivel, qtd] of Object.entries(composicao)) {
@@ -2297,9 +2314,19 @@ function gerador(semente) {
 
 // Dia já concluído jogado de novo: todos os pedidos pagam metade (a multa também, por ser sobre o pagamento)
 export const FATOR_REPETICAO = 0.5;
+// Modo infinito: todos os pedidos pagam 60% (não vira uma fonte de dinheiro sem fim)
+export const FATOR_INFINITO = 0.6;
 
-// Pagamento cresce levemente com o dia
-export const bonusDoDia = (dia) => 1 + (dia - 1) * 0.05;
+// Pagamento cresce levemente com o dia: +2% por dia, até +40% (a quantidade de pedidos do dia já
+// faz a renda crescer)
+export const BONUS_DIA = { porDia: 0.02, maximo: 0.4 };
+export const bonusDoDia = (dia) => 1 + Math.min(BONUS_DIA.maximo, (dia - 1) * BONUS_DIA.porDia);
+
+// Despesa fixa do escritório ("aluguel e luz"), cobrada no fim de cada dia útil da campanha: cresce
+// de R$ 30 (dia 1) a R$ 200 (último dia), uns 15% do que um dia bem jogado rende. Fim de semana não paga.
+export const DESPESA = { inicio: 30, fim: 200, dias: 23 };
+export const despesaDoDia = (dia) =>
+  Math.round((DESPESA.inicio + ((Math.min(dia, DESPESA.dias) - 1) * (DESPESA.fim - DESPESA.inicio)) / (DESPESA.dias - 1)) / 10) * 10;
 
 // Multa por pedido perdido (recusado ou cliente que foi embora): metade do que ele pagaria.
 // Quem já está devendo (saldo negativo no momento da multa) paga só um quarto.
@@ -2357,6 +2384,8 @@ export function criarPedidoUrgente(modeloId, seq, dia = 1) {
     urgente: true,
     assunto: `URGENTE: ${p.assunto}`,
     recompensa: Math.round(p.recompensa * URGENTE.pagamento),
+    // entregue atrasado, o urgente perde o bônus e paga como um pedido normal atrasado
+    recompensaNormal: p.recompensa,
     tempo,
     tempoRestante: tempo,
     paciencia,
@@ -2364,7 +2393,24 @@ export function criarPedidoUrgente(modeloId, seq, dia = 1) {
   };
 }
 
-// Aba de dicas: a resposta é dividida numa grade; cada pedaço custa parte do pagamento
+// Aba de dicas: a resposta é dividida numa grade; cada pedaço revela uma parte.
+// Preço pelo nível do pedido (`PRECO_DICA`) e cada pedaço comprado encarece o próximo do mesmo
+// diagrama: grade 2x2 → +25%, +50% e +100% sobre o primeiro (`AUMENTO_DICA`); pedido complexo
+// (grade 4x4, 16 pedaços) → +10% sobre o primeiro a cada pedaço (`AUMENTO_COMPLEXA`).
+export const PRECO_DICA = { facil: 100, medio: 150, dificil: 200 };
+export const AUMENTO_DICA = [0, 0.25, 0.5, 1];
+export const AUMENTO_COMPLEXA = 0.1;
 export const GRADE_PEDACOS = { colunas: 2, linhas: 2 };
+export const GRADE_COMPLEXA = { colunas: 4, linhas: 4 };
 export const TOTAL_PEDACOS = GRADE_PEDACOS.colunas * GRADE_PEDACOS.linhas;
-export const precoPedaco = (pedido) => Math.max(10, Math.round(pedido.recompensa * 0.15));
+export const gradeDePedacos = (modelo) => (ehComplexo(modelo) ? GRADE_COMPLEXA : GRADE_PEDACOS);
+export const pedacosDoModelo = (modelo) => gradeDePedacos(modelo).colunas * gradeDePedacos(modelo).linhas;
+// Preço do próximo pedaço da parte `parte` (pedido JUMBO: cada diagrama conta os seus)
+export function precoPedaco(pedido, parte = 0) {
+  const m = modeloPorId(pedido.modelo);
+  const total = m ? pedacosDoModelo(m) : TOTAL_PEDACOS;
+  const comprados = (pedido.pedacos ?? []).filter((i) => i >= parte * total && i < (parte + 1) * total).length;
+  const base = PRECO_DICA[m ? nivelDoModelo(m).id : 'facil'];
+  const aumento = m && ehComplexo(m) ? AUMENTO_COMPLEXA * comprados : AUMENTO_DICA[Math.min(comprados, AUMENTO_DICA.length - 1)];
+  return Math.round(base * (1 + aumento));
+}

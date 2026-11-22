@@ -2,13 +2,29 @@ import { PALETTE, METAIS, TINTAS } from '../art/palette.js';
 
 // Broche da coleção: moeda 12x12 com o número (1 ouro, 2 prata, 3 bronze) pendurada numa fita
 // vermelha, em pixel art (12x17 pixels de arte), como em Coleção_pedido_referencia.png.
+// Medalha vazia (`vazia`): só o contorno, com "?" no lugar do número (dia ainda não concluído no
+// calendário, como em Calendário referência.png).
 const DIGITOS = {
   1: ['.#.', '##.', '.#.', '.#.', '###'],
   2: ['##.', '..#', '.#.', '#..', '###'],
   3: ['##.', '..#', '.#.', '..#', '##.'],
+  '?': ['##.', '..#', '.#.', '...', '.#.'],
 };
 const FITA = ['krrddk', 'krrddk', 'krrddk', 'krrddk', 'krrddk', 'krrddk', 'kr..dk', 'kk..kk'];
+const FITA_VAZIA = ['k....k', 'k....k', 'k....k', 'k....k', 'k....k', 'k....k', 'k.kk.k', 'kk..kk'];
 const COR_FITA = { k: PALETTE.ink, r: PALETTE.rose, d: TINTAS.vermelho };
+
+function pixelsVazia() {
+  const px = [];
+  FITA_VAZIA.forEach((linha, j) => [...linha].forEach((ch, i) => ch === 'k' && px.push([3 + i, 9 + j, PALETTE.ink])));
+  for (let y = 0; y < 12; y++)
+    for (let x = 0; x < 12; x++) {
+      const d = Math.hypot(x + 0.5 - 6, y + 0.5 - 6);
+      if (d <= 6 && d > 4.9) px.push([x, y, PALETTE.ink]);
+    }
+  DIGITOS['?'].forEach((linha, j) => [...linha].forEach((ch, i) => ch === '#' && px.push([5 + i, 4 + j, PALETTE.ink])));
+  return px;
+}
 
 function pixels(medalha) {
   const metal = METAIS[medalha.id];
@@ -27,19 +43,19 @@ function pixels(medalha) {
   return px;
 }
 
-export default function Medalha({ medalha, tamanho = 48, className = '' }) {
-  if (!medalha) return null;
+export default function Medalha({ medalha, vazia = false, tamanho = 48, className = '' }) {
+  if (!medalha && !vazia) return null;
   return (
     <svg
-      className={`medalha medalha-${medalha.id} ${className}`}
+      className={`medalha medalha-${vazia ? 'vazia' : medalha.id} ${className}`}
       width={tamanho}
       height={(tamanho * 17) / 12}
       viewBox="0 0 12 17"
       shapeRendering="crispEdges"
       role="img"
-      aria-label={`Medalha de ${medalha.nome.toLowerCase()}`}
+      aria-label={vazia ? 'Medalha ainda não conquistada' : `Medalha de ${medalha.nome.toLowerCase()}`}
     >
-      {pixels(medalha).map(([x, y, cor], k) => <rect key={k} x={x} y={y} width="1" height="1" fill={cor} />)}
+      {(vazia ? pixelsVazia() : pixels(medalha)).map(([x, y, cor], k) => <rect key={k} x={x} y={y} width="1" height="1" fill={cor} />)}
     </svg>
   );
 }

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { FATOR_REPETICAO, JUMBO_NA_CAMPANHA, TODOS_MODELOS, criarPedido, ehJumbo, modeloPorId, pedidosNoDia, sortearPedidosDoDia } from '../data/pedidos.js';
-import { medalhaDaNota, naColecao, registrarEntrega } from '../lib/colecao.js';
+import { corDoDesempenho, medalhaDaNota, naColecao, registrarEntrega } from '../lib/colecao.js';
 import { composicaoDoDia, dataDoDia, niveisDoDia, nivelDoModelo } from '../lib/dificuldade.js';
 import { estadoInicial, reducer, sortearUrgente } from './reducer.js';
 
@@ -9,9 +9,13 @@ const colecaoCom = (ids) => Object.fromEntries(ids.map((id) => [id, { entregas: 
 const doNivel = (dia) => TODOS_MODELOS.filter((m) => niveisDoDia(dia).includes(nivelDoModelo(m).id) && (dia >= JUMBO_NA_CAMPANHA || !ehJumbo(m)));
 
 describe('medalhas da coleção', () => {
-  it('ouro com 85% ou mais, prata a partir de 45%, bronze abaixo', () => {
-    expect([100, 85, 84, 60, 45, 44, 0].map((n) => medalhaDaNota(n).id)).toEqual(['ouro', 'ouro', 'prata', 'prata', 'prata', 'bronze', 'bronze']);
+  it('ouro com 95% ou mais, prata de 70% a 94%, bronze abaixo', () => {
+    expect([100, 95, 94, 70, 69, 0].map((n) => medalhaDaNota(n).id)).toEqual(['ouro', 'ouro', 'prata', 'prata', 'bronze', 'bronze']);
     expect(medalhaDaNota(null)).toBeNull();
+  });
+
+  it('cor do desempenho no calendário: verde acima de 90%, amarelo de 70% a 90%, laranja abaixo', () => {
+    expect([100, 91, 90, 70, 69, 0].map(corDoDesempenho)).toEqual(['verde', 'verde', 'amarelo', 'amarelo', 'laranja', 'laranja']);
   });
 
   it('a coleção guarda quantas entregas e a melhor nota', () => {
@@ -95,8 +99,8 @@ describe('dia repetido e coleção no jogo', () => {
     expect(s.sessao.repeticao).toBeUndefined();
     const [p] = s.sessao.pedidos;
     expect(p.recompensa).toBe(criarPedido(p.modelo, 1, 1).recompensa);
-    s = rodar(s, { type: 'ACEITAR', id: p.id }, { type: 'ENTREGAR', id: p.id, nota: 88, valor: 10 });
-    expect(s.colecao[p.modelo]).toEqual({ entregas: 1, melhorNota: 88 });
+    s = rodar(s, { type: 'ACEITAR', id: p.id }, { type: 'ENTREGAR', id: p.id, nota: 96, valor: 10 });
+    expect(s.colecao[p.modelo]).toEqual({ entregas: 1, melhorNota: 96 });
     expect(medalhaDaNota(s.colecao[p.modelo].melhorNota).id).toBe('ouro');
   });
 });

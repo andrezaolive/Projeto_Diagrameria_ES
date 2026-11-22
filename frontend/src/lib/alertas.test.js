@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FRASES, detectarAlertas, sortearFrase, vistosIniciais } from './alertas.js';
+import { CLICAVEIS, FRASES, detectarAlertas, sortearFrase, vistosIniciais } from './alertas.js';
 
 const ped = (id, status, paciencia, total = 100) => ({ id, cliente: `Cliente ${id}`, status, paciencia, pacienciaTotal: total });
 
@@ -29,6 +29,19 @@ describe('alertas de clientes impacientes', () => {
   it('ao abrir o jogo, pedidos já expirados não geram alerta', () => {
     const pedidos = [ped('a', 'expirado', 0), ped('b', 'novo', 90)];
     expect(detectarAlertas(pedidos, vistosIniciais(pedidos)).alertas).toEqual([]);
+  });
+
+  it('pedido normal que chega depois de abrir o jogo: pop-up de novo pedido (clicável)', () => {
+    const inicio = [ped('a', 'novo', 100)];
+    let r = detectarAlertas(inicio, vistosIniciais(inicio));
+    expect(r.alertas).toEqual([]); // o que já estava na caixa não avisa
+    r = detectarAlertas([...inicio, ped('b', 'novo', 100)], r.vistos);
+    expect(r.alertas.map((x) => [x.tipo, x.pedido.id])).toEqual([['novo', 'b']]);
+    expect(detectarAlertas([...inicio, ped('b', 'novo', 100)], r.vistos).alertas).toEqual([]); // não repete
+    // urgente chega como "urgente", não como "novo"
+    const u = { ...ped('u', 'novo', 30), urgente: true };
+    expect(detectarAlertas([u], r.vistos).alertas.map((x) => x.tipo)).toEqual(['urgente']);
+    expect(CLICAVEIS).toEqual(['novo', 'urgente', 'atencao']);
   });
 
   it('não altera os conjuntos recebidos', () => {

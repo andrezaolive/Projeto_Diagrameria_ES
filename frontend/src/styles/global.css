@@ -60,7 +60,7 @@ button { font: inherit; color: inherit; }
   background: var(--c-ink);
 }
 .palco[data-ui='grande'] { --ui-btn: 1.18; }
-.palco[data-ui='reduzido'] { --ui-btn: 0.85; }
+.palco[data-ui='reduzido'] { --ui-btn: 0.72; }
 .palco {
   position: absolute;
   left: 50%;

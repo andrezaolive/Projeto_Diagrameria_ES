@@ -1,18 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Botao } from '../components/ui.jsx';
 import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES } from '../editor/Formas.jsx';
 import { MULTIPLICIDADES, TEM_MULTIPLICIDADE } from '../lib/multiplicidade.js';
 import { REDIMENSIONAVEIS, TAMANHOS, TAMANHO_MINIMO, centro, contido, foraDoLugar, posicaoAoSoltar, redimensionar, retangulo, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
-import { avaliar, avaliarPartes, pagamento } from '../lib/avaliacao.js';
-import { diagramaVazio } from '../lib/feedback.js';
-import { ehJumbo, modeloPorId } from '../data/pedidos.js';
+import { avaliar, avaliarPartes, pagamentoDaEntrega } from '../lib/avaliacao.js';
+import { diagramaVazio, gerarFeedback } from '../lib/feedback.js';
+import { ehComplexo, ehJumbo, modeloPorId } from '../data/pedidos.js';
 import { useGame } from '../state/GameContext.jsx';
 import { chaveDaParte, chaveDiagrama, diagramaDe, pedidosAceitos } from '../state/reducer.js';
 import { formatarTempo } from '../screens/Computador.jsx';
 import { sfx } from '../lib/sfx.js';
-import { LINHA_MEMBRO, TOPO_CLASSE, medidasClasse } from '../lib/membros.js';
+import { LINHA_MEMBRO, SIMBOLO, TOPO_CLASSE, VIS_PADRAO, VISIBILIDADES, alinharVisibilidades, medidasClasse, proximaVisibilidade, separarMembro } from '../lib/membros.js';
 import './editor.css';
 
 const novoId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -337,21 +337,27 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   const vazio = jumbo ? partesJumbo.every((p) => diagramaVazio(p.diagrama)) : diagramaVazio(diagrama);
   const entregar = () => {
     if (vazio) return;
-    const atrasado = pedido.tempoRestante === 0;
+    // tipos de erro do feedback, para as estatísticas ("erro mais comum")
+    const contarErros = (pares) => {
+      const out = {};
+      for (const [d, esp] of pares) for (const p of gerarFeedback(d, esp).problemas) out[p.tipo] = (out[p.tipo] ?? 0) + 1;
+      return out;
+    };
     if (jumbo) {
       const r = avaliarPartes(partesJumbo);
-      const valor = pagamento(pedido.recompensa, r.nota, atrasado);
+      const pago = pagamentoDaEntrega(pedido, r.nota);
       sfx.nota(r.nota);
-      onEntregue({ ...r, valor, atrasado, pedido });
-      dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, valor, partes: partesJumbo.map(({ secao: s, diagrama: d }) => ({ secao: s, diagrama: d })), atrasado, sorteio: Math.random() });
+      onEntregue({ ...r, ...pago, pedido });
+      const erros = contarErros(partesJumbo.map((p) => [p.diagrama, p.esperado]));
+      dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, ...pago, erros, notasPartes: r.partes.map((p) => p.nota), partes: partesJumbo.map(({ secao: s, diagrama: d }) => ({ secao: s, diagrama: d })), sorteio: Math.random() });
       setSel(null);
       return;
     }
     const r = avaliar(diagrama, modelo.esperado);
-    const valor = pagamento(pedido.recompensa, r.nota, atrasado);
+    const pago = pagamentoDaEntrega(pedido, r.nota);
     sfx.nota(r.nota); // Excellent / Great / Ok / Bad / Worst
-    onEntregue({ ...r, valor, atrasado, pedido, diagrama, esperado: modelo.esperado });
-    dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, valor, diagrama, atrasado, sorteio: Math.random() });
+    onEntregue({ ...r, ...pago, pedido, diagrama, esperado: modelo.esperado });
+    dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, ...pago, erros: contarErros([[diagrama, modelo.esperado]]), diagrama, sorteio: Math.random() });
     setSel(null);
   };
 
@@ -381,9 +387,9 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
 
   const nomeFerramenta = ferramenta && [...ELEMENTOS, ...RELACOES].find((x) => x.tipo === ferramenta.tipo).nome;
   const ajuda = escrevendo
-    ? 'Escrevendo na classe: Enter cria uma nova linha · clique fora ou Esc para terminar · linhas vazias somem'
+    ? 'Escrevendo na classe: escolha - privado, + público ou # protegido nos botões ao lado · Enter cria nova linha · Esc termina'
     : !ferramenta && selNode?.tipo === 'classe'
-    ? 'Classe: clique no nome, no meio (atributos: - saldo: float) ou embaixo (métodos: + sacar(valor: float): bool) para escrever'
+    ? 'Classe: clique no nome, no meio (atributos: saldo: float) ou embaixo (métodos: sacar(valor: float): bool) para escrever'
     : !ferramenta && selNode?.tipo === 'sistema'
     ? 'Sistema: puxe as setinhas no meio dos lados para redimensionar · casos de uso ficam dentro, atores fora · arrastar move tudo junto'
     : !ferramenta
@@ -422,6 +428,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
               <img src={iRelogio} alt="" className="pixel" /> {formatarTempo(pedido.tempoRestante)}
               {pedido.urgente && <b className="tag-urgente">URGENTE</b>}
               {jumbo && <b className="tag-jumbo">JUMBO</b>}
+              {ehComplexo(modelo) && <b className="tag-jumbo tag-complexo">COMPLEXO</b>}
             </div>
             <h4 className="cliente-pedido"><LogoEmpresa nome={pedido.cliente} tamanho={32} />{pedido.cliente}</h4>
             <div className="assunto">{pedido.assunto}</div>
@@ -438,7 +445,6 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             <Botao variante="rosa" som="" onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
               Entregar
             </Botao>
-            {vazio && <p className="aviso-vazio">{jumbo ? 'Monte os diagramas nas abas da paleta para poder entregar.' : 'Monte o diagrama na área ao lado para poder entregar.'}</p>}
           </>
         ) : (
           <>
@@ -620,11 +626,24 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
 // enquanto o jogador escreve; ao terminar, linhas vazias são descartadas.
 function EscritaNaClasse({ classe, campo, view, onMudar, onFim }) {
   const multilinha = campo !== 'rotulo';
-  const [texto, setTexto] = useState(multilinha ? (classe[campo] ?? []).join('\n') : classe.rotulo ?? '');
+  const padrao = VIS_PADRAO[campo] ?? '-';
+  // membros: o texto fica sem o símbolo; a visibilidade de cada linha é escolhida nos botões
+  const inicio = (classe[campo] ?? []).map(separarMembro);
+  const [texto, setTexto] = useState(multilinha ? inicio.map((m) => m.corpo).join('\n') : classe.rotulo ?? '');
+  const [vis, setVis] = useState(inicio.map((m) => m.vis || padrao));
+  const campoRef = useRef(null);
+  // posição do cursor a restaurar depois que um símbolo digitado sai do texto (antes da próxima tecla)
+  const cursorPendente = useRef(null);
+  useLayoutEffect(() => {
+    if (cursorPendente.current == null || !campoRef.current) return;
+    campoRef.current.setSelectionRange(cursorPendente.current, cursorPendente.current);
+    cursorPendente.current = null;
+  });
   const { w, divisoria } = medidasClasse(classe);
   const z = view.zoom;
   const topo = campo === 'rotulo' ? 0 : campo === 'atributos' ? TOPO_CLASSE : divisoria;
-  const linhas = multilinha ? Math.max(1, texto.split('\n').length) : 1;
+  const corpos = texto.split('\n');
+  const linhas = multilinha ? Math.max(1, corpos.length) : 1;
   const estilo = {
     left: view.x + classe.x * z,
     top: view.y + (classe.y + topo) * z,
@@ -634,17 +653,52 @@ function EscritaNaClasse({ classe, campo, view, onMudar, onFim }) {
     lineHeight: `${LINHA_MEMBRO * z}px`,
     padding: multilinha ? `${4 * z}px ${8 * z}px` : `0 ${8 * z}px`,
   };
+  const juntar = (cs, vs, limpar = false) => {
+    const out = cs.map((c, i) => (c.trim() ? `${vs[i] || padrao} ${limpar ? c.trim() : c.trimEnd()}` : limpar ? '' : c.trimEnd()));
+    return limpar ? out.filter(Boolean) : out;
+  };
   const mudar = (v) => {
-    setTexto(v);
+    if (!multilinha) {
+      setTexto(v);
+      onMudar({ rotulo: v });
+      return;
+    }
+    // quem digitar o símbolo no começo da linha também escolhe a visibilidade (ele sai do texto)
+    let novos = v.split('\n');
+    let novasVis = alinharVisibilidades(corpos, vis, novos, padrao);
+    let removidos = 0;
+    const el = campoRef.current;
+    const cursor = el?.selectionStart ?? v.length;
+    let pos = 0;
+    novos = novos.map((linha, i) => {
+      const m = linha.match(SIMBOLO);
+      if (m && linha.slice(m[0].length).length) {
+        novasVis[i] = m[1];
+        if (pos + m[0].length <= cursor) removidos += m[0].length;
+        linha = linha.slice(m[0].length);
+      }
+      pos += linha.length + 1 + (m ? m[0].length : 0);
+      return linha;
+    });
+    const valor = novos.join('\n');
+    setTexto(valor);
+    setVis(novasVis);
     // enquanto escreve, as linhas vazias ficam (a caixa já cresce com o Enter)
-    onMudar(multilinha ? { [campo]: v.split('\n').map((l) => l.trimEnd()) } : { rotulo: v });
+    onMudar({ [campo]: juntar(novos, novasVis) });
+    if (removidos) cursorPendente.current = cursor - removidos;
+  };
+  const escolher = (i, simbolo) => {
+    const novasVis = corpos.map((_, k) => (k === i ? simbolo : vis[k] || padrao));
+    setVis(novasVis);
+    onMudar({ [campo]: juntar(corpos, novasVis) });
   };
   const terminar = () => {
-    if (multilinha) onMudar({ [campo]: texto.split('\n').map((l) => l.trim()).filter(Boolean) });
+    if (multilinha) onMudar({ [campo]: juntar(corpos, vis, true) });
     else onMudar({ rotulo: texto.trim() || classe.rotulo });
     onFim();
   };
   const props = {
+    ref: campoRef,
     className: `escrita-classe ${multilinha ? '' : 'nome'}`,
     style: estilo,
     value: texto,
@@ -660,7 +714,42 @@ function EscritaNaClasse({ classe, campo, view, onMudar, onFim }) {
         e.currentTarget.blur();
       }
     },
-    placeholder: campo === 'atributos' ? '- nome: tipo' : campo === 'metodos' ? '+ nome(param: tipo): retorno' : 'Nome da classe',
+    placeholder: campo === 'atributos' ? 'nome: tipo' : campo === 'metodos' ? 'nome(param: tipo): retorno' : 'Nome da classe',
   };
-  return multilinha ? <textarea {...props} /> : <input {...props} maxLength={28} />;
+  if (!multilinha) return <input {...props} maxLength={28} />;
+
+  // botão de visibilidade: um quadradinho no começo de cada linha, dentro da caixa (como em
+  // referencia_botao_classe.png); cada clique passa para a próxima (- → + → #)
+  const quadrado = Math.max(12, (LINHA_MEMBRO - 4) * z);
+  return (
+    <>
+      <textarea {...props} style={{ ...estilo, paddingLeft: 8 * z + quadrado + 6 * z }} />
+      {Array.from({ length: linhas }, (_, i) => {
+        const atual = vis[i] || padrao;
+        const info = VISIBILIDADES.find((v) => v.simbolo === atual) ?? VISIBILIDADES[0];
+        return (
+          <button
+            key={i}
+            type="button"
+            className="vis-botao"
+            style={{
+              left: estilo.left + 8 * z,
+              top: estilo.top + 4 * z + i * LINHA_MEMBRO * z + (LINHA_MEMBRO * z - quadrado) / 2,
+              width: quadrado,
+              height: quadrado,
+              fontSize: Math.max(12, 18 * z),
+            }}
+            title={`${info.simbolo} ${info.nome} (clique para trocar)`}
+            aria-label={`Visibilidade: ${info.nome}. Clique para trocar`}
+            // não tira o foco da escrita (senão ela termina) nem arrasta a área
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => escolher(i, proximaVisibilidade(atual))}
+          >
+            {atual}
+          </button>
+        );
+      })}
+    </>
+  );
 }

@@ -11,8 +11,8 @@ import { nivelDoModelo, pontuacao } from '../lib/dificuldade.js';
 export default function TodosPedidos({ onEscolher, onFechar }) {
   const [filtro, setFiltro] = useState('todos');
   // do mais fácil ao mais difícil
-  const FILTROS = [{ id: 'todos', nome: 'Todos' }, ...TIPOS_DIAGRAMA, { id: 'jumbo', nome: 'Jumbo' }];
-  const doTipo = (id) => TODOS_MODELOS.filter((m) => id === 'todos' || tipoDoModelo(m) === id);
+  const FILTROS = [{ id: 'todos', nome: 'Todos' }, ...TIPOS_DIAGRAMA, { id: 'jumbo', nome: 'Jumbo' }, { id: 'complexo', nome: 'Complexos' }];
+  const doTipo = (id) => TODOS_MODELOS.filter((m) => id === 'todos' || tipoDoModelo(m) === id || (id === 'complexo' && m.complexo));
   const lista = doTipo(filtro).sort((a, b) => pontuacao(a) - pontuacao(b));
   const janela = (
     <Modal titulo={`TODOS_OS_PEDIDOS.TXT · ${TODOS_MODELOS.length}`} w={1000} h={640} onFechar={onFechar}>

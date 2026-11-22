@@ -3,7 +3,7 @@ import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import { Botao, Modal, formatarReais } from '../components/ui.jsx';
 import Resultado from '../apps/Resultado.jsx';
 import { avaliar, avaliarPartes } from '../lib/avaliacao.js';
-import { ehJumbo, modeloPorId } from '../data/pedidos.js';
+import { ehComplexo, ehJumbo, modeloPorId } from '../data/pedidos.js';
 import { desempenhoDoPedido } from '../state/reducer.js';
 
 // Linha do resumo: o que aconteceu com o pedido
@@ -21,10 +21,10 @@ export function resultadoDoPedido(pedido) {
   // pedido JUMBO: uma avaliação por diagrama entregue (cada um com o seu gabarito)
   if (pedido.partes) {
     const partes = pedido.partes.map((p) => ({ ...p, esperado: modelo.partes.find((x) => x.secao === p.secao).esperado }));
-    return { ...avaliarPartes(partes), nota: pedido.nota, valor: pedido.valor, atrasado: pedido.atrasado, pedido };
+    return { ...avaliarPartes(partes), nota: pedido.nota, valor: pedido.valor, atrasado: pedido.atrasado, fatorAtraso: pedido.fatorAtraso, perdeuBonus: pedido.perdeuBonus, pedido };
   }
   const esperado = modelo.esperado;
-  return { ...avaliar(pedido.diagrama, esperado), nota: pedido.nota, valor: pedido.valor, atrasado: pedido.atrasado, pedido, diagrama: pedido.diagrama, esperado };
+  return { ...avaliar(pedido.diagrama, esperado), nota: pedido.nota, valor: pedido.valor, atrasado: pedido.atrasado, fatorAtraso: pedido.fatorAtraso, perdeuBonus: pedido.perdeuBonus, pedido, diagrama: pedido.diagrama, esperado };
 }
 
 // Resumo do dia (fim do dia da campanha): todos os pedidos; os entregues abrem de novo o resultado
@@ -50,6 +50,7 @@ export default function ResumoDia({ pedidos, dia, onFechar }) {
                       <LogoEmpresa nome={p.cliente} tamanho={20} />
                       {p.urgente && <b className="tag-urgente">URGENTE</b>}
                       {ehJumbo(modeloPorId(p.modelo)) && <b className="tag-jumbo">JUMBO</b>}
+                      {ehComplexo(modeloPorId(p.modelo)) && <b className="tag-jumbo tag-complexo">COMPLEXO</b>}
                       {p.cliente}
                     </span>
                     <span className="assunto">{p.urgente ? p.assunto.replace(/^URGENTE: /, '') : p.assunto}</span>

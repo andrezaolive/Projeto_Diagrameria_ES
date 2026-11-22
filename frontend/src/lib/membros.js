@@ -2,7 +2,7 @@
 // No nó: `atributos` e `metodos` são listas de texto, uma linha por membro, como no UML:
 //   atributo: "- saldo: float"            (visibilidade, nome, tipo)
 //   método:   "+ sacar(valor: float): bool" (visibilidade, nome, parâmetros, retorno)
-// A visibilidade (+ - # ~) não entra na nota; nome e tipo sim.
+// Nome, tipo e visibilidade (+ público, - privado, # protegido) entram na nota.
 
 const normal = (s = '') =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '').trim();
@@ -49,11 +49,50 @@ export function medidasClasse(node) {
 }
 
 // ------------------------------------------------------------------ comparação com o gabarito
-// Cada membro do gabarito vale 1: nome certo na classe certa e mesmo tipo (sem tipo no gabarito, o
-// nome basta). Nome certo com tipo diferente vale metade. Membros a mais não tiram pontos.
+// Cada membro do gabarito vale 1: nome certo na classe certa, mesmo tipo (sem tipo no gabarito, o
+// nome basta) e mesma visibilidade (sem visibilidade no gabarito, qualquer uma vale). Tipo errado
+// tira metade; visibilidade errada tira um quarto (`PERDA_MEMBRO`). Membros a mais não tiram pontos.
 function procurar(lista, alvo) {
   const lidos = lista.map(lerMembro);
   return lidos.find((m) => normal(m.nome) === normal(alvo.nome)) ?? null;
+}
+
+export const PERDA_MEMBRO = { tipo: 0.5, visibilidade: 0.25 };
+// Visibilidades que o editor oferece (botões ao lado de cada linha)
+export const VISIBILIDADES = [
+  { simbolo: '-', nome: 'privado' },
+  { simbolo: '+', nome: 'público' },
+  { simbolo: '#', nome: 'protegido' },
+];
+
+// Editor (EscritaNaClasse): o texto da linha fica sem o símbolo, escolhido nos botões
+// Visibilidade de uma linha de membro: o símbolo do começo ("-", "+", "#", "~") e o resto
+export const SIMBOLO = /^\s*([+\-#~])\s*/;
+export const separarMembro = (linha = '') => {
+  const m = linha.match(SIMBOLO);
+  return m ? { vis: m[1], corpo: linha.slice(m[0].length) } : { vis: '', corpo: linha };
+};
+// Toda linha nova nasce privada ("-"); o botão da linha troca, em ciclo: - → + → #
+export const VIS_PADRAO = { atributos: '-', metodos: '-' };
+export const proximaVisibilidade = (atual) => {
+  const i = VISIBILIDADES.findIndex((v) => v.simbolo === atual);
+  return VISIBILIDADES[(i + 1) % VISIBILIDADES.length].simbolo;
+};
+
+// Depois de editar o texto, mantém cada visibilidade na sua linha: casa as linhas iguais do começo e
+// do fim; as do meio que já existiam ficam com a visibilidade antiga, as novas ganham a padrão.
+export function alinharVisibilidades(antigas, visAntigas, novas, padrao) {
+  let ini = 0;
+  while (ini < antigas.length && ini < novas.length && antigas[ini] === novas[ini]) ini++;
+  let fim = 0;
+  while (fim < antigas.length - ini && fim < novas.length - ini && antigas[antigas.length - 1 - fim] === novas[novas.length - 1 - fim]) fim++;
+  const meio = novas.length - ini - fim;
+  const meioAntigo = antigas.length - ini - fim;
+  return [
+    ...visAntigas.slice(0, ini),
+    ...Array.from({ length: meio }, (_, k) => (k < meioAntigo ? visAntigas[ini + k] : padrao)),
+    ...visAntigas.slice(visAntigas.length - fim),
+  ];
 }
 
 export function compararMembros(classeJogador, classeEsperada) {
@@ -63,7 +102,9 @@ export function compararMembros(classeJogador, classeEsperada) {
       const esp = lerMembro(texto);
       const achou = classeJogador ? procurar(classeJogador[campo] ?? [], esp) : null;
       const tipoOk = !esp.tipo || (achou && normal(achou.tipo) === normal(esp.tipo));
-      out.push({ campo, tipoMembro, esperado: esp, achou, pontos: !achou ? 0 : tipoOk ? 1 : 0.5 });
+      const visibilidadeOk = !esp.visibilidade || (achou && achou.visibilidade === esp.visibilidade);
+      const pontos = !achou ? 0 : 1 - (tipoOk ? 0 : PERDA_MEMBRO.tipo) - (visibilidadeOk ? 0 : PERDA_MEMBRO.visibilidade);
+      out.push({ campo, tipoMembro, esperado: esp, achou, tipoOk: Boolean(tipoOk), visibilidadeOk: Boolean(visibilidadeOk), pontos });
     }
   }
   return out;

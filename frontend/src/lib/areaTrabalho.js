@@ -19,8 +19,13 @@ export function celulaDoPonto(x, y) {
 
 // Ícones com lugar próprio na primeira abertura: o Guia fica sozinho no canto superior direito,
 // separado dos ícones principais do jogo
-// Guia no canto superior direito e a Coleção logo embaixo dele
-export const POSICOES_FIXAS = { guia: { col: GRADE.colunas - 1, lin: 0 }, colecao: { col: GRADE.colunas - 1, lin: 1 } };
+// Guia no canto superior direito, a Coleção logo embaixo dele e, embaixo dela, Músicas (que só
+// aparece depois de comprar o toca-fitas)
+export const POSICOES_FIXAS = {
+  guia: { col: GRADE.colunas - 1, lin: 0 },
+  colecao: { col: GRADE.colunas - 1, lin: 1 },
+  musicas: { col: GRADE.colunas - 1, lin: 2 },
+};
 
 // Padrão: os fixos no lugar deles; os outros em coluna, de cima para baixo (e na coluna seguinte se faltar espaço)
 export function posicoesPadrao(ids, fixas = POSICOES_FIXAS) {

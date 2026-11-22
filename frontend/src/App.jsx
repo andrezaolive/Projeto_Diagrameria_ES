@@ -7,6 +7,7 @@ import Conta from './screens/Conta.jsx';
 import Modos from './screens/Modos.jsx';
 import Calendario from './screens/Calendario.jsx';
 import Jogo from './screens/Jogo.jsx';
+import AvisoConquista from './components/AvisoConquista.jsx';
 import { useGame } from './state/GameContext.jsx';
 import { EXCESSO_MENU_DB, LOOP_MENU, tocarMusica } from './lib/musica.js';
 import musicaMenu from './assets/audio/musica-menu.mp3';
@@ -25,8 +26,10 @@ export default function App() {
     if (TELAS_MENU.includes(tela)) tocarMusica(musicaMenu, { loop: LOOP_MENU, excessoDb: EXCESSO_MENU_DB });
   }, [tela]);
 
-  const iniciar = (modo, dia) => {
-    dispatch({ type: 'INICIAR_SESSAO', modo, dia, sorteio: Math.random(), semente: Math.random() });
+  // escolha do calendário: { dia } (dia útil) ou { fimDeSemana } (data do sábado/domingo)
+  const iniciar = (modo, escolha = {}) => {
+    // primeira partida: os pedidos esperam o tutorial do computador (screens/Tutorial.jsx)
+    dispatch({ type: 'INICIAR_SESSAO', modo, ...escolha, tutorial: !state.tutorial?.visto, sorteio: Math.random(), semente: Math.random() });
     setTela('jogo');
   };
   const abrirConta = (modo) => {
@@ -52,8 +55,10 @@ export default function App() {
       {tela === 'modos' && (
         <Modos onInfinito={() => iniciar('infinito')} onCampanha={() => setTela('calendario')} onVoltar={() => setTela('menu')} />
       )}
-      {tela === 'calendario' && <Calendario onEscolher={(dia) => iniciar('campanha', dia)} onVoltar={() => setTela('modos')} />}
+      {tela === 'calendario' && <Calendario onEscolher={(escolha) => iniciar('campanha', escolha)} onVoltar={() => setTela('modos')} />}
       {tela === 'jogo' && <Jogo onMenu={() => setTela('menu')} onCalendario={() => setTela('calendario')} />}
+      {/* conquista desbloqueada: aviso no topo, em qualquer tela (menos na abertura) */}
+      {tela !== 'splash' && <AvisoConquista />}
     </Palco>
   );
 }

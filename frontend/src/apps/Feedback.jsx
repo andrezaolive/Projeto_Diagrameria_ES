@@ -1,6 +1,7 @@
 import { Botao, Modal } from '../components/ui.jsx';
 import { CONCEITOS, NOME_TIPO, gerarFeedback } from '../lib/feedback.js';
 import { lerMult } from '../lib/multiplicidade.js';
+import { VISIBILIDADES } from '../lib/membros.js';
 import './apps.css';
 
 // Trecho errado, em vermelho
@@ -119,6 +120,18 @@ function Problema({ p }) {
           <p className="fb-sugestao">O tipo vem depois dos dois-pontos: "- saldo: float", "+ consultarSaldo(): float".</p>
         </>
       );
+    case 'membroVisibilidade': {
+      const nome = (s) => VISIBILIDADES.find((v) => v.simbolo === s)?.nome ?? 'sem visibilidade';
+      return (
+        <>
+          <p>
+            Em <Nome>{p.classe}</Nome>, {p.tipoMembro === 'metodo' ? 'o método' : 'o atributo'} <b>{p.membro.nome}</b> deveria ser <b>{p.membro.visibilidade} {nome(p.membro.visibilidade)}</b>, mas você usou{' '}
+            <Errado>{p.usado.visibilidade ? `${p.usado.visibilidade} ${nome(p.usado.visibilidade)}` : 'nenhuma'}</Errado>.
+          </p>
+          <p className="fb-sugestao">Escolha com os botões "-" (privado), "+" (público) e "#" (protegido) ao lado da linha.</p>
+        </>
+      );
+    }
     case 'sentidoInvertido':
       return (
         <>

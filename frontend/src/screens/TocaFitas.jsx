@@ -5,10 +5,18 @@ import { ALEATORIA, faixasDoJogador } from '../data/musicas.js';
 // Janelinha do toca-fitas (abre com um clique nele no escritório): escolhe entre as músicas que o
 // jogador tem, no mesmo estilo da lojinha. "Aleatória" sorteia uma a cada vez que o jogo começa.
 export default function TocaFitas({ possui, escolhida, tocando, onEscolher, onFechar }) {
+  return (
+    <Modal titulo="TOCA-FITAS.EXE" w={760} h={500} onFechar={onFechar}>
+      <ListaMusicas possui={possui} escolhida={escolhida} tocando={tocando} onEscolher={onEscolher} />
+    </Modal>
+  );
+}
+
+// A lista de músicas em si: usada no toca-fitas do escritório e no app Músicas do computador
+export function ListaMusicas({ possui, escolhida, tocando, onEscolher }) {
   const faixas = faixasDoJogador(possui);
   const opcoes = [...faixas, { id: ALEATORIA, nome: 'Aleatória', cor: 'var(--c-lavender)' }];
   return (
-    <Modal titulo="TOCA-FITAS.EXE" w={760} h={500} onFechar={onFechar}>
       <div className="toca-fitas">
         <div className="loja-grade rolagem">
           {opcoes.map((f) => {
@@ -27,8 +35,6 @@ export default function TocaFitas({ possui, escolhida, tocando, onEscolher, onFe
             );
           })}
         </div>
-        <p className="aviso-loja">Compre mais músicas na lojinha do computador (aba Músicas).</p>
       </div>
-    </Modal>
   );
 }

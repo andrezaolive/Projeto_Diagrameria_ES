@@ -7,7 +7,12 @@
 //            | nome de outro objeto empilhável (ex.: um livro)
 //   A altura (y) não é salva: sai do apoio. Assim, quando um apoio some, quem estava
 //   em cima "cai" para o apoio de baixo (ver soltarDependentes).
-import { DESK_Y, ESTANTE, MONITOR, MONITOR_SCREEN, SCENE_H, SCENE_W } from '../art/layout.js';
+//
+// Duas salas (`CENARIOS`): o escritório e a sala de exposição (SALA em art/layout.js). Na sala a
+// posição salva leva `sala: 'sala'`; lá não há mesa: objetos de mesa ficam numa prateleira
+// (`sobre: 'p1'`, 'armario-cima'...) ou em cima de outro objeto; os de parede vão em qualquer lugar
+// acima do chão. Quem está em cima de outro objeto fica na sala dele (`salaDe`).
+import { DESK_Y, ESTANTE, MONITOR, MONITOR_SCREEN, SALA, SCENE_H, SCENE_W } from '../art/layout.js';
 import OBJETOS from '../art/objetos.json';
 
 // Quanto da base do objeto precisa ficar sobre o tampo da mesa
@@ -20,6 +25,44 @@ export const TOPO_MONITOR = { x1: MONITOR.x + 4, x2: MONITOR.x + MONITOR.w - 4, 
 const MESMA_FILEIRA = 8;
 
 const RAIZES = ['mesa', 'monitor', 'estante'];
+
+export const CENARIOS = {
+  escritorio: { id: 'escritorio' },
+  sala: { id: 'sala', prateleiras: SALA.prateleiras, padrao: 'p-baixo', chao: SALA.chao },
+};
+export const SALAS = Object.keys(CENARIOS);
+
+// Em que sala o objeto está: a da posição salva; se está em cima de outro objeto, a dele
+export function salaDe(nome, posicoes = {}, visitando = new Set()) {
+  const e = posicoes[nome];
+  if (e?.sala) return e.sala;
+  if (e?.sobre && OBJETOS[e.sobre] && !visitando.has(nome)) return salaDe(e.sobre, posicoes, visitando.add(nome));
+  if (!e) {
+    const meta = OBJETOS[nome];
+    if (meta?.sala) return meta.sala;
+    if (meta?.sobrePadrao && OBJETOS[meta.sobrePadrao]) return salaDe(meta.sobrePadrao, posicoes, visitando.add(nome));
+  }
+  return 'escritorio';
+}
+
+// Posição ao chegar na outra sala (objeto solto na seta): na sala, na prateleira de baixo ou no meio
+// da parede; no escritório, o lugar de sempre (os da sala vão para o meio da mesa)
+export function entradaNaSala(nome, sala) {
+  const meta = OBJETOS[nome];
+  if (sala === 'sala') {
+    if (meta.zona !== 'mesa') return { sala, x: Math.round((SCENE_W - meta.w) / 2), y: Math.max(0, 60 - Math.round(meta.h / 2)) };
+    const p = SALA.prateleiras['p-baixo'];
+    return { sala, x: Math.round(p.x + (p.w - meta.w) / 2), sobre: 'p-baixo' };
+  }
+  if (!meta.sala) return posicaoPadrao(nome);
+  if (meta.zona !== 'mesa') return limitarPosicao(meta, 250, 30);
+  return { x: Math.round(150 - meta.w / 2), sobre: 'mesa', chao: BASE_MIN_NA_MESA + 30 };
+}
+
+// Na sala: parede inteira acima do chão
+function limitarNaSala(meta, x, y) {
+  return { x: limitar(Math.round(x), 0, SCENE_W - meta.w), y: limitar(Math.round(y), 0, SALA.chao - meta.h) };
+}
 
 const limitar = (v, min, max) => Math.min(max, Math.max(min, v));
 const sobrepoe = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
@@ -68,6 +111,8 @@ export const ehPorta = (nome) => Boolean(OBJETOS[nome]?.porta);
 
 export function posicaoPadrao(nome) {
   const meta = OBJETOS[nome];
+  // objetos que nascem na sala de exposição
+  if (meta.sala) return meta.zona === 'mesa' ? { sala: meta.sala, x: meta.x, sobre: meta.apoio } : { sala: meta.sala, x: meta.x, y: meta.y };
   if (meta.zona !== 'mesa') return { x: meta.x, y: meta.y };
   // vem empilhado em outro objeto (livros da pilha) ou dentro dele (canetas no pote, já inclinadas)
   if (meta.sobrePadrao) return { x: meta.x, sobre: meta.sobrePadrao, ...(meta.anguloPadrao != null ? { angulo: meta.anguloPadrao } : {}) };
@@ -96,7 +141,7 @@ const chaoDaRaiz = (raiz, chao) => (raiz === 'monitor' ? MONITOR.y : raiz === 'e
 
 // Calcula x/y de cada objeto a partir dos apoios.
 // Devolve [{ nome, meta, x, y, entrada, raiz, chao, nivel }]; nivel = altura na pilha (0 = na superfície).
-export function resolverCena(nomes, posicoes = {}) {
+export function resolverCena(nomes, posicoes = {}, cen = CENARIOS.escritorio) {
   const entradas = Object.fromEntries(nomes.map((n) => [n, normalizarEntrada(n, posicoes[n])]));
   const pronto = {};
 
@@ -105,9 +150,12 @@ export function resolverCena(nomes, posicoes = {}) {
     const entrada = entradas[nome];
     const meta = metaDe(nome, entrada.deitado);
     let r;
+    const prateleira = cen.prateleiras?.[entrada.sobre];
     if (meta.zona !== 'mesa') {
       r = { x: entrada.x, y: entrada.y, raiz: 'parede', chao: entrada.y + meta.h, nivel: 0 };
-    } else if (RAIZES.includes(entrada.sobre)) {
+    } else if (prateleira) {
+      r = { x: entrada.x, y: prateleira.y - meta.h, raiz: entrada.sobre, chao: prateleira.y, nivel: 0 };
+    } else if (!cen.prateleiras && RAIZES.includes(entrada.sobre)) {
       const chao = chaoDaRaiz(entrada.sobre, entrada.chao ?? BASE_MIN_NA_MESA);
       r = { x: entrada.x, y: yNaRaiz(entrada.sobre, meta, chao), raiz: entrada.sobre, chao, nivel: 0 };
     } else if (entradas[entrada.sobre] && !visitando.has(entrada.sobre)) {
@@ -121,6 +169,10 @@ export function resolverCena(nomes, posicoes = {}) {
           ? // na bandeja da cafeteira (a caneca): lugar fixo, debaixo do bico
             { x: s.x + s.meta.bandeja.x, y: s.y + s.meta.bandeja.base - meta.h, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1 }
           : { x: entrada.x, y: s.y - meta.h + 1, raiz: s.raiz, chao: s.chao, nivel: s.nivel + 1 };
+    } else if (cen.prateleiras) {
+      // apoio sumiu na sala: cai na prateleira de baixo
+      const p = cen.prateleiras[cen.padrao];
+      r = { x: entrada.x, y: p.y - meta.h, raiz: cen.padrao, chao: p.y, nivel: 0 };
     } else {
       // apoio sumiu: cai na mesa, no fundo
       r = { x: entrada.x, y: BASE_MIN_NA_MESA - meta.h, raiz: 'mesa', chao: BASE_MIN_NA_MESA, nivel: 0 };
@@ -157,10 +209,11 @@ export function estaEmPilha(obj, cena) {
 // Onde o objeto `nome` pousa se for solto com o canto em (x, y). `cena` = os outros objetos resolvidos.
 // Objetos "elevaveis" sobem no monitor e na estante e caem sobre o empilhável mais alto debaixo deles.
 // Devolve { entrada, x, y } (entrada no formato salvo; x/y para mostrar a prévia).
-export function pousar(nome, deitado, x, y, cena) {
+export function pousar(nome, deitado, x, y, cena, cen = CENARIOS.escritorio) {
   const meta = metaDe(nome, deitado);
   const extra = deitado && podeDeitar(nome) ? { deitado: true } : {};
 
+  if (cen.prateleiras) return pousarNaSala(nome, meta, extra, x, y, cena, cen);
   if (meta.zona !== 'mesa') {
     const p = limitarPosicao(meta, x, y);
     return { entrada: { x: p.x, y: p.y }, x: p.x, y: p.y };
@@ -173,20 +226,8 @@ export function pousar(nome, deitado, x, y, cena) {
   const centro = x + meta.w / 2;
   const base = y + meta.h;
 
-  // caneta solta sobre a boca do pote: entra no pote com snap no centro inferior dele (a base fica no
-  // meio do fundo; o ângulo é sorteado por quem solta, no escritório). Pode ficar por cima de outra caneta.
-  if (meta.caneta) {
-    const pote = cena.find((o) => o.meta.porta && centro >= o.x && centro <= o.x + o.meta.w && base >= o.y - 12 && base <= o.y + o.meta.h + 4);
-    if (pote) {
-      const px = pote.x + Math.round((pote.meta.w - meta.w) / 2);
-      return { entrada: { x: px, sobre: pote.nome }, x: px, y: pote.y + pote.meta.fundo - meta.h };
-    }
-  }
-  // caneca solta sobre a cafeteira: encaixa na bandeja, debaixo do bico
-  if (meta.xicara) {
-    const maquina = cena.find((o) => o.meta.bandeja && centro >= o.x && centro <= o.x + o.meta.w && base >= o.y && base <= o.y + o.meta.h + 4);
-    if (maquina) return { entrada: { x: maquina.x + maquina.meta.bandeja.x, sobre: maquina.nome }, x: maquina.x + maquina.meta.bandeja.x, y: maquina.y + maquina.meta.bandeja.base - meta.h };
-  }
+  const encaixe = encaixar(meta, centro, base, cena);
+  if (encaixe) return encaixe;
   let raiz = 'mesa';
   let chao = limitar(Math.round(base), BASE_MIN_NA_MESA, SCENE_H);
   let nx = limitar(Math.round(x), 0, SCENE_W - meta.w);
@@ -225,6 +266,44 @@ export function pousar(nome, deitado, x, y, cena) {
     return { entrada: { x: p.x, sobre: 'mesa', chao: p.y + meta.h, ...extra }, x: p.x, y: p.y };
   }
   return { entrada: { x: nx, sobre: raiz, ...extra }, x: nx, y: yNaRaiz(raiz, meta, chao) };
+}
+
+// Caneta solta sobre a boca do pote: entra no pote com snap no centro inferior dele (a base fica no
+// meio do fundo; o ângulo é sorteado por quem solta). Pode ficar por cima de outra caneta.
+// Caneca solta sobre a cafeteira: encaixa na bandeja, debaixo do bico. (Vale nas duas salas.)
+function encaixar(meta, centro, base, cena) {
+  if (meta.caneta) {
+    const pote = cena.find((o) => o.meta.porta && centro >= o.x && centro <= o.x + o.meta.w && base >= o.y - 12 && base <= o.y + o.meta.h + 4);
+    if (pote) {
+      const px = pote.x + Math.round((pote.meta.w - meta.w) / 2);
+      return { entrada: { x: px, sobre: pote.nome }, x: px, y: pote.y + pote.meta.fundo - meta.h };
+    }
+  }
+  if (meta.xicara) {
+    const maquina = cena.find((o) => o.meta.bandeja && centro >= o.x && centro <= o.x + o.meta.w && base >= o.y && base <= o.y + o.meta.h + 4);
+    if (maquina) return { entrada: { x: maquina.x + maquina.meta.bandeja.x, sobre: maquina.nome }, x: maquina.x + maquina.meta.bandeja.x, y: maquina.y + maquina.meta.bandeja.base - meta.h };
+  }
+  return null;
+}
+
+// Na sala de exposição: parede livre; os de mesa caem na prateleira mais alta que está debaixo do
+// ponto solto (a do chão, se nenhuma estiver), e em cima de um empilhável se houver um ali
+function pousarNaSala(nome, meta, extra, x, y, cena, cen) {
+  if (meta.zona !== 'mesa') {
+    const p = limitarNaSala(meta, x, y);
+    return { entrada: { sala: cen.id, x: p.x, y: p.y }, x: p.x, y: p.y };
+  }
+  const centro = x + meta.w / 2;
+  const base = y + meta.h;
+  const encaixe = encaixar(meta, centro, base, cena);
+  if (encaixe) return encaixe;
+  const embaixo = Object.entries(cen.prateleiras).filter(([, p]) => centro >= p.x && centro <= p.x + p.w && p.y >= base - 8);
+  const [id, p] = embaixo.reduce((a, b) => (!a || b[1].y < a[1].y ? b : a), null) ?? [cen.padrao, cen.prateleiras[cen.padrao]];
+  const nx = limitar(Math.round(x), p.x, p.x + p.w - meta.w);
+  const debaixo = cena.filter((o) => o.meta.empilhavel && o.raiz === id && nx < o.x + o.meta.w - 1 && nx + meta.w > o.x + 1);
+  const apoio = debaixo.reduce((a, b) => (!a || b.y < a.y ? b : a), null);
+  if (apoio) return { entrada: { x: nx, sobre: apoio.nome, ...extra }, x: nx, y: apoio.y - meta.h + 1 };
+  return { entrada: { sala: cen.id, x: nx, sobre: id, ...extra }, x: nx, y: p.y - meta.h };
 }
 
 // ---------------------------------------------------------------- desenho e clique

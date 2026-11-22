@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Botao, Dinheiro } from '../components/ui.jsx';
 import { ITENS_LOJA } from '../data/loja.js';
-import { FAIXAS_JOGO, temTocaFitas } from '../data/musicas.js';
+import { FAIXAS_JOGO } from '../data/musicas.js';
 import { CAPSULAS, EFEITO_SEGUNDOS, iconeCapsula, temCafeteira } from '../data/cafe.js';
 import { pararPrevia, tocarPrevia, PREVIA } from '../lib/musica.js';
 import Disco from '../components/Disco.jsx';
+import { Avatar } from '../components/Avatar.jsx';
+import { ROTULO_PARTE } from '../lib/avatar.js';
 import { useGame } from '../state/GameContext.jsx';
+import { precoNoExpediente } from '../lib/modificadores.js';
 import { sfx } from '../lib/sfx.js';
 import './apps.css';
 
@@ -13,9 +16,39 @@ const ABAS = [
   { id: 'fundo', nome: 'Fundos' },
   { id: 'mesa', nome: 'Mesa' },
   { id: 'parede', nome: 'Parede' },
+  { id: 'sala', nome: 'Sala' }, // vai para a sala de exposição (seta ao lado do escritório)
   { id: 'musicas', nome: 'Músicas' },
   { id: 'cafe', nome: 'Cafeteira' }, // (sem É: a fonte dos botões não tem maiúsculas acentuadas)
+  { id: 'avatar', nome: 'Avatar' }, // cabelos, roupas e acessórios (lib/avatar.js)
 ];
+
+// Aba Avatar: cada item aparece no próprio avatar do jogador (prévia), com o tipo da parte
+const SUBABAS_AVATAR = Object.entries(ROTULO_PARTE);
+
+// Comprar só desbloqueia a peça: o jogador veste no editor de avatar do perfil
+function ItemAvatar({ item, state, onComprar }) {
+  const atual = state.perfil.avatar;
+  const tem = state.loja.possui.includes(item.id);
+  const emUso = atual[item.campo] === item.valor;
+  return (
+    <div className={`loja-item ${emUso ? 'em-uso' : ''}`}>
+      <div className="miniatura objeto-loja">
+        <Avatar avatar={{ ...atual, [item.campo]: item.valor }} tamanho={128} className="avatar-loja" />
+      </div>
+      <strong>{item.nome}</strong>
+      {!tem && (
+        <Botao tamanho="pequeno" variante="rosa" disabled={state.dinheiro < precoNoExpediente(item.preco, state.sessao)} onClick={() => onComprar(item)} som="">
+          R$ {precoNoExpediente(item.preco, state.sessao)}
+        </Botao>
+      )}
+      {tem && (
+        <Botao tamanho="pequeno" variante={emUso ? 'ativo' : 'claro'} disabled title="Vista pelo editor de avatar, no perfil">
+          {emUso ? 'Em uso' : 'Comprado'}
+        </Botao>
+      )}
+    </div>
+  );
+}
 
 // Aba Café: cápsulas compradas uma a uma (precisa da cafeteira), com quantas o jogador já tem
 function Capsulas({ state, onComprar }) {
@@ -25,7 +58,7 @@ function Capsulas({ state, onComprar }) {
       {CAPSULAS.map((c) => (
         <div key={c.id} className="loja-item capsula-item">
           <div className="miniatura objeto-loja">
-            <img src={iconeCapsula(c.id)} alt="" className="pixel" style={{ width: 96, height: 96 }} />
+            <img src={iconeCapsula(c.id)} alt="" className="pixel sprite" style={{ width: 96, height: 96 }} />
           </div>
           <strong>{c.nome}</strong>
           <span className="capsula-info">
@@ -34,12 +67,12 @@ function Capsulas({ state, onComprar }) {
           <Botao
             tamanho="pequeno"
             variante="rosa"
-            disabled={!pode || state.dinheiro < c.preco}
+            disabled={!pode || state.dinheiro < precoNoExpediente(c.preco, state.sessao)}
             title={pode ? 'Compra 1 cápsula' : 'Compre a cafeteira primeiro'}
             onClick={() => onComprar(c)}
             som=""
           >
-            R$ {c.preco}
+            R$ {precoNoExpediente(c.preco, state.sessao)}
           </Botao>
         </div>
       ))}
@@ -62,7 +95,7 @@ function Miniatura({ item }) {
 }
 
 // Aba de músicas: disco, nome, prévia (5 s, pausando a música do jogo) e preço
-function Musicas({ possui, dinheiro, onComprar }) {
+function Musicas({ possui, dinheiro, sessao, onComprar }) {
   const [ouvindo, setOuvindo] = useState(null);
   // saiu da aba/fechou a loja no meio da prévia: devolve a música do jogo
   useEffect(() => () => pararPrevia(), []);
@@ -90,8 +123,8 @@ function Musicas({ possui, dinheiro, onComprar }) {
                 {tem ? (
                   <span className="selo-comprada">{f.preco === 0 ? 'Já vem no jogo' : 'Comprada'}</span>
                 ) : (
-                  <Botao tamanho="pequeno" variante="rosa" disabled={dinheiro < f.preco} onClick={() => onComprar(f)} som="">
-                    R$ {f.preco}
+                  <Botao tamanho="pequeno" variante="rosa" disabled={dinheiro < precoNoExpediente(f.preco, sessao)} onClick={() => onComprar(f)} som="">
+                    R$ {precoNoExpediente(f.preco, sessao)}
                   </Botao>
                 )}
               </div>
@@ -99,9 +132,6 @@ function Musicas({ possui, dinheiro, onComprar }) {
           );
         })}
       </div>
-      <p className="aviso-loja">
-        Mude a música usando o toca-fitas{temTocaFitas(possui) ? ' do escritório.' : ' (compre o toca-fitas na aba Mesa).'}
-      </p>
     </>
   );
 }
@@ -109,14 +139,19 @@ function Musicas({ possui, dinheiro, onComprar }) {
 export default function Loja() {
   const { state, dispatch } = useGame();
   const [aba, setAba] = useState('fundo');
+  const [parte, setParte] = useState('cabelo');
   const { possui, fundo, moveis } = state.loja;
 
+  // preço com o "Orçamento apertado" do modo infinito (lib/modificadores.js)
+  const precoDe = (preco) => precoNoExpediente(preco, state.sessao);
   const comprar = (item) => {
-    if (state.dinheiro < item.preco) return sfx.erro();
+    const preco = precoDe(item.preco);
+    if (state.dinheiro < preco) return sfx.erro();
     sfx.moeda();
-    dispatch({ type: 'COMPRAR', id: item.id, preco: item.preco });
+    dispatch({ type: 'COMPRAR', id: item.id, preco });
     if (item.categoria === 'fundo') dispatch({ type: 'USAR_FUNDO', id: item.id });
-    else dispatch({ type: 'ALTERNAR_MOVEL', id: item.id });
+    // avatar: só desbloqueia (o jogador veste pelo perfil)
+    else if (item.categoria !== 'avatar') dispatch({ type: 'ALTERNAR_MOVEL', id: item.id });
   };
 
   return (
@@ -128,7 +163,7 @@ export default function Loja() {
           </Botao>
         ))}
         <span style={{ flex: 1 }} />
-        {(aba === 'mesa' || aba === 'parede' || aba === 'cafe') && (
+        {(aba === 'mesa' || aba === 'parede' || aba === 'cafe' || aba === 'sala') && (
           <span className="com-dica">
             <Botao tamanho="pequeno" variante="claro" onClick={() => dispatch({ type: 'ARRUMAR_ESCRITORIO' })} aria-describedby="dica-arrumar">
               Arrumar
@@ -144,14 +179,32 @@ export default function Loja() {
         <Musicas
           possui={possui}
           dinheiro={state.dinheiro}
+          sessao={state.sessao}
           onComprar={(f) => {
-            if (state.dinheiro < f.preco) return sfx.erro();
+            if (state.dinheiro < precoDe(f.preco)) return sfx.erro();
             sfx.moeda();
-            dispatch({ type: 'COMPRAR', id: f.id, preco: f.preco });
+            dispatch({ type: 'COMPRAR', id: f.id, preco: precoDe(f.preco) });
           }}
         />
       )}
-      {aba !== 'musicas' && (
+      {aba === 'avatar' && (
+        <>
+          <div className="loja-subabas">
+            {SUBABAS_AVATAR.map(([id, nome]) => (
+              <Botao key={id} tamanho="pequeno" variante={parte === id ? 'ativo' : 'claro'} onClick={() => setParte(id)}>
+                {nome === 'Acessório' ? 'Acessorios' : `${nome}s`}
+              </Botao>
+            ))}
+          </div>
+          <div className="loja-grade rolagem">
+            {ITENS_LOJA.filter((i) => i.categoria === 'avatar' && i.campo === parte).map((item) => (
+              <ItemAvatar key={item.id} item={item} state={state} onComprar={comprar} />
+            ))}
+          </div>
+          <p className="aviso-loja">Peças compradas ficam disponíveis no editor de avatar, no seu perfil.</p>
+        </>
+      )}
+      {aba !== 'musicas' && aba !== 'avatar' && (
       <div className="loja-grade rolagem">
         {ITENS_LOJA.filter((i) => i.categoria === aba).map((item) => {
           const tem = possui.includes(item.id);
@@ -163,8 +216,8 @@ export default function Loja() {
               </div>
               <strong>{item.nome}</strong>
               {!tem && (
-                <Botao tamanho="pequeno" variante="rosa" disabled={state.dinheiro < item.preco} onClick={() => comprar(item)} som="">
-                  R$ {item.preco}
+                <Botao tamanho="pequeno" variante="rosa" disabled={state.dinheiro < precoDe(item.preco)} onClick={() => comprar(item)} som="">
+                  R$ {precoDe(item.preco)}
                 </Botao>
               )}
               {tem && item.categoria === 'fundo' && (
@@ -184,20 +237,13 @@ export default function Loja() {
           <Capsulas
             state={state}
             onComprar={(c) => {
-              if (state.dinheiro < c.preco) return sfx.erro();
+              if (state.dinheiro < precoDe(c.preco)) return sfx.erro();
               sfx.moeda();
               dispatch({ type: 'COMPRAR_CAPSULA', tipo: c.id });
             }}
           />
         )}
       </div>
-      )}
-      {aba === 'cafe' && (
-        <p className="aviso-loja">
-          {temCafeteira(state)
-            ? 'Ponha a caneca na cafeteira do escritório e clique nela para fazer café. Clique na caneca cheia para beber.'
-            : 'Compre a cafeteira para poder usar as cápsulas.'}
-        </p>
       )}
     </div>
   );

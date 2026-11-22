@@ -106,8 +106,26 @@ export function calcularNota(partes) {
   return Math.round(100 * ((1 - pesoExtras) * base + extra));
 }
 
-export function pagamento(recompensa, nota, atrasado) {
-  return Math.round(recompensa * (nota / 100) * (atrasado ? 0.5 : 1));
+// Atraso: −10% a cada 30 s depois do prazo (começando no primeiro segundo), até sobrar 20%
+export const ATRASO = { passo: 30, perda: 0.1, minimo: 0.2 };
+export const fatorAtraso = (segundos = 0) =>
+  segundos > 0 ? Math.max(ATRASO.minimo, 1 - ATRASO.perda * Math.ceil(segundos / ATRASO.passo)) : 1;
+
+// `fator` = fatorAtraso (1 no prazo)
+export function pagamento(recompensa, nota, fator = 1) {
+  return Math.round(recompensa * (nota / 100) * fator);
+}
+
+// Pagamento de uma entrega: no prazo, recompensa × nota; atrasado, cai com o tempo de atraso
+// (`pedido.atraso`, segundos contados no TICK depois que o prazo zera) e o urgente perde o bônus
+// (paga como um pedido normal atrasado).
+export function pagamentoDaEntrega(pedido, nota) {
+  const atrasado = pedido.tempoRestante === 0;
+  const segundos = atrasado ? Math.max(1, pedido.atraso ?? 0) : 0;
+  const fator = fatorAtraso(segundos);
+  const perdeuBonus = atrasado && Boolean(pedido.urgente);
+  const base = perdeuBonus ? pedido.recompensaNormal ?? pedido.recompensa : pedido.recompensa;
+  return { valor: pagamento(base, nota, fator), atrasado, atraso: segundos, fatorAtraso: fator, perdeuBonus };
 }
 
 // Pedido JUMBO: cada diagrama é avaliado contra o seu gabarito e a nota final é a média das partes.

@@ -111,7 +111,7 @@ export const CONCEITOS = {
     titulo: 'Atributo',
     texto:
       'Um dado que cada objeto da classe guarda. Fica na parte do meio da caixa, um por linha: visibilidade, nome e tipo. ' +
-      '"-" é privado (só a própria classe mexe) e "+" é público. Se o tipo é outra classe, as duas também se ligam por associação.',
+      'A visibilidade é "-" privado, "+" público ou "#" protegido. Se o tipo é outra classe, as duas também se ligam por associação.',
     exemplo: '- saldo: float · - titular: Cliente (e ContaBancaria — Cliente).',
   },
   metodo: {
@@ -120,6 +120,13 @@ export const CONCEITOS = {
       'Algo que o objeto sabe fazer. Fica na parte de baixo da caixa: visibilidade, nome, parâmetros entre parênteses e o tipo de retorno. ' +
       'Se um parâmetro é de outra classe e ela só é usada ali, a ligação é uma dependência (seta tracejada).',
     exemplo: '+ sacar(valor: float): bool · + gerar(carro: Carro): String (e Relatório ⇢ Carro).',
+  },
+  visibilidade: {
+    titulo: 'Visibilidade (-, +, #)',
+    texto:
+      'Quem pode usar o atributo ou o método. "-" privado: só a própria classe. "+" público: qualquer classe. ' +
+      '"#" protegido: a própria classe e as que herdam dela. No editor, escolha com os botões ao lado de cada linha.',
+    exemplo: '- saldo: float (só a conta mexe) · + sacar(valor: float): bool (todo mundo pede) · # nome: String (Pessoa e os filhos Paciente e Médico).',
   },
   multiplicidade: {
     titulo: 'Multiplicidade (1, 0..1, 1..*, 0..*)',
@@ -246,7 +253,8 @@ export function gerarFeedback(jogador, esperado) {
         const outra = jogador.nodes.find((n) => n !== cj && n.tipo === 'classe' && compararMembros(n, { [r.campo]: [r.esperado.texto] })[0]?.achou);
         problemas.push({ categoria: 'membro', tipo: outra ? 'membroNoLugarErrado' : 'membroFaltando', classe: ce.rotulo, outra: outra?.rotulo, membro: r.esperado, tipoMembro: r.tipoMembro, conceitos: [r.tipoMembro] });
       } else {
-        problemas.push({ categoria: 'membro', tipo: 'membroTipo', classe: ce.rotulo, membro: r.esperado, usado: r.achou, tipoMembro: r.tipoMembro, conceitos: [r.tipoMembro] });
+        if (!r.tipoOk) problemas.push({ categoria: 'membro', tipo: 'membroTipo', classe: ce.rotulo, membro: r.esperado, usado: r.achou, tipoMembro: r.tipoMembro, conceitos: [r.tipoMembro] });
+        if (!r.visibilidadeOk) problemas.push({ categoria: 'membro', tipo: 'membroVisibilidade', classe: ce.rotulo, membro: r.esperado, usado: r.achou, tipoMembro: r.tipoMembro, conceitos: ['visibilidade'] });
       }
     }
   }

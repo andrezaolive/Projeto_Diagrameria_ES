@@ -7,6 +7,7 @@ import iLoja from '../assets/ui/icon-loja-16.png';
 import iEscritorio from '../assets/ui/icon-escritorio-16.png';
 import iGuia from '../assets/ui/icon-guia-16.png';
 import iColecao from '../assets/ui/icon-colecao-16.png';
+import iMusicas from '../assets/ui/icon-musicas-16.png';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Dinheiro, Janela } from '../components/ui.jsx';
 import Editor from '../apps/Editor.jsx';
@@ -15,6 +16,9 @@ import Dicas from '../apps/Dicas.jsx';
 import Loja from '../apps/Loja.jsx';
 import Guia from '../apps/Guia.jsx';
 import Colecao from '../apps/Colecao.jsx';
+import Tutorial from './Tutorial.jsx';
+import { ListaMusicas } from './TocaFitas.jsx';
+import { temTocaFitas } from '../data/musicas.js';
 import { itemPorId } from '../data/loja.js';
 import { useGame } from '../state/GameContext.jsx';
 import { sfx } from '../lib/sfx.js';
@@ -27,19 +31,31 @@ export const APPS = {
   loja: { nome: 'Lojinha', titulo: 'MEBOL-LOJA VIRTUAL.EXE', icone: iLoja, x: 170, y: 40, w: 940, h: 590, Comp: Loja },
   guia: { nome: 'Guia', titulo: 'GUIA-DIAGRAMAS.EXE', icone: iGuia, x: 140, y: 30, w: 1000, h: 620, Comp: Guia },
   colecao: { nome: 'Coleção', titulo: 'COLECAO-PEDIDOS.EXE', icone: iColecao, x: 110, y: 26, w: 1060, h: 630, Comp: Colecao },
+  // só com o toca-fitas comprado (`SO_COM`): troca a música do jogo, como o toca-fitas do escritório
+  musicas: { nome: 'Músicas', titulo: 'TOCA-FITAS.EXE', icone: iMusicas, x: 260, y: 60, w: 760, h: 500, Comp: AppMusicas },
 };
+// Apps que só aparecem quando o jogador tem algo
+const SO_COM = { musicas: (state) => temTocaFitas(state.loja.possui) };
 
-// Ícones da área de trabalho: os apps e o "Voltar ao escritório"
-const ICONES = [...Object.keys(APPS), 'escritorio'];
+// App Músicas: a mesma lista do toca-fitas; `musica` vem do Jogo (faixa tocando e como trocar)
+function AppMusicas({ musica }) {
+  const { state } = useGame();
+  return <ListaMusicas possui={state.loja.possui} escolhida={state.loja.musica} tocando={musica?.tocando} onEscolher={musica?.onEscolher} />;
+}
 
 export const formatarTempo = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-export default function Computador({ desligando, onDesligar, onEntregue }) {
+// `pedidoFoco` ({ id, n }): veio do clique num pop-up; abre o e-mail com esse pedido e avisa
+// `onFocoUsado` (assim reabrir o computador depois não abre o e-mail de novo)
+// `revendoTutorial`/`onRevendoTutorial`: tutorial aberto de novo pelo botão do Guia (o Jogo para o relógio)
+export default function Computador({ desligando, onDesligar, onEntregue, pedidoFoco, onFocoUsado, musica, revendoTutorial, onRevendoTutorial }) {
   const { state, dispatch } = useGame();
   const sessao = state.sessao;
   const raiz = useRef(null);
 
   // ---------------------------------------------------------------- ícones arrastáveis no grid invisível
+  // Ícones da área de trabalho: os apps (os de SO_COM só quando liberados) e o "Voltar ao escritório"
+  const ICONES = [...Object.keys(APPS).filter((id) => !SO_COM[id] || SO_COM[id](state)), 'escritorio'];
   const posicoes = resolverPosicoes(ICONES, state.computador?.icones);
   const [arraste, setArraste] = useState(null); // { id, ox, oy, x, y, sx, sy, moveu }
   const soltouArrastando = useRef(false); // o click que vem depois de arrastar não abre o app
@@ -93,20 +109,24 @@ export default function Computador({ desligando, onDesligar, onEntregue }) {
   };
   // janelas[id] = { x, y, z, min }
   const [janelas, setJanelas] = useState({});
-  const [toast, setToast] = useState(null);
   const zTopo = useRef(10);
-  const qtdPedidos = useRef(sessao?.pedidos.length ?? 0);
 
   const focar = (id) => setJanelas((j) => ({ ...j, [id]: { ...j[id], z: ++zTopo.current, min: false } }));
-  const abrir = (id) => {
+  // `foco`: pedido a mostrar (o e-mail seleciona ele)
+  const abrir = (id, foco) => {
     sfx.clique();
     setJanelas((j) => {
       const a = APPS[id];
       // `aberturas` conta quantas vezes o app foi aberto (ícone ou outro app): o editor volta para a
       // seção de casos de uso a cada abertura
-      return { ...j, [id]: { x: j[id]?.x ?? a.x, y: j[id]?.y ?? a.y, z: ++zTopo.current, min: false, aberturas: (j[id]?.aberturas ?? 0) + 1 } };
+      return { ...j, [id]: { x: j[id]?.x ?? a.x, y: j[id]?.y ?? a.y, z: ++zTopo.current, min: false, aberturas: (j[id]?.aberturas ?? 0) + 1, ...(foco ? { foco } : {}) } };
     });
   };
+  useEffect(() => {
+    if (!pedidoFoco) return;
+    abrir('email', pedidoFoco);
+    onFocoUsado?.();
+  }, [pedidoFoco?.n]); // eslint-disable-line react-hooks/exhaustive-deps
   const fechar = (id) => setJanelas(({ [id]: _, ...resto }) => resto);
   const minimizar = (id) => setJanelas((j) => ({ ...j, [id]: { ...j[id], min: true } }));
   const mover = (id) => (x, y) => setJanelas((j) => ({ ...j, [id]: { ...j[id], x, y } }));
@@ -115,19 +135,19 @@ export default function Computador({ desligando, onDesligar, onEntregue }) {
     .filter(([, j]) => !j.min)
     .sort((a, b) => b[1].z - a[1].z)[0]?.[0];
 
-  // Aviso de e-mail novo (modo infinito)
-  useEffect(() => {
-    const n = sessao?.pedidos.length ?? 0;
-    if (n > qtdPedidos.current) {
-      sfx.email();
-      setToast({ id: Date.now(), texto: `Novo pedido: ${sessao.pedidos.at(-1).cliente}` });
-    }
-    qtdPedidos.current = n;
-  }, [sessao?.pedidos]);
+  // (Pedido novo chegando: pop-up no canto, em screens/Alertas.jsx, no escritório e no computador)
 
   const novos = sessao?.pedidos.filter((p) => p.status === 'novo').length ?? 0;
   const ativo = sessao?.pedidos.find((p) => p.id === sessao.ativo);
   const fundo = itemPorId(state.loja.fundo)?.img;
+
+  // primeira vez no computador: tutorial antes do primeiro pedido (que chega com o pop-up no canto);
+  // também volta pelo botão "Tutorial" do Guia
+  const tutorialAberto = (!state.tutorial?.visto || revendoTutorial) && !desligando;
+  const concluirTutorial = () => {
+    if (!state.tutorial?.visto) dispatch({ type: 'CONCLUIR_TUTORIAL' });
+    onRevendoTutorial?.(false);
+  };
 
   return (
     <div ref={raiz} className={`computador crt ${desligando ? 'desligando' : ''}`}>
@@ -170,23 +190,19 @@ export default function Computador({ desligando, onDesligar, onEntregue }) {
             h={a.h}
             z={j.z}
             foco={focoId === id}
-            style={j.min ? { display: 'none' } : undefined}
+            // com o tutorial aberto as janelas somem (sem fechar) para os ícones destacados aparecerem
+            style={j.min || tutorialAberto ? { display: 'none' } : undefined}
             onFoco={() => focoId !== id && focar(id)}
             onMover={mover(id)}
             onMinimizar={() => minimizar(id)}
             onFechar={() => fechar(id)}
           >
-            <Comp abrirApp={abrir} focado={focoId === id} onEntregue={onEntregue} abertura={j.aberturas} />
+            <Comp abrirApp={abrir} focado={focoId === id} onEntregue={onEntregue} abertura={j.aberturas} foco={j.foco} musica={musica} onTutorial={() => onRevendoTutorial?.(true)} />
           </Janela>
         );
       })}
 
-      {toast && (
-        <div key={toast.id} className="toast" onAnimationEnd={() => setToast(null)}>
-          <img src={iEmail} alt="" className="pixel" />
-          {toast.texto}
-        </div>
-      )}
+      {tutorialAberto && <Tutorial revendo={state.tutorial?.visto} nome={state.perfil.nome} modo={sessao?.modo} posicoes={posicoes} onConcluir={concluirTutorial} />}
 
       <footer className="barra-tarefas">
         <button className="tarefa" onClick={onDesligar} title="Voltar ao escritório">

@@ -6,7 +6,7 @@ import { resumoEstatisticas } from '../lib/estatisticas.js';
 import { sfx } from '../lib/sfx.js';
 import './perfil.css';
 
-// Lista de estatísticas; clicar numa linha mostra o gráfico dela ao lado
+// Lista de estatísticas; clicar numa linha mostra o gráfico dela ao lado, com uma dica do que fazer
 export default function Estatisticas({ onVoltar }) {
   const { state } = useGame();
   const itens = resumoEstatisticas(state);
@@ -34,7 +34,10 @@ export default function Estatisticas({ onVoltar }) {
             </li>
           ))}
         </ul>
-        <Grafico grafico={atual.grafico} titulo={atual.titulo} vazio={atual.vazio} />
+        <div className="estatisticas-detalhe">
+          <Grafico grafico={atual.grafico} titulo={atual.titulo} vazio={atual.vazio} />
+          {atual.dica && <p className="estatisticas-dica">{atual.dica}</p>}
+        </div>
       </div>
       <div className="estatisticas-rodape">
         <span className="dica-clique">clique numa estatística para ver o gráfico</span>

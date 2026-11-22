@@ -31,7 +31,7 @@ export default function Cafeteira({ onFechar }) {
                 title={motivo ?? `${c.nome}: relógio ${Math.round(c.lentidao * 100)}% mais lento por ${EFEITO_SEGUNDOS} s`}
                 onClick={() => {
                   sfx.click();
-                  dispatch({ type: 'FAZER_CAFE', tipo: c.id, sorteio: Math.random() });
+                  dispatch({ type: 'FAZER_CAFE', tipo: c.id, sorteio: Math.random(), derrame: Math.random() });
                 }}
               >
                 <span className="capsula-icone">

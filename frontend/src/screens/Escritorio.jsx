@@ -1,23 +1,32 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import escritorio from '../assets/scenes/office-320x180.png';
+import fundoSala from '../assets/scenes/sala-320x180.png';
+import vidroSala from '../assets/scenes/sala-vidro-320x180.png';
 import iconeBau from '../assets/ui/icon-bau-16.png';
-import { ITENS_LOJA, OBJETOS_BASE, metaDe, metaObjeto, nomeObjeto, objetosDoItem, podeDeitar, spriteDe, spriteObjeto } from '../data/loja.js';
+import { ITENS_LOJA, metaDe, metaObjeto, nomeObjeto, objetosDoJogo, objetosPresentes, podeDeitar, spriteDe, spriteObjeto } from '../data/loja.js';
 import { CAFETEIRA, CANECA } from '../data/cafe.js';
+import { tempoDeLimpeza } from '../lib/eventos.js';
 import { MONITOR, SCENE_W, SCENE_H } from '../art/layout.js';
-import { anguloAleatorio, chaveSprite, conteudoDe, estaEmPilha, normalizarEntrada, objetoNoPonto, ordemDeDesenho, posicoesDoGrupo, pousar, resolverCena } from '../lib/decoracao.js';
+import { CENARIOS, anguloAleatorio, chaveSprite, conteudoDe, entradaNaSala, estaEmPilha, normalizarEntrada, objetoNoPonto, ordemDeDesenho, posicoesDoGrupo, pousar, resolverCena, salaDe } from '../lib/decoracao.js';
 import { useGame } from '../state/GameContext.jsx';
+import { usePremiosAtualizados } from '../data/premios.js';
+import { Avatar } from '../components/Avatar.jsx';
 import { sfx } from '../lib/sfx.js';
 
 const ESCALA = 4; // 1 pixel de arte = 4px no palco
 const pct = (v, total) => `${(v / total) * 100}%`;
 const limitar = (v, min, max) => Math.min(max, Math.max(min, v));
 
-// Máscaras de transparência dos sprites, por chave de sprite (carregadas uma vez)
+// Máscaras de transparência dos sprites, por chave de sprite (carregadas uma vez; de novo se o PNG
+// mudar, como um prêmio editado no npm run dev)
 const MASCARAS = {};
+const ORIGEM_MASCARA = {};
 function carregarMascara(nome, deitado) {
   const chave = chaveSprite(nome, deitado);
-  if (MASCARAS[chave] !== undefined) return;
+  const src = spriteDe(nome, deitado);
+  if (MASCARAS[chave] !== undefined && ORIGEM_MASCARA[chave] === src) return;
   MASCARAS[chave] = null;
+  ORIGEM_MASCARA[chave] = src;
   const img = new Image();
   img.onload = () => {
     const cv = document.createElement('canvas');
@@ -28,9 +37,9 @@ function carregarMascara(nome, deitado) {
     const d = ctx.getImageData(0, 0, img.width, img.height).data;
     const alfa = new Uint8Array(img.width * img.height);
     for (let i = 0; i < alfa.length; i++) alfa[i] = d[i * 4 + 3] > 0 ? 1 : 0;
-    MASCARAS[chave] = { w: img.width, h: img.height, alfa };
+    if (ORIGEM_MASCARA[chave] === src) MASCARAS[chave] = { w: img.width, h: img.height, alfa };
   };
-  img.src = spriteDe(nome, deitado);
+  img.src = src;
 }
 
 // Cena do escritório em primeira pessoa: computador clicável, objetos arrastáveis e o baú (inventário).
@@ -47,28 +56,84 @@ function carregarMascara(nome, deitado) {
 // Cafeteira: clique abre os botões das cápsulas; caneca cheia: clique bebe o café (arrastar move as duas).
 const TOCA_FITAS = 'radio';
 const PAPEL = 'papeis';
-const VAPOR = 'vapor'; // sprite do vapor por cima da caneca cheia (posição relativa à caneca, no gerador)
+const VAPOR = 'vapor';
+const CALENDARIO = 'calendario-mesa'; // calendário de mesa: clique mostra o calendário da campanha
+const ALBUM = 'album-conquistas'; // livro de conquistas da sala: clique abre a lista // sprite do vapor por cima da caneca cheia (posição relativa à caneca, no gerador)
 
-export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafeteira, desativado }) {
+// `sala`: 'escritorio' (mesa e computador) ou 'sala' (sala de exposição: quadro de broches, armário de
+// vidro e prateleiras). A seta na lateral troca de sala (`onTrocarSala`); soltar um objeto em cima dela
+// leva o objeto para a outra sala.
+const OUTRA = { escritorio: 'sala', sala: 'escritorio' };
+const NOME_SALA = { escritorio: 'Escritório', sala: 'Sala de exposição' };
+
+// `reiniciando`: computador inacessível no modo infinito ('pane': reiniciando depois de uma pane;
+// 'energia': queda de energia; 'cafe': café derramado): o monitor não entra e a dica vira
+// "sistema reiniciando · N s" ou "sem energia · N s" (ao passar o mouse e, piscando, ao clicar) ou,
+// com o café, "limpe o café derramado primeiro" (sempre à mostra). A poça fica debaixo da
+// cafeteira: clicar nela limpa (EVENTOS.cafe.limpeza, 5 a 7 s, com a barra de progresso).
+export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafeteira, onConquistas, onCalendario, desativado, sala = 'escritorio', onTrocarSala, chamarComputador = false, reiniciando = null }) {
   const { state, dispatch } = useGame();
+  const [avisoReinicio, setAvisoReinicio] = useState(0);
+  useEffect(() => {
+    if (!avisoReinicio) return;
+    const t = setTimeout(() => setAvisoReinicio(0), 1500);
+    return () => clearTimeout(t);
+  }, [avisoReinicio]);
+  useEffect(() => {
+    if (!reiniciando) setAvisoReinicio(0);
+  }, [reiniciando]);
+  // limpeza do café derramado: { inicio, dura } em ms (performance.now) e o progresso de 0 a 1
+  const [limpeza, setLimpeza] = useState(null);
+  const [progresso, setProgresso] = useState(0);
+  const derramado = Boolean(state.sessao?.cafeDerramado);
+  useEffect(() => {
+    if (!derramado) setLimpeza(null), setProgresso(0);
+  }, [derramado]);
+  useEffect(() => {
+    if (!limpeza) return;
+    let raf;
+    const passo = () => {
+      const p = Math.min(1, (performance.now() - limpeza.inicio) / limpeza.dura);
+      setProgresso(p);
+      if (p >= 1) {
+        sfx.moeda();
+        dispatch({ type: 'LIMPAR_CAFE' });
+      } else raf = requestAnimationFrame(passo);
+    };
+    raf = requestAnimationFrame(passo);
+    return () => cancelAnimationFrame(raf);
+  }, [limpeza, dispatch]);
+  const limpar = () => {
+    if (limpeza) return;
+    sfx.click();
+    setLimpeza({ inicio: performance.now(), dura: tempoDeLimpeza(Math.random()) * 1000 });
+  };
+  usePremiosAtualizados(); // PNG de prêmio editado (npm run dev): desenha de novo
+  const cen = CENARIOS[sala];
+  const outra = OUTRA[sala];
   const { preparando, xicara } = state.cafe;
   const beber = () => {
     sfx.click();
     dispatch({ type: 'BEBER_CAFE' });
   };
-  const clicaveis = { [TOCA_FITAS]: onTocaFitas, [PAPEL]: onPapel, [CAFETEIRA]: onCafeteira, ...(xicara ? { [CANECA]: beber } : {}) };
+  const clicaveis = { [TOCA_FITAS]: onTocaFitas, [PAPEL]: onPapel, [CAFETEIRA]: onCafeteira, [ALBUM]: onConquistas, [CALENDARIO]: onCalendario, ...(xicara ? { [CANECA]: beber } : {}) };
   const DICA_CLIQUE = {
     [TOCA_FITAS]: 'clique: escolher a música',
     [PAPEL]: 'clique: rabiscar no papel',
+    [ALBUM]: 'clique: ver as conquistas',
+    [CALENDARIO]: 'clique: ver o calendário',
     [CAFETEIRA]: preparando ? `preparando o café... ${preparando.falta} s` : 'clique: fazer café',
     ...(xicara ? { [CANECA]: 'clique: beber o café' } : {}),
   };
   // enquanto a cafeteira trabalha, a caneca e a cafeteira não saem do lugar
-  const presa = (nome) => Boolean(preparando) && (nome === CANECA || nome === CAFETEIRA);
+  // café sendo feito (ou derramado): a cafeteira e a caneca não saem do lugar
+  const presa = (nome) => Boolean(preparando || state.sessao?.cafeDerramado) && (nome === CANECA || nome === CAFETEIRA);
   // a caneca cheia usa o sprite com café (a cor mostra a força)
   const sprite = (nome, deitado) => (nome === CANECA && xicara ? spriteObjeto(`caneca-cheia-${xicara}`) : spriteDe(nome, deitado));
   const ref = useRef(null);
   const bauRef = useRef(null);
+  const setaRef = useRef(null);
+  const [sobreSeta, setSobreSeta] = useState(false);
   // mao = { nome, deitado, ox, oy, px, py, modo: 'arraste'|'segurando', apertado, moveu, original, origem }
   const [mao, setMao] = useState(null);
   const maoRef = useRef(null);
@@ -81,15 +146,14 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
   const { posicoes, guardados } = state.escritorio;
   const comprados = ITENS_LOJA.filter((i) => i.objeto && state.loja.possui.includes(i.id));
   const usados = comprados.filter((i) => state.loja.moveis.includes(i.id));
-  // em uso: os objetos de cada item (a pilha de livros são 4), menos os livros guardados um a um
-  const emUso = usados.flatMap(objetosDoItem).filter((n) => !guardados.includes(n));
   // inventário: objetos do jogo guardados + livros da pilha guardados soltos + itens comprados fora de uso
   // (a pilha inteira guardada aparece como uma entrada só: "Pilha de livros")
   // canetas guardadas DENTRO do pote não aparecem soltas: o pote mostra quantas leva
   const guardadosDentro = state.escritorio.guardadosDentro ?? {};
   const dentroDePote = new Set(Object.entries(guardadosDentro).filter(([pote]) => guardados.includes(pote)).flatMap(([, ns]) => ns));
   const inventario = [
-    ...OBJETOS_BASE.filter((n) => guardados.includes(n)),
+    // (os do jogo incluem os prêmios das conquistas que não couberam na sala)
+    ...objetosDoJogo(state).filter((n) => guardados.includes(n)),
     ...usados.flatMap((i) => (i.objetos ?? []).filter((n) => guardados.includes(n) && !dentroDePote.has(n))),
     ...comprados.filter((i) => !state.loja.moveis.includes(i.id)).map((i) => i.objeto),
   ];
@@ -99,13 +163,14 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
   };
   const ehGrupo = (nome) => Boolean(ITENS_LOJA.find((i) => i.objeto === nome)?.objetos);
 
-  const presentes = [...OBJETOS_BASE.filter((n) => !guardados.includes(n)), ...emUso];
+  // só os desta sala (quem está em cima de outro objeto fica na sala dele)
+  const presentes = objetosPresentes(state).filter((n) => salaDe(n, posicoes) === sala);
   // o pote na mão leva junto o que está dentro dele (as canetas não caem nem ficam para trás)
   // (a cafeteira leva a caneca da bandeja do mesmo jeito)
   const levaJunto = (m) => m.porta || m.bandeja;
   const naMaoJunto = mao && levaJunto(metaDe(mao.nome, mao.deitado)) && !mao.grupo ? conteudoDe(mao.nome, posicoes, presentes) : [];
   const nomes = presentes.filter((n) => n !== mao?.nome && !naMaoJunto.includes(n));
-  const cena = resolverCena(nomes, posicoes);
+  const cena = resolverCena(nomes, posicoes, cen);
   const objs = ordemDeDesenho(cena);
 
   useEffect(() => {
@@ -119,19 +184,30 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
     x: limitar(mao.px - mao.ox, -metaMao.w / 2, SCENE_W - metaMao.w / 2),
     y: limitar(mao.py - mao.oy, -metaMao.h / 2, SCENE_H - metaMao.h / 2),
   };
-  const destino = mao && pousar(mao.nome, mao.deitado, noAr.x, noAr.y, cena);
+  const destino = mao && pousar(mao.nome, mao.deitado, noAr.x, noAr.y, cena, cen);
 
   const arte = (e) => {
     const r = ref.current.getBoundingClientRect();
     return { x: ((e.clientX - r.left) * SCENE_W) / r.width, y: ((e.clientY - r.top) * SCENE_H) / r.height };
   };
-  const emCimaDoBau = (e) => {
-    const r = bauRef.current?.getBoundingClientRect();
+  const dentroDe = (el, e) => {
+    const r = el?.getBoundingClientRect();
     return Boolean(r && e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom);
   };
+  const emCimaDoBau = (e) => dentroDe(bauRef.current, e);
+  const emCimaDaSeta = (e) => dentroDe(setaRef.current, e);
 
-  const soltar = (noBau) => {
+  const soltar = (noBau, naSeta = false) => {
     sfx.clickSoltar(); // pegar usa o click normal; soltar, o mesmo bem baixinho
+    if (naSeta) {
+      // leva o objeto para a outra sala (e vai junto). Grupo inteiro tirado do baú: solte numa sala.
+      if (mao.grupo) return cancelar();
+      dispatch({ type: 'MOVER_OBJETO', objeto: mao.nome, posicao: entradaNaSala(mao.nome, outra) });
+      setMao(null);
+      setSobreSeta(false);
+      onTrocarSala?.(outra);
+      return;
+    }
     if (mao.grupo) {
       // grupo inteiro na mão (pilha de livros, pote com canetas): no baú, continua guardado; na mesa,
       // cada um vira um objeto separado, na mesma arrumação de sempre
@@ -184,17 +260,18 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
       // e não no monitor ou no baú (que entraria no computador / abriria o painel).
       e.preventDefault();
       ref.current.setPointerCapture(e.pointerId);
-      soltar(emCimaDoBau(e));
+      soltar(emCimaDoBau(e), emCimaDaSeta(e));
       return;
     }
-    if (e.target.closest('.inventario')) return; // clique no baú/painel
+    if (e.target.closest('.inventario, .seta-sala, .poca-cafe')) return; // clique no baú/painel, na seta ou na poça
     const p = arte(e);
     const o = objetoNoPonto(objs, MASCARAS, p.x, p.y);
     if (!o) return; // deixa o clique seguir para o monitor
     e.preventDefault();
     if (presa(o.nome)) {
       // café sendo feito: a cafeteira só mostra o andamento; a caneca não sai da bandeja
-      if (o.nome === CAFETEIRA) {
+      if (o.nome === CAFETEIRA && state.sessao?.cafeDerramado) sfx.erro();
+      else if (o.nome === CAFETEIRA) {
         sfx.click();
         onCafeteira?.();
       }
@@ -231,13 +308,14 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
       return;
     }
     setSobreBau(emCimaDoBau(e));
+    setSobreSeta(emCimaDaSeta(e));
     setMao((m) => (m ? { ...m, px: p.x, py: p.y, moveu: m.moveu || Math.abs(p.x - m.sx) + Math.abs(p.y - m.sy) > 1.5 } : m));
   };
 
   const up = (e) => {
     if (!mao?.apertado) return;
     if (mao.modo === 'arraste' && mao.moveu) {
-      soltar(emCimaDoBau(e));
+      soltar(emCimaDoBau(e), emCimaDaSeta(e));
       return;
     }
     if (clicaveis[mao.nome] && mao.modo === 'arraste') {
@@ -276,7 +354,7 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
     const m = metaDe(o.nome, deitar);
     const centro = o.x + o.meta.w / 2;
     const base = o.y + o.meta.h;
-    const novo = pousar(o.nome, deitar, Math.round(centro - m.w / 2), base - m.h, cena.filter((x) => !acima.has(x.nome)));
+    const novo = pousar(o.nome, deitar, Math.round(centro - m.w / 2), base - m.h, cena.filter((x) => !acima.has(x.nome)), cen);
     dispatch({ type: 'MOVER_OBJETO', objeto: o.nome, posicao: novo.entrada });
     sfx.click();
   };
@@ -307,10 +385,21 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
     ...(angulo ? { transform: `rotate(${angulo}deg)`, transformOrigin: '50% 100%' } : {}),
   });
 
+  // porta-retrato (metadado `foto`): o avatar do jogador aparece na janela da moldura
+  const foto = (x, y, meta, classe = '') =>
+    meta.foto && (
+      <div
+        className={`objeto foto-avatar ${classe}`}
+        style={{ left: (x + meta.foto.x) * ESCALA, top: (y + meta.foto.y) * ESCALA, width: meta.foto.w * ESCALA, height: meta.foto.h * ESCALA }}
+      >
+        <Avatar avatar={state.perfil.avatar} tamanho={meta.foto.w * ESCALA} />
+      </div>
+    );
+
   return (
     <div
       ref={ref}
-      className={`escritorio ${mao ? 'arrastando' : sobre ? 'sobre-objeto' : ''}`}
+      className={`escritorio ${sala === 'sala' ? 'sala-exposicao' : ''} ${mao ? 'arrastando' : sobre ? 'sobre-objeto' : ''}`}
       onPointerDown={down}
       onPointerMove={move}
       onPointerUp={up}
@@ -318,9 +407,14 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
       onPointerLeave={() => setSobre(null)}
       onWheel={roda}
     >
-      <img src={escritorio} alt="Escritório: mesa com computador" className="cena pixel" draggable={false} />
-      <div className="tela-brilho" />
-      <button
+      <img
+        src={sala === 'sala' ? fundoSala : escritorio}
+        alt={sala === 'sala' ? 'Sala de exposição: quadro de broches, armário de vidro e prateleiras' : 'Escritório: mesa com computador'}
+        className="cena pixel"
+        draggable={false}
+      />
+      {sala === 'escritorio' && <div className="tela-brilho" />}
+      {sala === 'escritorio' && <button
         className="monitor-hotspot"
         style={{
           left: pct(MONITOR.x, SCENE_W),
@@ -329,24 +423,33 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
           height: pct(MONITOR.h, SCENE_H),
         }}
         onClick={() => {
+          if (reiniciando) {
+            sfx.erro();
+            setAvisoReinicio(Date.now());
+            return;
+          }
           sfx.click();
           onComputador();
         }}
         disabled={desativado || Boolean(mao)}
-        aria-label="Usar o computador"
+        aria-label={reiniciando === 'cafe' ? 'Limpe o café derramado primeiro' : reiniciando ? 'Computador reiniciando' : 'Usar o computador'}
       >
         {novos > 0 && <span className="badge-email">{novos}</span>}
-      </button>
+      </button>}
       {objs.map((o) => (
-        <img
-          key={o.nome}
-          src={sprite(o.nome, o.entrada?.deitado)}
-          alt=""
-          draggable={false}
-          className={`objeto pixel ${sobre === o.nome && !mao ? 'realce' : ''}`}
-          style={estilo(o.x, o.y, o.meta, o.dentro ? o.entrada?.angulo : 0)}
-        />
+        <span key={o.nome} style={{ display: 'contents' }}>
+          <img
+            src={sprite(o.nome, o.entrada?.deitado)}
+            alt=""
+            draggable={false}
+            className={`objeto pixel ${sobre === o.nome && !mao ? 'realce' : ''}`}
+            style={estilo(o.x, o.y, o.meta, o.dentro ? o.entrada?.angulo : 0)}
+          />
+          {foto(o.x, o.y, o.meta)}
+        </span>
       ))}
+      {/* armário da sala: o vidro das portas fica por cima do que está dentro */}
+      {sala === 'sala' && <img src={vidroSala} alt="" className="cena pixel vidro-armario" draggable={false} />}
       {/* café: gotas caindo do bico enquanto prepara; vapor saindo da caneca cheia */}
       {(() => {
         const maquina = objs.find((o) => o.nome === CAFETEIRA);
@@ -354,6 +457,23 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
         const v = metaObjeto(VAPOR), c0 = metaObjeto(CANECA);
         return (
           <>
+            {/* café derramado: poça debaixo da cafeteira (clique para limpar) */}
+            {state.sessao?.cafeDerramado && maquina && (
+              <button
+                className={`poca-cafe ${limpeza ? 'limpando' : ''}`}
+                style={{ left: (maquina.x + maquina.meta.w / 2) * ESCALA, top: (maquina.y + maquina.meta.h - 3) * ESCALA, '--resta': 1 - progresso }}
+                onClick={limpar}
+                aria-label={limpeza ? 'Limpando o café' : 'Limpar o café derramado'}
+              >
+                <span className="poca" />
+                <span className="poca-dica">{limpeza ? 'limpando...' : 'clique para limpar'}</span>
+                {limpeza && (
+                  <span className="poca-barra">
+                    <i style={{ width: `${progresso * 100}%` }} />
+                  </span>
+                )}
+              </button>
+            )}
             {preparando && maquina && (
               <span className="cafe-gotejando" style={{ left: (maquina.x + 7) * ESCALA, top: (maquina.y + 11) * ESCALA, height: (maquina.meta.bandeja.base - 14 - 11 + 1) * ESCALA }} aria-hidden="true" />
             )}
@@ -369,6 +489,7 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
         <>
           {/* prévia de onde vai pousar */}
           {!sobreBau && <img src={sprite(mao.nome, mao.deitado)} alt="" draggable={false} className="objeto pixel fantasma" style={estilo(destino.x, destino.y, metaMao)} />}
+          {!sobreBau && foto(destino.x, destino.y, metaMao, 'fantasma')}
           {/* canetas dentro do pote na mão: mesma posição e inclinação, desenhadas antes do pote */}
           {naMaoJunto.map((n) => {
             const e = normalizarEntrada(n, posicoes[n]);
@@ -394,14 +515,42 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
             className={`objeto pixel levantado ${sobreBau ? 'indo-pro-bau' : ''}`}
             style={estilo(noAr.x, noAr.y, metaMao)}
           />
+          {!sobreBau && foto(noAr.x, noAr.y, metaMao, 'levantado')}
         </>
       )}
 
       {/* dica do monitor numa camada própria, depois dos objetos: fica sempre na frente deles.
           Aparece pelo :hover do botão do monitor (seletor de irmão no CSS). */}
-      <div className="dica-monitor-camada" aria-hidden="true" style={{ left: pct(MONITOR.x, SCENE_W), top: pct(MONITOR.y, SCENE_H), width: pct(MONITOR.w, SCENE_W) }}>
-        <span className="dica-monitor">clique para usar</span>
-      </div>
+      {sala === 'escritorio' && (
+        <div className="dica-monitor-camada" aria-hidden="true" style={{ left: pct(MONITOR.x, SCENE_W), top: pct(MONITOR.y, SCENE_H), width: pct(MONITOR.w, SCENE_W) }}>
+          {/* primeira partida (tutorial pendente): a dica fica sempre à mostra, piscando */}
+          {reiniciando === 'cafe' ? (
+            <span key={avisoReinicio} className={`dica-monitor reiniciando fixa ${avisoReinicio ? 'chamando' : ''}`}>limpe o café derramado primeiro</span>
+          ) : reiniciando ? (
+            <span key={avisoReinicio} className={`dica-monitor reiniciando ${avisoReinicio ? 'chamando' : ''}`}>{reiniciando === 'energia' ? 'sem energia' : 'sistema reiniciando'} · {state.sessao?.bloqueio?.falta ?? 0} s</span>
+          ) : (
+            <span className={`dica-monitor ${chamarComputador ? 'chamando' : ''}`}>{chamarComputador ? 'clique para começar' : 'clique para usar'}</span>
+          )}
+        </div>
+      )}
+
+      {/* seta para a outra sala (direita no escritório, esquerda na sala); com um objeto na mão,
+          soltar em cima dela leva o objeto junto */}
+      <button
+        ref={setaRef}
+        className={`seta-sala ${sala === 'sala' ? 'esquerda' : 'direita'} ${mao ? 'alvo' : ''} ${sobreSeta ? 'brilho' : ''}`}
+        onClick={() => {
+          if (mao) return;
+          sfx.click();
+          onTrocarSala?.(outra);
+        }}
+        disabled={desativado}
+        aria-label={`Ir para: ${NOME_SALA[outra]}`}
+        title={mao ? `Soltar aqui leva para: ${NOME_SALA[outra]}` : NOME_SALA[outra]}
+      >
+        {sala === 'sala' ? '◀' : '▶'}
+      </button>
+      {mao && sobreSeta && <span className={`seta-dica ${sala === 'sala' ? 'esquerda' : 'direita'}`} role="tooltip">levar para: {NOME_SALA[outra].toLowerCase()}</span>}
 
       {/* toca-fitas, papel, cafeteira e caneca cheia: dica ao passar o mouse */}
       {!mao && !desativado && DICA_CLIQUE[sobre] && (() => {
@@ -437,7 +586,7 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
                 })}
               </ul>
             )}
-            <p className="dica">clique num item para pegar · clique no escritório para soltar</p>
+            <p className="dica">clique num item para pegar · clique na sala para soltar</p>
           </div>
         )}
         {mao && sobreBau && <span className="bau-dica" role="tooltip">guardar item</span>}

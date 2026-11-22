@@ -39,6 +39,7 @@ export function categoriasDoModelo(modelo) {
   const { nodes, edges } = modelo.esperado;
   const tipo = tipoDoDiagrama(modelo.esperado);
   const out = [TIPOS_DIAGRAMA.find((t) => t.id === tipo).nome];
+  if (modelo.complexo) out.push('Complexo');
   if (nodes.some((n) => n.tipo === 'sistema')) out.push('Sistema');
   if (nodes.some((n) => n.tipo === 'decisao')) out.push('Decisão');
   const usadas = new Set(edges.map((e) => e.tipo));

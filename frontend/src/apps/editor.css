@@ -32,7 +32,6 @@
 .aba-pedido.urgente { border-color: var(--c-rose); background: var(--c-blush); }
 .aba-pedido.urgente.ativa { box-shadow: inset 3px 3px 0 var(--c-rose); }
 .aba-pedido.acabando .tempo { color: var(--c-rose); }
-.editor-requisitos .aviso-vazio { margin: 0; font-size: 18px; line-height: 1; text-align: center; color: var(--c-plum); }
 .editor-requisitos h4 { margin: 4px 0 0; font-family: var(--f-titulo); font-size: 11px; line-height: 1.4; }
 .editor-requisitos .assunto { font-size: 22px; color: var(--c-plum); }
 .editor-requisitos .lista { flex: 1; min-height: 0; font-size: 21px; line-height: 1; padding: 4px 8px; background: var(--c-cream); border: 3px solid var(--c-ink); }
@@ -187,3 +186,11 @@
   white-space: pre;
 }
 .escrita-classe.nome { text-align: center; font-weight: bold; background: var(--c-lilac); }
+/* botões de visibilidade (- privado, + público, # protegido) ao lado de cada linha de membro */
+.vis-botao {
+  position: absolute; z-index: 4; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; cursor: pointer;
+  font-family: var(--f-texto); font-weight: bold; line-height: 0.7; color: var(--c-ink);
+  background: var(--c-cream); border: 2px solid var(--c-lavender);
+}
+.vis-botao:hover { background: var(--c-butter); border-color: var(--c-grape); }

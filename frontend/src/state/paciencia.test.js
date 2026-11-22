@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { diaEncerrado, estadoInicial, reducer, temRelogio } from './reducer.js';
-import { MULTA, multaPedido, pacienciaDoDia, pedidosNoDia } from '../data/pedidos.js';
+import { ESPERA_INFINITO, diaEncerrado, estadoInicial, reducer, temRelogio } from './reducer.js';
+import { MULTA, despesaDoDia, multaPedido, pacienciaDoDia, pedidosNoDia } from '../data/pedidos.js';
 
 const rodar = (state, ...acoes) => acoes.reduce(reducer, state);
 const ticks = (state, n) => rodar(state, ...Array.from({ length: n }, () => ({ type: 'TICK' })));
@@ -22,10 +22,13 @@ describe('paciência dos clientes', () => {
     expect(pb.paciencia).toBe(b.paciencia - 5);
   });
 
-  it('sem paciência, o cliente vai embora e um pedido novo chega (modo infinito)', () => {
+  it('sem paciência, o cliente vai embora e um pedido novo chega depois (modo infinito)', () => {
     let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'infinito' });
     const total = s.sessao.pedidos[0].pacienciaTotal;
     s = ticks(s, total);
+    expect(s.sessao.pedidos.filter((p) => p.status === 'novo')).toHaveLength(0);
+    expect(temRelogio(s.sessao)).toBe(true); // o relógio continua: tem pedido a caminho
+    s = ticks(s, ESPERA_INFINITO.max);
     const expirados = s.sessao.pedidos.filter((p) => p.status === 'expirado');
     expect(expirados).toHaveLength(2);
     expect(s.sessao.pedidos.filter((p) => p.status === 'novo')).toHaveLength(2);
@@ -49,9 +52,9 @@ describe('paciência dos clientes', () => {
       saldo -= m;
       multas += m;
     }
-    expect(s.dinheiro).toBe(saldo);
+    expect(s.dinheiro).toBe(saldo - despesaDoDia(1)); // e o aluguel do dia
     // ninguém atendido: 0% de desempenho, o dia não conta como concluído
-    expect(s.sessao.relatorio).toEqual({ media: 0, aprovado: false, ganho: -multas });
+    expect(s.sessao.relatorio).toEqual({ media: 0, aprovado: false, ganho: -multas, despesa: despesaDoDia(1) });
     expect(s.campanha.concluidos[1]).toBeUndefined();
     expect(s.campanha.desbloqueado).toBe(1);
     expect(temRelogio(s.sessao)).toBe(false); // nada mais para cronometrar
