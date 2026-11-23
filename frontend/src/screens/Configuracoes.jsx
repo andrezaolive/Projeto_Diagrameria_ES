@@ -59,6 +59,21 @@ export default function Configuracoes({ onFechar, rodape, onResetar }) {
         desativado={!cfg.vhsAtivo}
         onChange={mudar('vhsIntensidade')}
       />
+      <div className="px-linha">
+        <span className="rotulo">Texto dos pedidos</span>
+        <span className="descricao">
+          nos pedidos, o que vai no diagrama: {cfg.nomesNegrito ? <b className="nome-pedido">Leitor</b> : '"Leitor"'}
+        </span>
+        <Botao
+          tamanho="pequeno"
+          variante={cfg.nomesNegrito ? 'ativo' : 'claro'}
+          aria-pressed={Boolean(cfg.nomesNegrito)}
+          title={cfg.nomesNegrito ? 'Deixa os elementos do pedido em negrito' : 'Deixa os elementos do pedido em "aspas"'}
+          onClick={() => mudar('nomesNegrito')(!cfg.nomesNegrito)}
+        >
+          {cfg.nomesNegrito ? 'Negrito' : 'Aspas'}
+        </Botao>
+      </div>
       {onResetar && (
         <div className="px-linha">
           <span className="rotulo">Dados</span>

@@ -12,6 +12,7 @@ import { conteudoDe, ehPorta, grupoDoObjeto, membrosDoGrupo, moverComConteudo, s
 import { arrumarPremios, desbloquear, marcosIniciais, verificarConquistas } from '../lib/conquistas.js';
 import { pagamentoDaEntrega } from '../lib/avaliacao.js';
 import { CONQUISTAS } from '../art/conquistas.js';
+import { criarPedidoDeTreino } from '../data/treino.js';
 
 export const DIAS_CAMPANHA = 23; // dias úteis de um mês de 31 dias começando na segunda
 
@@ -87,7 +88,7 @@ export const estadoInicial = () => ({
   perfil: { nome: null, avatar: avatarPadrao(), conta: null }, // conta = { email } quando logado
   estatisticas: estatisticasIniciais(),
   dinheiro: 100,
-  config: { musica: 60, efeitos: 70, interface: 'auto', vhsAtivo: false, vhsIntensidade: 50 }, // interface: reduzido | auto | grande
+  config: { musica: 60, efeitos: 70, interface: 'auto', vhsAtivo: false, vhsIntensidade: 50, nomesNegrito: false }, // interface: reduzido | auto | grande; nomesNegrito: nomes dos pedidos em negrito no lugar das aspas (components/TextoPedido.jsx)
   // concluidos[dia] = { ganho, media }; fimDeSemana[data do calendário] = { ganho, media }
   campanha: { desbloqueado: 1, concluidos: {}, fimDeSemana: {} },
   loja: { possui: [...ITENS_INICIAIS], fundo: 'fundo-por-do-sol', moveis: [], musica: null }, // musica: escolhida no toca-fitas
@@ -283,12 +284,14 @@ const atualizarPedido = (sessao, id, f) => ({
 export const FINALIZADOS = ['entregue', 'recusado', 'expirado'];
 // Relógio do jogo precisa correr? (pedido em andamento, cliente esperando resposta ou pedido a
 // caminho: `sessao.chegadas` no modo infinito, a fila do dia na campanha)
+// (durante o tutorial e o pedido de treino, `esperaTutorial`, o relógio fica parado)
 export const temRelogio = (sessao) =>
   Boolean(
-    sessao?.chegadas?.length ||
+    !sessao?.esperaTutorial &&
+    (sessao?.chegadas?.length ||
       (sessao?.fila?.length && !sessao.esperaTutorial) ||
       sessao?.dormindo ||
-      sessao?.pedidos.some((p) => p.status === 'aceito' || (p.status === 'novo' && p.paciencia != null)),
+      sessao?.pedidos.some((p) => p.status === 'aceito' || (p.status === 'novo' && p.paciencia != null))),
   );
 
 // Vários pedidos podem estar aceitos ao mesmo tempo; `sessao.ativo` é o que está aberto no editor.
@@ -508,6 +511,7 @@ function reducerBase(state, action) {
     case 'RECUSAR': {
       const s = state.sessao;
       const pedido = s?.pedidos.find((p) => p.id === action.id);
+      if (pedido?.treino) return terminarTreino(state, pedido.id, 0); // recusar o treino = pular, sem multa
       if (!pedido || (pedido.status !== 'novo' && pedido.status !== 'aceito')) return state;
       const multa = multaPedido(pedido, state.dinheiro);
       const estatisticas = { ...state.estatisticas, recusados: state.estatisticas.recusados + 1, multas: (state.estatisticas.multas ?? 0) + multa };
@@ -589,6 +593,8 @@ function reducerBase(state, action) {
       const s = state.sessao;
       if (!s) return state;
       const { id, nota, valor } = action;
+      // pedido de treino do tutorial: só paga (pouco) e libera os pedidos de verdade
+      if (s.pedidos.find((p) => p.id === id)?.treino) return terminarTreino(state, id, valor);
       // o diagrama entregue fica no pedido, para o resumo do dia mostrar de novo (com o esperado e o feedback)
       // pedido JUMBO: `partes` = [{ secao, diagrama }] (um diagrama por aba do editor)
       // atraso: guarda o fator aplicado e se o urgente perdeu o bônus (o resumo do dia mostra igual)
@@ -891,8 +897,20 @@ function reducerBase(state, action) {
       const s = state.sessao;
       const tutorial = { visto: true };
       if (!s?.esperaTutorial) return { ...state, tutorial };
+      // "Vamos nessa!" (`treino`): antes dos pedidos de verdade, um pedido de treino já aceito e aberto
+      // no editor (data/treino.js, tipo sorteado); os retidos continuam esperando até ele acabar
+      if (action.treino && !s.pedidos.some((p) => p.treino)) {
+        const treino = criarPedidoDeTreino(action.sorteio ?? 0);
+        return { ...state, tutorial, sessao: { ...s, pedidos: [...s.pedidos, treino], ativo: treino.id } };
+      }
       const { esperaTutorial, ...sessao } = s;
       return { ...state, tutorial, sessao: { ...sessao, pedidos: [...sessao.pedidos, ...esperaTutorial] } };
+    }
+
+    // "Pular treino" no editor
+    case 'PULAR_TREINO': {
+      const p = state.sessao?.pedidos.find((x) => x.treino);
+      return p ? terminarTreino(state, p.id, 0) : state;
     }
 
     case 'CONFIG':
@@ -936,6 +954,15 @@ function reporGrupo(escritorio, membros, guardar) {
   const posicoes = Object.fromEntries(Object.entries(e.posicoes).filter(([n]) => !membros.includes(n)));
   const guardadosDentro = Object.fromEntries(Object.entries(e.guardadosDentro ?? {}).filter(([n]) => !membros.includes(n)));
   return { ...e, posicoes, guardados: e.guardados.filter((g) => !membros.includes(g)), guardadosDentro };
+}
+
+// Fim do pedido de treino (entregue, pulado ou recusado): ele sai da sessão (não conta na média do
+// dia, na coleção, nas estatísticas nem nas conquistas), paga `valor` e os pedidos retidos chegam
+function terminarTreino(state, id, valor = 0) {
+  const { esperaTutorial = [], ...s } = state.sessao;
+  const pedidos = [...s.pedidos.filter((p) => p.id !== id), ...esperaTutorial];
+  const sessao = { ...s, pedidos, ganho: s.ganho + valor, ativo: s.ativo === id ? null : s.ativo };
+  return { ...state, dinheiro: state.dinheiro + valor, sessao, diagramas: semDiagrama(state.diagramas, id) };
 }
 
 // Tira os diagramas do pedido (o único dele ou, no JUMBO, um por aba: pedido:<id>:<secao>)

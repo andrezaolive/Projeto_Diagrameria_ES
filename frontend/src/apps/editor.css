@@ -213,3 +213,21 @@
 .clode-fala::after { content: ''; position: absolute; right: -19px; bottom: 10px; border: 8px solid transparent; border-left-color: var(--c-ink); }
 .clode-fala b { font-family: var(--f-titulo); font-size: 10px; }
 @keyframes clode-fala { from { transform: translateY(6px); opacity: 0; } }
+
+/* pedido de treino do tutorial (data/treino.js): cartão do passo na coluna dos requisitos, embaixo
+   do e-mail, e destaque pulsando no que o passo pede */
+.relogio-pedido.treino { background: var(--c-mint); }
+.treino-cartao {
+  flex: none; box-sizing: border-box; padding: 8px 8px 8px; font-size: 18px; line-height: 1.05; color: var(--c-ink);
+  background: var(--c-butter); border: var(--px) solid var(--c-ink); box-shadow: 4px 4px 0 var(--sombra-texto);
+}
+.treino-cartao p { margin: 0 0 8px; animation: treino-passo 0.25s steps(3) both; }
+.treino-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.treino-topo .tutorial-mascote { width: 50px; height: 50px; }
+.treino-topo b { display: flex; flex-direction: column; gap: 4px; font-family: var(--f-titulo); font-size: 12px; color: var(--c-grape); }
+.treino-topo small { font-size: 8px; color: var(--c-plum); }
+.treino-cartao .px-btn { display: block; margin-left: auto; }
+.treino-alvo { position: relative; outline: var(--px) dashed var(--c-butter); outline-offset: 2px; animation: treino-pulsa 1s steps(2) infinite; z-index: 2; }
+@keyframes treino-pulsa { 50% { outline-color: var(--c-rose); } }
+@keyframes treino-passo { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .treino-alvo, .treino-cartao p { animation: none; } }

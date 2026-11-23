@@ -1,5 +1,6 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import LogoEmpresa from '../components/LogoEmpresa.jsx';
+import TextoPedido from '../components/TextoPedido.jsx';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Botao, formatarReais } from '../components/ui.jsx';
 import roboClode from '../assets/ui/clode-robo-16.png';
@@ -14,6 +15,8 @@ import { chaveDaParte, chaveDiagrama, diagramaDe, pedidosAceitos, precoDoClode }
 import { formatarTempo } from '../screens/Computador.jsx';
 import { sfx } from '../lib/sfx.js';
 import { LINHA_MEMBRO, SIMBOLO, TOPO_CLASSE, VIS_PADRAO, VISIBILIDADES, alinharVisibilidades, medidasClasse, proximaVisibilidade, separarMembro } from '../lib/membros.js';
+import { passoDoTreino, treinoPorId } from '../data/treino.js';
+import { MascoteFalando } from '../screens/Tutorial.jsx';
 import './editor.css';
 
 const HIST_JUNTAR = 600; // ms: mudanças mais próximas que isso viram um passo só no desfazer
@@ -459,6 +462,14 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   // caso de uso fora do sistema / ator dentro dele (só confere quando há um sistema desenhado)
   const alertas = Object.fromEntries(foraDoLugar(diagrama.nodes).map((x) => [x.id, x.problema]));
 
+  // pedido de treino do tutorial (data/treino.js): o cartão diz o passo atual e o que ele pede
+  // (elemento/relação da paleta, aba, campo do rótulo ou o Entregar) ganha o destaque `treino-alvo`
+  const treino = pedido?.treino ? treinoPorId(pedido.modelo) : null;
+  const passoTreino = treino ? passoDoTreino(treino, diagrama, secao) : null;
+  const alvoTreino = passoTreino?.alvo ?? {};
+  const marca = (sim) => (sim ? 'treino-alvo' : '');
+  const falaTreino = useMemo(() => [passoTreino?.texto ?? ''], [passoTreino?.texto]);
+
   const nomeFerramenta = ferramenta && [...ELEMENTOS, ...RELACOES].find((x) => x.tipo === ferramenta.tipo).nome;
   const ajuda = escrevendo
     ? 'Escrevendo na classe: escolha - privado, + público ou # protegido nos botões ao lado · Enter cria nova linha · Esc termina'
@@ -498,20 +509,40 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
         )}
         {pedido ? (
           <>
+            {treino ? (
+              <div className="etiqueta relogio-pedido treino">TREINO: sem prazo</div>
+            ) : (
             <div className={`etiqueta relogio-pedido ${pedido.tempoRestante <= 30 || pedido.urgente ? 'urgente' : ''}`}>
               <img src={iRelogio} alt="" className="pixel" /> {formatarTempo(pedido.tempoRestante)}
               {pedido.urgente && <b className="tag-urgente">URGENTE</b>}
               {jumbo && <b className="tag-jumbo">JUMBO</b>}
               {ehComplexo(modelo) && <b className="tag-jumbo tag-complexo">COMPLEXO</b>}
             </div>
+            )}
             <h4 className="cliente-pedido"><LogoEmpresa nome={pedido.cliente} tamanho={32} />{pedido.cliente}</h4>
             <div className="assunto">{pedido.assunto}</div>
             <div className="lista rolagem">
-              {modelo.corpo.map((l, i) => <p key={i}>{l}</p>)}
+              {modelo.corpo.map((l, i) => <p key={i}><TextoPedido texto={l} /></p>)}
             </div>
-            {pedido.tempoRestante === 0 && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
-            <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>
-            <Botao variante="rosa" som="" onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
+            {pedido.tempoRestante === 0 && !treino && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
+            {/* treino: o passo a passo fica aqui, embaixo do e-mail (fora da área de montagem) */}
+            {passoTreino && (
+              <div className="treino-cartao" role="status" aria-live="polite">
+                <div className="treino-topo">
+                  <MascoteFalando key={passoTreino.texto} texto={falaTreino} />
+                  <b>
+                    TREINO
+                    <small>passo {passoTreino.n} de {passoTreino.total}</small>
+                  </b>
+                </div>
+                <p key={passoTreino.texto}>{passoTreino.texto}</p>
+                <Botao tamanho="pequeno" variante="claro" som="voltar" onClick={() => dispatch({ type: 'PULAR_TREINO' })} title="Os pedidos de verdade chegam na hora">
+                  Pular treino
+                </Botao>
+              </div>
+            )}
+            {!treino && <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>}
+            <Botao variante="rosa" som="" className={marca(alvoTreino.entregar)} onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
               Entregar
             </Botao>
           </>
@@ -528,7 +559,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
       <div className="editor-centro">
         <div className="editor-barra">
           {transicao ? (
-            <label className="rotulo">
+            <label className={`rotulo ${marca(alvoTreino.rotulo)}`}>
               Evento
               <input
                 ref={eventoRef}
@@ -552,7 +583,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
               ))}
             </div>
           ) : (
-          <label className="rotulo">
+          <label className={`rotulo ${marca(alvoTreino.rotulo)}`}>
             Rótulo
             <input
               ref={rotuloRef}
@@ -660,7 +691,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
               key={s.id}
               role="tab"
               aria-selected={secao === s.id}
-              className={`secao-paleta ${secao === s.id ? 'ativa' : ''}`}
+              className={`secao-paleta ${secao === s.id ? 'ativa' : ''} ${marca(alvoTreino.secao === s.id)}`}
               onClick={() => trocarSecao(s.id)}
               title={`Diagrama de ${s.nome.toLowerCase()}`}
             >
@@ -676,7 +707,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
         {secaoAtual.elementos.map((t) => ELEMENTOS.find((el) => el.tipo === t)).map((el) => (
           <button
             key={el.tipo}
-            className={`item-paleta ${ferramenta?.tipo === el.tipo ? 'ativo' : ''}`}
+            className={`item-paleta ${ferramenta?.tipo === el.tipo ? 'ativo' : ''} ${marca(alvoTreino.paleta === el.tipo)}`}
             onPointerDown={(e) => pegarDaPaleta(e, 'elemento', el.tipo)}
             title={`Arraste ou clique: ${el.nome}`}
           >
@@ -688,7 +719,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
         {secaoAtual.relacoes.map((t) => RELACOES.find((r) => r.tipo === t)).map((r) => (
           <button
             key={r.tipo}
-            className={`item-paleta ${ferramenta?.tipo === r.tipo ? 'ativo' : ''}`}
+            className={`item-paleta ${ferramenta?.tipo === r.tipo ? 'ativo' : ''} ${marca(alvoTreino.paleta === r.tipo)}`}
             onPointerDown={(e) => pegarDaPaleta(e, 'relacao', r.tipo)}
             title={`Clique e depois ligue dois elementos: ${r.nome}`}
           >

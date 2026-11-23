@@ -2,6 +2,7 @@ import { composicaoDoDia, composicaoDoFimDeSemana, nivelDoModelo } from '../lib/
 import { tipoDoDiagrama } from '../lib/categorias.js';
 import { c, e, n, t } from './gabarito.js';
 import { COMPLEXOS } from './complexos.js';
+import { TREINOS } from './treino.js';
 // Modelos de pedidos recebidos por e-mail. "esperado" é o diagrama-gabarito usado na avaliação.
 // Coordenadas do gabarito já estão no grid (múltiplos de 20).
 
@@ -2163,7 +2164,8 @@ export const JUMBOS = [
 // Todos os modelos que chegam por e-mail (normais + JUMBO + complexos). Urgentes saem só de MODELOS.
 export const TODOS_MODELOS = [...MODELOS, ...JUMBOS, ...COMPLEXOS];
 export { COMPLEXOS };
-export const modeloPorId = (id) => TODOS_MODELOS.find((m) => m.id === id);
+// (o pedido de treino do tutorial, data/treino.js, não chega por e-mail, mas também tem modelo)
+export const modeloPorId = (id) => TODOS_MODELOS.find((m) => m.id === id) ?? TREINOS.find((m) => m.id === id);
 export const ehJumbo = (modelo) => Boolean(modelo?.partes);
 // Pedido complexo (data/complexos.js): só nos fins de semana da campanha e no modo infinito
 export const ehComplexo = (modelo) => Boolean(modelo?.complexo);

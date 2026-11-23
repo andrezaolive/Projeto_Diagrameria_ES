@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import TextoPedido from '../components/TextoPedido.jsx';
 import { Botao } from '../components/ui.jsx';
 import { DiagramaEstatico, IconePaleta } from '../editor/Formas.jsx';
 import { SECOES_GUIA } from '../data/guia.js';
@@ -49,7 +50,7 @@ export default function Guia({ onTutorial }) {
         <div className="guia-exemplo">
           <blockquote className="guia-email">
             <span className="guia-de">De: {s.pedido.cliente}</span>
-            {s.pedido.corpo.map((l) => <p key={l}>{l}</p>)}
+            {s.pedido.corpo.map((l) => <p key={l}><TextoPedido texto={l} /></p>)}
           </blockquote>
           <figure className="guia-diagrama">
             <DiagramaEstatico diagrama={s.diagrama} prefixo={`guia-${s.id}`} />

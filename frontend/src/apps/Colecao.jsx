@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import TextoPedido from '../components/TextoPedido.jsx';
 import cadeado from '../assets/ui/icon-cadeado-16.png';
 import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import Medalha from '../components/Medalha.jsx';
@@ -109,7 +110,7 @@ export default function Colecao() {
                 Melhor nota: <b>{colecao[sel.id].melhorNota}%</b> · {medalhaDaNota(colecao[sel.id].melhorNota).nome} · entregue {colecao[sel.id].entregas}×
               </p>
               <div className="colecao-resumo rolagem">
-                {sel.corpo.map((l, i) => <p key={i}>{l}</p>)}
+                {sel.corpo.map((l, i) => <p key={i}><TextoPedido texto={l} /></p>)}
               </div>
             </>
           ) : (

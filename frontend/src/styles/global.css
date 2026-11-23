@@ -209,10 +209,17 @@ button { font: inherit; color: inherit; }
 }
 
 /* ---------------------------------------------------------------- modal */
+/* fundo escurecido das janelas modais: só ele surge aos poucos (::before). Antes a animação de opacidade
+   valia para a janela também, e em placa de vídeo fraca ela ficava transparente por cima das outras */
 .modal-fundo {
   position: absolute;
   inset: 0;
   z-index: 900;
+}
+.modal-fundo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: rgba(30, 26, 46, 0.6);
   background-image: radial-gradient(rgba(30, 26, 46, 0.4) 1px, transparent 1px);
   background-size: 4px 4px;
@@ -346,3 +353,6 @@ button { font: inherit; color: inherit; }
 .erro-caixa p { margin: 0; font-size: 22px; }
 .erro-caixa pre { margin: 0; max-height: 46vh; overflow: auto; padding: 10px; font-size: 16px; white-space: pre-wrap; background: var(--c-mist); border: 3px solid var(--c-ink); }
 .erro-botoes { display: flex; justify-content: flex-end; gap: 12px; }
+
+/* nomes dos pedidos em negrito (opção "Nomes" das Configurações, components/TextoPedido.jsx) */
+.nome-pedido { font-weight: 700; color: var(--c-ink); }

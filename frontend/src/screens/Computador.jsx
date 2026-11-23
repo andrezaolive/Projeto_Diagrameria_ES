@@ -146,8 +146,12 @@ export default function Computador({ desligando, onDesligar, onEntregue, pedidoF
   // primeira vez no computador: tutorial antes do primeiro pedido (que chega com o pop-up no canto);
   // também volta pelo botão "Tutorial" do Guia
   const tutorialAberto = (!state.tutorial?.visto || revendoTutorial) && !desligando;
-  const concluirTutorial = () => {
-    if (!state.tutorial?.visto) dispatch({ type: 'CONCLUIR_TUTORIAL' });
+  // primeira vez: "Vamos nessa!" segue para o pedido de treino no editor; "Pular" pula ele também
+  const concluirTutorial = ({ pular = false } = {}) => {
+    if (!state.tutorial?.visto) {
+      dispatch({ type: 'CONCLUIR_TUTORIAL', treino: !pular, sorteio: Math.random() });
+      if (!pular) abrir('editor');
+    }
     onRevendoTutorial?.(false);
   };
 

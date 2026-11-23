@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import TextoPedido from '../components/TextoPedido.jsx';
 import { Botao } from '../components/ui.jsx';
 import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import { useGame } from '../state/GameContext.jsx';
@@ -238,7 +239,7 @@ export default function Email({ abrirApp, foco }) {
           </header>
           <div className="corpo rolagem">
             {sel.urgente && <p className="aviso-urgente">É URGENTE! Pago a mais, mas preciso do diagrama em {formatarTempo(sel.tempo)}.</p>}
-            {(sel.retorno?.texto ?? modelo.corpo).map((l, i) => <p key={i}>{l}</p>)}
+            {(sel.retorno?.texto ?? modelo.corpo).map((l, i) => <p key={i}><TextoPedido texto={l} /></p>)}
             {sel.retorno?.tipo !== 'ambiguo' && <p className="assinatura">Atenciosamente,<br />{sel.cliente}</p>}
           </div>
           <footer>

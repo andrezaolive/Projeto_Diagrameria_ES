@@ -4,9 +4,10 @@
   inset: 0;
   /* centro da tela do monitor: (160, 74) px de arte × 4 */
   transform-origin: 640px 296px;
-  transition: transform 0.75s cubic-bezier(0.6, 0, 0.4, 1), filter 0.75s;
+  /* só transform: um filter (brilho) nesta camada ampliada 5× pesava demais em placa de vídeo fraca */
+  transition: transform 0.75s cubic-bezier(0.6, 0, 0.4, 1);
 }
-.camada-escritorio.zoom { transform: translate(0, 64px) scale(5); filter: brightness(1.4); }
+.camada-escritorio.zoom { transform: translate(0, 64px) scale(5); }
 .escritorio { position: absolute; inset: 0; }
 .tela-brilho {
   position: absolute;

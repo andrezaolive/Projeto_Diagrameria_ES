@@ -17,7 +17,8 @@ const CARTAO_W = 470;
 const QUADRO_FALA_MS = 160;
 const duracaoDaFala = (texto) => Math.min(3200, 500 + texto.join(' ').length * 12);
 
-function MascoteFalando({ texto }) {
+// (também no cartão do pedido de treino, em apps/Editor.jsx)
+export function MascoteFalando({ texto }) {
   const [boca, setBoca] = useState(true);
   const [falando, setFalando] = useState(true);
   useSpritesAtualizados(); // PNG do mascote editado (npm run dev): desenha de novo
@@ -34,6 +35,9 @@ function MascoteFalando({ texto }) {
 }
 
 // `revendo`: aberto de novo pelo Guia (os pedidos já estão chegando; o relógio fica parado)
+// primeira vez: o tutorial continua no editor, com um pedido de treino (data/treino.js)
+const TEXTO_TREINO = 'Antes do primeiro cliente, vamos treinar: vou abrir o editor com um pedido bem simples e te mostrar cada passo.';
+
 export const passosDoTutorial = (nome, modo, revendo = false) => [
   {
     titulo: 'BEM-VINDO(A)!',
@@ -89,11 +93,11 @@ export const passosDoTutorial = (nome, modo, revendo = false) => [
       modo === 'campanha'
         ? [
             `No fim do dia, a média dos pedidos precisa ser de pelo menos ${MEDIA_MINIMA}% para liberar o dia seguinte. E o aluguel vence todo dia, então capriche!`,
-            revendo ? 'Pedido novo chega com um aviso no canto da tela: clique nele para abrir o pedido. Esc pausa o jogo.' : 'Seu primeiro cliente já vai escrever: clique no aviso que aparecer no canto da tela para abrir o pedido. Esc pausa o jogo.',
+            revendo ? 'Pedido novo chega com um aviso no canto da tela: clique nele para abrir o pedido. Esc pausa o jogo.' : TEXTO_TREINO,
           ]
         : [
             `No modo infinito os pedidos não param de chegar: entregue o máximo que conseguir, com até ${MAX_ACEITOS_INFINITO} em andamento ao mesmo tempo. Cliente que vai embora ou entrega atrasada custam um dos ${VIDAS_INFINITO} corações.`,
-            revendo ? 'Pedido novo chega com um aviso no canto da tela: clique nele para abrir o pedido. Esc pausa o jogo.' : 'Seus primeiros clientes já vão escrever: clique no aviso que aparecer no canto da tela para abrir o pedido. Esc pausa o jogo.',
+            revendo ? 'Pedido novo chega com um aviso no canto da tela: clique nele para abrir o pedido. Esc pausa o jogo.' : TEXTO_TREINO,
           ],
   },
 ];
@@ -128,7 +132,7 @@ export default function Tutorial({ nome, modo, posicoes, onConcluir, revendo = f
     const tecla = (e) => {
       if (e.key === 'ArrowRight' || e.key === 'Enter') {
         e.preventDefault();
-        ultimo ? onConcluir() : setI(i + 1);
+        ultimo ? onConcluir({}) : setI(i + 1);
       } else if (e.key === 'ArrowLeft' && i > 0) setI(i - 1);
     };
     window.addEventListener('keydown', tecla);
@@ -151,7 +155,7 @@ export default function Tutorial({ nome, modo, posicoes, onConcluir, revendo = f
             {i + 1}/{passos.length}
           </span>
           {!ultimo && (
-            <Botao tamanho="pequeno" variante="claro" som="voltar" onClick={onConcluir}>
+            <Botao tamanho="pequeno" variante="claro" som="voltar" onClick={() => onConcluir({ pular: true })}>
               Pular
             </Botao>
           )}
@@ -160,7 +164,7 @@ export default function Tutorial({ nome, modo, posicoes, onConcluir, revendo = f
               Voltar
             </Botao>
           )}
-          <Botao tamanho="pequeno" variante={ultimo ? 'rosa' : 'menta'} onClick={() => (ultimo ? onConcluir() : setI(i + 1))} autoFocus>
+          <Botao tamanho="pequeno" variante={ultimo ? 'rosa' : 'menta'} onClick={() => (ultimo ? onConcluir({}) : setI(i + 1))} autoFocus>
             {/* (sem Ó/Ç: a fonte dos botões não tem essas maiúsculas) */}
             {ultimo ? 'Vamos nessa!' : 'Seguir'}
           </Botao>

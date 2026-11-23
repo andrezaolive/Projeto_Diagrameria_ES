@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { partesComAspas } from '../components/TextoPedido.jsx';
 import { DIAS_CAMPANHA, MAX_HISTORICO, NIVEIS_INTERFACE, estadoInicial, migrar, reducer } from '../state/reducer.js';
 import { reacaoMascote } from './mascote.js';
 import { existsSync } from 'node:fs';
@@ -192,8 +193,15 @@ describe('gráficos das estatísticas e nível da interface', () => {
   });
 
   it('save antigo com interface numérica vira "auto"', () => {
-    expect(migrar({ config: { musica: 10, efeitos: 20, interface: 70 } }).config).toEqual({ musica: 10, efeitos: 20, interface: 'auto', vhsAtivo: false, vhsIntensidade: 50 });
+    expect(migrar({ config: { musica: 10, efeitos: 20, interface: 70 } }).config).toEqual({ musica: 10, efeitos: 20, interface: 'auto', vhsAtivo: false, vhsIntensidade: 50, nomesNegrito: false });
     expect(migrar({ config: { interface: 'grande' } }).config.interface).toBe('grande');
     expect(NIVEIS_INTERFACE).toEqual(['reduzido', 'auto', 'grande']);
+  });
+});
+
+describe('nomes dos pedidos em negrito', () => {
+  it('separa o que está entre aspas (índices ímpares)', () => {
+    expect(partesComAspas('O "Leitor" usa o sistema para "Pegar livro".')).toEqual(['O ', 'Leitor', ' usa o sistema para ', 'Pegar livro', '.']);
+    expect(partesComAspas('sem aspas')).toEqual(['sem aspas']);
   });
 });
