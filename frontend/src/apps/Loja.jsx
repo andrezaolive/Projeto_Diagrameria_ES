@@ -1,3 +1,4 @@
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import { useEffect, useState } from 'react';
 import { Botao, Dinheiro } from '../components/ui.jsx';
 import { ITENS_LOJA } from '../data/loja.js';
@@ -138,6 +139,7 @@ function Musicas({ possui, dinheiro, sessao, onComprar }) {
 
 export default function Loja() {
   const { state, dispatch } = useGame();
+  useSpritesAtualizados(); // PNG de objeto ou cápsula editado (npm run dev): desenha de novo
   const [aba, setAba] = useState('fundo');
   const [parte, setParte] = useState('cabelo');
   const { possui, fundo, moveis } = state.loja;

@@ -348,8 +348,8 @@
 
 /* ---------------------------------------------------------- café: aba da loja e janela da cafeteira */
 .capsula-info { font-size: 18px; color: var(--c-grape); text-align: center; }
-.cafeteira { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; }
-.cafeteira-botoes { display: flex; gap: 16px; }
+.cafeteira { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; text-align: center; }
+.cafeteira-botoes { display: flex; justify-content: center; gap: 16px; }
 .capsula-btn {
   display: flex;
   flex-direction: column;
@@ -387,7 +387,6 @@
 .cafeteira-status.preparando { background: var(--c-peach); }
 .cafeteira-status.pronto { background: var(--c-mint); }
 .cafeteira-efeito { margin: 0; font-size: 20px; color: var(--c-plum); }
-.cafeteira .aviso-loja { align-self: stretch; border: 3px solid var(--c-ink); }
 
 /* ---------------------------------------------------------- pedido JUMBO (dois diagramas de uma vez) */
 .tag-jumbo {

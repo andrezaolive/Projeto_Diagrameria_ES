@@ -67,6 +67,7 @@ function eventos(antes, depois, action) {
         tempo: p.tempo ?? 0,
         restante: p.tempoRestante ?? 0,
         pedacos: (p.pedacos ?? []).length,
+        clode: (p.clode ?? 0) > 0, // usou o Clode: não vale para as conquistas de 100% e de sem dica (SEM_CLODE)
         modo: sa.modo,
         erros: action.erros ?? {},
         cafe: antes.cafe.efeito?.tipo ?? null,
@@ -154,7 +155,7 @@ function atualizarMarcos(antes, depois, action, ev) {
   // pedido entregue
   const e = ev.entrega;
   if (e) {
-    m.seqCem = e.nota >= 100 ? m.seqCem + 1 : 0;
+    m.seqCem = e.nota >= 100 && !e.clode ? m.seqCem + 1 : 0; // 100% com o Clode não conta (e quebra a sequência)
     if (e.modo === 'infinito') {
       m.infinitoEntregues += 1;
       m.infinitoSeguidos = e.nota >= 90 ? m.infinitoSeguidos + 1 : 0;
@@ -209,7 +210,7 @@ const musicasPagas = FAIXAS_JOGO.filter((f) => f.preco > 0);
 export const REGRAS = {
   'primeiro-pedido': { cond: (s) => s.estatisticas.entregues >= 1 },
   'primeiro-expediente': { cond: (s) => Boolean(s.campanha.concluidos[1]) },
-  carimbo: { cond: (s, ev) => ev.entrega?.nota >= 100 },
+  carimbo: { cond: (s, ev) => ev.entrega?.nota >= 100 && !ev.entrega.clode },
   'fregues-fiel': { cond: (s) => Object.values(s.colecao ?? {}).some((c) => c.entregas >= 2) },
   cafezinho: { cond: (s) => s.marcos.cafes >= 1 },
 
@@ -228,12 +229,12 @@ export const REGRAS = {
       const f = ev.fimDia;
       if (!f) return false;
       const normais = pedidosNormais(f.sessao);
-      return normais.length >= 4 && normais.every((p) => p.status === 'entregue' && p.nota >= 100);
+      return normais.length >= 4 && normais.every((p) => p.status === 'entregue' && p.nota >= 100 && !p.clode);
     },
   },
-  'na-raca': { cond: (s, ev) => ev.entrega?.nivel === 'dificil' && ev.entrega.nota >= 100 && ev.entrega.pedacos === 0 },
+  'na-raca': { cond: (s, ev) => ev.entrega?.nivel === 'dificil' && ev.entrega.nota >= 100 && ev.entrega.pedacos === 0 && !ev.entrega.clode },
   'semana-dourada': { cond: (s) => SEMANAS.some((dias) => dias.length && dias.every((d) => s.campanha.concluidos[d]?.media >= OURO)) },
-  'arquiteto-senior': { cond: (s, ev) => Boolean(ev.entrega?.complexo) && ev.entrega.nivel === 'dificil' && ev.entrega.nota >= 90 && ev.entrega.pedacos === 0 },
+  'arquiteto-senior': { cond: (s, ev) => Boolean(ev.entrega?.complexo) && ev.entrega.nivel === 'dificil' && ev.entrega.nota >= 90 && ev.entrega.pedacos === 0 && !ev.entrega.clode },
   'calendario-reluzente': { cond: (s) => golds(s) >= DIAS_CAMPANHA, progresso: golds },
 
   pontualidade: {
@@ -258,7 +259,7 @@ export const REGRAS = {
   'poliglota-uml': { cond: (s) => ['casos', 'classes', 'estados'].every((t) => (s.estatisticas.porTipo[t]?.n ?? 0) >= 10 && media(s.estatisticas.porTipo[t]) >= 90) },
 
   'hora-extra': { cond: (s) => Object.keys(s.campanha.fimDeSemana ?? {}).length >= 1 },
-  'quebra-cabeca': { cond: (s, ev) => Boolean(ev.entrega?.complexo) && ev.entrega.nota >= 90 && ev.entrega.pedacos <= 4 },
+  'quebra-cabeca': { cond: (s, ev) => Boolean(ev.entrega?.complexo) && ev.entrega.nota >= 90 && ev.entrega.pedacos <= 4 && !ev.entrega.clode },
   'sem-folga': {
     cond: (s) => FINS_DE_SEMANA.every((d) => s.campanha.fimDeSemana?.[d]),
     progresso: (s) => FINS_DE_SEMANA.filter((d) => s.campanha.fimDeSemana?.[d]).length,
@@ -267,7 +268,7 @@ export const REGRAS = {
 
   'primeiro-salario': { cond: (s) => s.dinheiro >= 1000, progresso: (s) => Math.max(0, s.dinheiro) },
   'aluguel-em-dia': { cond: (s) => s.marcos.saldoSeguido >= 10, progresso: (s) => s.marcos.saldoSeguido },
-  'pao-duro': { cond: (s, ev) => Boolean(ev.fimDia) && ev.fimDia.relatorio.media >= OURO && diaPuxado(ev.fimDia.sessao) && !ev.fimDia.sessao.pedidos.some((p) => (p.pedacos ?? []).length) },
+  'pao-duro': { cond: (s, ev) => Boolean(ev.fimDia) && ev.fimDia.relatorio.media >= OURO && diaPuxado(ev.fimDia.sessao) && !ev.fimDia.sessao.pedidos.some((p) => (p.pedacos ?? []).length || p.clode) },
   'pe-de-meia': { cond: (s) => s.dinheiro >= 10000, progresso: (s) => Math.max(0, s.dinheiro) },
   'cliente-vip': { cond: (s) => loja.every((i) => s.loja.possui.includes(i.id)), progresso: (s) => loja.filter((i) => s.loja.possui.includes(i.id)).length, meta: loja.length },
 
@@ -308,7 +309,7 @@ export const REGRAS = {
   organizador: { cond: (s) => s.marcos.movidos >= 100, progresso: (s) => s.marcos.movidos },
   'por-um-fio': { cond: (s, ev) => Boolean(ev.entrega) && !ev.entrega.atrasado && ev.entrega.restante <= 3 },
   'torre-de-pisa': { cond: (s) => s.marcos.maiorPilha >= 3 },
-  placebo: { cond: (s, ev) => ev.entrega?.cafe === 'descafeinado' && ev.entrega.nota >= 100 },
+  placebo: { cond: (s, ev) => ev.entrega?.cafe === 'descafeinado' && ev.entrega.nota >= 100 && !ev.entrega.clode },
   investidor: { cond: (s) => (s.marcos.dicasPedido?.total ?? 0) > 1000 },
 
   mestre: {

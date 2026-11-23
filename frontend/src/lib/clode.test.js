@@ -81,17 +81,24 @@ describe('Clode no jogo (USAR_CLODE)', () => {
     const p = s.sessao.pedidos[0];
     s = reducer(s, { type: 'ACEITAR', id: p.id });
     const preco = precoDoClode(p, s.sessao);
-    const novo = { nodes: [{ id: 'a', tipo: 'ator', rotulo: 'X', x: 0, y: 0 }], edges: [] };
-    const depois = reducer(s, { type: 'USAR_CLODE', id: p.id, chave: 'pedido:' + p.id, diagrama: novo });
+    const depois = reducer(s, { type: 'USAR_CLODE', id: p.id, chave: 'pedido:' + p.id, n: 1 });
+    const novo = depois.diagramas['pedido:' + p.id];
+    expect(novo.nodes).toHaveLength(1); // o 1º elemento que faltava
+    expect(depois.sessao.falaClode).toMatchObject({ n: 1 });
     expect(depois.dinheiro).toBe(1000 - preco);
-    expect(depois.diagramas['pedido:' + p.id]).toEqual(novo);
     expect(depois.estatisticas.gastos.clode).toBe(preco);
     expect(depois.sessao.pedidos[0].clode).toBe(1);
     // o seguinte custa 10% a mais, também em outro pedido do mesmo dia
     expect(precoDoClode(depois.sessao.pedidos[0], depois.sessao)).toBe(Math.round(preco * 1.1));
     expect(precoDoClode({ ...p, id: 'outro' }, depois.sessao)).toBe(Math.round(preco * 1.1));
     expect(precoDoClode(p, { ...s.sessao, clode: { usos: 5, ultimo: 0 } })).toBe(Math.round(preco * 1.5));
-    expect(reducer({ ...s, dinheiro: preco - 1 }, { type: 'USAR_CLODE', id: p.id, chave: 'x', diagrama: novo }).dinheiro).toBe(preco - 1);
+    expect(reducer({ ...s, dinheiro: preco - 1 }, { type: 'USAR_CLODE', id: p.id, chave: 'x', n: 2 }).dinheiro).toBe(preco - 1);
+    // cliques seguidos: cada um faz a sua mudança e paga o seu preço
+    let r = { ...s, dinheiro: 100000 };
+    for (let k = 1; k <= 4; k++) r = reducer(r, { type: 'USAR_CLODE', id: p.id, chave: 'pedido:' + p.id, n: k });
+    expect(r.sessao.clode.usos).toBe(4);
+    expect(r.diagramas['pedido:' + p.id].nodes.length + r.diagramas['pedido:' + p.id].edges.length).toBeGreaterThanOrEqual(4);
+    expect(r.dinheiro).toBe(100000 - [0, 1, 2, 3].reduce((t, u) => t + Math.round(preco * (1 + 0.1 * u)), 0));
   });
 
   it('no modo infinito é bem mais barato', async () => {

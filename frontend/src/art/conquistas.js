@@ -39,6 +39,10 @@ const broche = (id, cat, rar, glifo, nome, desc, extra) => c(id, cat, rar, 'broc
 const medalha = (id, cat, glifo, nome, desc, extra) => c(id, cat, 'ouro', 'medalha', glifo, nome, desc, extra);
 const trofeu = (id, cat, rar, tamanho, glifo, nome, desc, extra) => c(id, cat, rar, 'trofeu', glifo, nome, desc, { tamanho, ...extra });
 
+// Conquistas de nota 100% ou de "sem dica": não contam se o jogador usou o Clode no pedido (ou, nas
+// do dia inteiro, em algum pedido do dia). A tela de conquistas avisa no detalhe delas.
+export const SEM_CLODE = new Set(['carimbo', 'sequencia-perfeita', 'sem-rabisco', 'na-raca', 'arquiteto-senior', 'quebra-cabeca', 'pao-duro', 'placebo']);
+
 export const CONQUISTAS = [
   // primeiros passos
   broche('primeiro-pedido', 'inicio', 'bronze', 'check', 'Primeiro Pedido', 'Entregue o seu primeiro pedido.'),

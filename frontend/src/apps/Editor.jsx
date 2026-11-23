@@ -3,7 +3,6 @@ import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
 import { Botao, formatarReais } from '../components/ui.jsx';
 import roboClode from '../assets/ui/clode-robo-16.png';
-import { acaoDoClode } from '../lib/clode.js';
 import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES } from '../editor/Formas.jsx';
 import { MULTIPLICIDADES, TEM_MULTIPLICIDADE } from '../lib/multiplicidade.js';
 import { REDIMENSIONAVEIS, TAMANHOS, TAMANHO_MINIMO, centro, contido, foraDoLugar, posicaoAoSoltar, redimensionar, retangulo, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
@@ -17,6 +16,8 @@ import { sfx } from '../lib/sfx.js';
 import { LINHA_MEMBRO, SIMBOLO, TOPO_CLASSE, VIS_PADRAO, VISIBILIDADES, alinharVisibilidades, medidasClasse, proximaVisibilidade, separarMembro } from '../lib/membros.js';
 import './editor.css';
 
+const HIST_JUNTAR = 600; // ms: mudanças mais próximas que isso viram um passo só no desfazer
+const HIST_MAX = 100;
 const novoId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
@@ -70,30 +71,59 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   viewRef.current = view;
   diagRef.current = diagrama;
 
-  const salvar = (d) => dispatch({ type: 'SET_DIAGRAMA', chave, diagrama: d });
+  // Histórico para desfazer/refazer (Ctrl+Z / Ctrl+Y), um por diagrama (`chave`: cada pedido e cada
+  // aba do JUMBO). Mudanças seguidas com menos de HIST_JUNTAR ms entre elas (arrastar, digitar o nome)
+  // viram um passo só: só a primeira guarda o diagrama de antes.
+  const historico = useRef({});
+  const hist = () => (historico.current[chave] ??= { passado: [], futuro: [], ultimo: 0 });
+  const lembrar = (agrupar = true) => {
+    const h = hist();
+    const agora = performance.now();
+    if ((!agrupar || agora - h.ultimo > HIST_JUNTAR) && h.passado.at(-1) !== diagRef.current) {
+      h.passado.push(diagRef.current);
+      if (h.passado.length > HIST_MAX) h.passado.shift();
+    }
+    h.ultimo = agrupar ? agora : 0;
+    h.futuro = [];
+  };
+  const salvar = (d) => {
+    lembrar();
+    dispatch({ type: 'SET_DIAGRAMA', chave, diagrama: d });
+  };
+  const voltarPara = (de, para) => {
+    const h = hist();
+    if (!h[de].length) return sfx.erro();
+    h[para].push(diagRef.current);
+    h.ultimo = 0;
+    dispatch({ type: 'SET_DIAGRAMA', chave, diagrama: h[de].pop() });
+    setSel(null);
+    setOrigem(null);
+    sfx.voltar();
+  };
+  const desfazer = () => voltarPara('passado', 'futuro');
+  const refazer = () => voltarPara('futuro', 'passado');
 
   // Clode (lib/clode.js): põe um elemento que falta ou corrige uma coisa, comparando com o gabarito do
-  // diagrama desta aba; sem nada a fazer, só avisa (e não cobra). A fala fica um tempo embaixo do botão.
+  // diagrama desta aba; sem nada a fazer, só avisa (e não cobra). O reducer calcula a ação (USAR_CLODE),
+  // então cliques seguidos funcionam um depois do outro; a fala vem de `sessao.falaClode` e fica uns 4 s.
+  const falaDoReducer = sessao?.falaClode;
   const [falaClode, setFalaClode] = useState(null);
+  const ultimaFala = useRef(falaDoReducer?.n);
   useEffect(() => {
-    if (!falaClode) return;
+    if (!falaDoReducer || falaDoReducer.n === ultimaFala.current) return;
+    ultimaFala.current = falaDoReducer.n;
+    if (falaDoReducer.nada) sfx.erro();
+    else sfx.moeda();
+    setFalaClode(falaDoReducer);
     const t = setTimeout(() => setFalaClode(null), 4500);
     return () => clearTimeout(t);
-  }, [falaClode]);
+  }, [falaDoReducer]);
   useEffect(() => setFalaClode(null), [pedido?.id, secao]);
   const precoClode = pedido ? precoDoClode(pedido, sessao) : 0;
   const usarClode = () => {
-    const esperado = jumbo ? modelo.partes.find((p) => p.secao === secao)?.esperado : modelo.esperado;
-    const a = acaoDoClode(diagRef.current, esperado);
-    if (a.tipo === 'nada') {
-      sfx.erro();
-      return setFalaClode({ n: Date.now(), texto: 'Nada a ser feito.', nada: true });
-    }
-    if (state.dinheiro < precoClode) return sfx.erro();
-    sfx.moeda();
-    dispatch({ type: 'USAR_CLODE', id: pedido.id, chave, diagrama: a.diagrama });
+    lembrar(false); // o que o Clode fez também se desfaz (o dinheiro não volta)
+    dispatch({ type: 'USAR_CLODE', id: pedido.id, chave, secao, n: Date.now() + Math.random() });
     setSel(null);
-    setFalaClode({ n: Date.now(), texto: a.texto });
   };
 
   // Coordenadas do ponteiro dentro da área (desfaz a escala do palco)
@@ -120,6 +150,17 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
     setSel({ tipo: 'node', id: node.id });
     sfx.soltar();
     setTimeout(() => rotuloRef.current?.select(), 0);
+  };
+
+  // Ctrl+D: cópia do elemento selecionado, um pouco para baixo e para a direita (vira a seleção)
+  const duplicar = () => {
+    const d = diagRef.current;
+    const n = sel?.tipo === 'node' && d.nodes.find((x) => x.id === sel.id);
+    if (!n) return sfx.erro();
+    const copia = { ...n, id: novoId(), x: snap(n.x + 40), y: snap(n.y + 40) };
+    salvar({ ...d, nodes: [...d.nodes, copia] });
+    setSel({ tipo: 'node', id: copia.id });
+    sfx.soltar();
   };
 
   const ligar = (de, para) => {
@@ -340,6 +381,13 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
         return;
       }
       const digitando = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      // Ctrl+Z desfaz, Ctrl+Y (ou Ctrl+Shift+Z) refaz, Ctrl+D duplica o elemento selecionado
+      if (e.ctrlKey || e.metaKey) {
+        const k = e.key.toLowerCase();
+        if (k === 'z' && !e.shiftKey) return void (e.preventDefault(), desfazer());
+        if (k === 'y' || (k === 'z' && e.shiftKey)) return void (e.preventDefault(), refazer());
+        if (k === 'd') return void (e.preventDefault(), duplicar()); // (sem abrir o "favoritar" do navegador)
+      }
       if (e.key === 'Escape' && (ferramenta || origem || sel)) {
         e.preventDefault(); // impede que o ESC abra a pausa
         setFerramenta(null);
@@ -419,7 +467,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
     : !ferramenta && selNode?.tipo === 'sistema'
     ? 'Sistema: puxe as setinhas no meio dos lados para redimensionar · casos de uso ficam dentro, atores fora · arrastar move tudo junto'
     : !ferramenta
-    ? 'Arraste um item da paleta para a área · arraste o fundo para mover · roda do mouse = zoom · Del apaga'
+    ? 'Arraste da paleta · fundo move · roda = zoom · Del apaga · Ctrl+Z desfaz · Ctrl+Y refaz · Ctrl+D duplica'
     : ferramenta.categoria === 'elemento'
       ? `Clique numa área vazia para colocar: ${nomeFerramenta} (Shift mantém a ferramenta · Esc cancela)`
       : origem
@@ -548,6 +596,9 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
           onPointerUp={onUp}
           onPointerLeave={() => !arraste.current && setFantasma(null)}
           onDoubleClick={(e) => {
+            // o 1º clique já abriu a escrita na classe e o 2º caiu no campo: o navegador manda o duplo
+            // clique para a área; não pode tirar o foco do campo (ia para o "Rótulo" da barra)
+            if (escrevendo || e.target.closest('.escrita-classe, .vis-botao')) return;
             const id = e.target.closest('[data-node]')?.dataset.node;
             if (id && escreverNaClasse(id, mundo(e).y)) return;
             if (sel?.tipo === 'node') rotuloRef.current?.select();
@@ -655,13 +706,13 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
                 onClick={usarClode}
                 disabled={state.dinheiro < precoClode}
                 aria-label={`Clode: usar por ${formatarReais(precoClode)}`}
-                title={state.dinheiro < precoClode ? 'Dinheiro insuficiente para o Clode' : 'Clode: põe um elemento pronto ou corrige uma coisa'}
+                title={state.dinheiro < precoClode ? 'Dinheiro insuficiente para o Clode' : 'Compre um elemento pronto ou corrija algo no seu diagrama'}
               >
                 <img src={roboClode} alt="" className="pixel" width={48} height={48} draggable={false} />
               </button>
               <span className="clode-texto">
                 <strong>Clode</strong>
-                <small>Compra um elemento pronto ou corrige uma coisa no diagrama.</small>
+                <small>Compre um elemento pronto ou corrija algo no seu diagrama.</small>
               </span>
             </div>
             <span className="clode-preco">preço: {formatarReais(precoClode)}</span>
@@ -679,7 +730,7 @@ function EscritaNaClasse({ classe, campo, view, onMudar, onFim }) {
   const multilinha = campo !== 'rotulo';
   const padrao = VIS_PADRAO[campo] ?? '-';
   // membros: o texto fica sem o símbolo; a visibilidade de cada linha é escolhida nos botões
-  const inicio = (classe[campo] ?? []).map(separarMembro);
+  const inicio = multilinha ? (classe[campo] ?? []).map(separarMembro) : []; // (no nome, `classe.rotulo` é texto, não lista)
   const [texto, setTexto] = useState(multilinha ? inicio.map((m) => m.corpo).join('\n') : classe.rotulo ?? '');
   const [vis, setVis] = useState(inicio.map((m) => m.vis || padrao));
   const campoRef = useRef(null);

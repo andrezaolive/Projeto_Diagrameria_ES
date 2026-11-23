@@ -290,3 +290,13 @@ describe('botões de debug do painel Dev', () => {
     expect(s.avisosConquista.at(-1).id).toBe('semana-dourada');
   });
 });
+
+describe('dia sem nenhuma entrega', () => {
+  it('recusar todos os pedidos deixa o desempenho em 0% (com uma entrega, recusado vale 10%)', () => {
+    const r = (status, extra = {}) => ({ status, ...extra });
+    expect(desempenhoDoDia([r('recusado'), r('recusado'), r('recusado')])).toBe(0);
+    expect(desempenhoDoDia([r('recusado'), r('expirado')])).toBe(0);
+    expect(desempenhoDoDia([r('recusado'), r('entregue', { nota: 90 })])).toBe(50); // (10 + 90) / 2
+    expect(desempenhoDoDia([r('recusado'), r('entregue', { nota: 90, urgente: true })])).toBe(0); // urgente não conta
+  });
+});

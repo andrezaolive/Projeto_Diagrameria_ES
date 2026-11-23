@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Botao } from '../components/ui.jsx';
-import { CONQUISTAS, RARIDADES, nomeDoPremio, objetoDaConquista } from '../art/conquistas.js';
+import { CONQUISTAS, RARIDADES, SEM_CLODE, nomeDoPremio, objetoDaConquista } from '../art/conquistas.js';
 import OBJETOS from '../art/objetos.json';
 import { metaDe, progressoDe } from '../lib/conquistas.js';
 import { salaDe } from '../lib/decoracao.js';
 import { spriteObjeto } from '../data/loja.js';
 import { usePremiosAtualizados } from '../data/premios.js';
 import { useGame } from '../state/GameContext.jsx';
+import { sfx } from '../lib/sfx.js';
 import '../apps/apps.css';
 import './conquistas.css';
 
@@ -62,6 +63,14 @@ export default function Conquistas({ onVoltar }) {
   const ganhas = state.conquistas ?? {};
   const [filtro, setFiltro] = useState('todas');
   const [selId, setSelId] = useState(null);
+  const [avisoClode, setAvisoClode] = useState(false);
+  // a janelinha do "i" fecha com um clique em qualquer outro lugar
+  useEffect(() => {
+    if (!avisoClode) return;
+    const fechar = (e) => !e.target.closest('.aviso-clode-ancora') && setAvisoClode(false);
+    window.addEventListener('pointerdown', fechar);
+    return () => window.removeEventListener('pointerdown', fechar);
+  }, [avisoClode]);
   const f = FILTROS.find((x) => x.id === filtro);
   const lista = CONQUISTAS.filter(f.ok);
   const tem = (cq) => Boolean(ganhas[cq.id]);
@@ -77,6 +86,24 @@ export default function Conquistas({ onVoltar }) {
           </Botao>
         ))}
         <span className="espaco" />
+        {/* aviso do Clode: clicar no "i" abre uma janelinha com o texto (clicar fora ou de novo fecha) */}
+        <span className="aviso-clode-ancora">
+          <button
+            type="button"
+            className={`aviso-clode-conquistas ${avisoClode ? 'aberto' : ''}`}
+            onClick={() => { sfx.clique(); setAvisoClode((a) => !a); }}
+            aria-expanded={avisoClode}
+            aria-label="Sobre o Clode e as conquistas"
+          >
+            i
+          </button>
+          {avisoClode && (
+            <span className="aviso-clode-janela" role="dialog" aria-label="Clode e conquistas">
+              <strong>CLODE</strong>
+              Usar o Clode não te ajuda a conseguir conquistas: as de nota 100% e as de "sem dica" não contam num pedido em que ele foi usado.
+            </span>
+          )}
+        </span>
         {onVoltar && <Botao tamanho="pequeno" variante="claro" som="voltar" onClick={onVoltar}>Voltar</Botao>}
       </div>
 
@@ -135,6 +162,7 @@ function Detalhe({ state, cq, ok }) {
       <p className="conquista-descricao">{escondida ? 'Conquista secreta: jogue para descobrir.' : cq.descricao}</p>
       {progresso && <Barra progresso={progresso} />}
       {progresso && cq.interrompivel && <p className="conquista-obs">A sequência recomeça do zero se for interrompida.</p>}
+      {!escondida && SEM_CLODE.has(cq.id) && <p className="conquista-obs">Não vale se você usar o Clode no pedido.</p>}
       <p className={`conquista-status ${ok ? 'ok' : ''}`}>
         {ok ? `Desbloqueada · ${onde(state, cq)}` : `Desbloqueie para ver ${premio.startsWith('Troféu') ? 'o troféu' : premio.startsWith('Medalha') ? 'a medalha' : 'o broche'}.`}
       </p>

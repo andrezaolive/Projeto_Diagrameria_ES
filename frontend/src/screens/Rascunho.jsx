@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Botao, Modal } from '../components/ui.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { PALETTE as PALETA, TINTAS } from '../art/palette.js';
+import { urlDoCursor } from '../data/spritesRascunho.js';
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 
 // Folha de rascunho (clique no papel da mesa): o jogador rabisca com o lápis (botão esquerdo) e apaga
 // com a borracha (botão direito). O desenho tem a mesma resolução da arte do jogo: cada ponto do
@@ -124,7 +126,7 @@ export default function Rascunho({ onFechar }) {
             onPointerCancel={up}
             onContextMenu={(e) => e.preventDefault()}
           />
-          {ponteiro && <Lapis x={ponteiro.x} y={ponteiro.y} apagando={apagando} cor={corId === LAPIS.id ? null : cor} />}
+          {ponteiro && <Lapis x={ponteiro.x} y={ponteiro.y} apagando={apagando} corId={corId} />}
         </div>
         {cores.length > 1 && (
           <div className="rascunho-cores" role="radiogroup" aria-label="Cor">
@@ -154,43 +156,19 @@ export default function Rascunho({ onFechar }) {
   );
 }
 
-// Lápis em pixel art que segue o mouse (a ponta fica no ponteiro); apagando, vira a borracha.
-// `cor`: com uma caneta escolhida, o corpo e a ponta ficam da cor dela.
+// Lápis em pixel art que segue o mouse (a ponta fica no ponteiro); apagando, vira a borracha;
+// com uma caneta escolhida, o sprite é o da caneta daquela cor.
 // `x`/`y`: pixel de arte sob o mouse. O desenho é encaixado nesse pixel: a ponta do lápis (pixel 0,11
 // do sprite) fica exatamente sobre o pixel pintado, e a borracha (quadrado 3×3, linhas 9–11) fica
 // centrada no que ela apaga (x−1..x+1, y−1..y+1).
 export const posicaoDoCursor = (x, y, apagando, s = FOLHA.escala) =>
   apagando ? { left: (x - 1) * s, top: (y - 1 - 9) * s } : { left: x * s, top: (y - 11) * s };
 
-function Lapis({ x, y, apagando, cor }) {
+// Sprite do cursor: PNG 12×12 editável (data/spritesRascunho.js): lápis, borracha ou a caneta da cor
+// escolhida (`corId`: 'lapis' ou o id da tinta)
+function Lapis({ x, y, apagando, corId }) {
+  useSpritesAtualizados(); // PNG do cursor editado (npm run dev): desenha de novo
   const s = FOLHA.escala;
-  return (
-    <svg
-      className="lapis-cursor"
-      width={12 * s}
-      height={12 * s}
-      viewBox="0 0 12 12"
-      shapeRendering="crispEdges"
-      style={posicaoDoCursor(x, y, apagando)}
-      aria-hidden="true"
-    >
-      {apagando ? (
-        // borracha (ponta de baixo à esquerda no ponteiro)
-        <g>
-          <path d="M0 9h3v3H0z" fill={PALETA.blush} />
-          <path d="M3 6h3v3H3zM1 8h4v1H1z" fill={PALETA.rose} />
-          <path d="M5 4h2v2H5zM7 2h2v2H7zM9 0h2v2H9z" fill={PALETA.butter} />
-        </g>
-      ) : (
-        <g>
-          <path d="M0 11h1v1H0z" fill={cor ?? PALETA.ink} />
-          <path d="M1 9h2v2H1zM1 10h1v1H1z" fill={cor ? PALETA.ink : PALETA.peach} />
-          <path d="M3 7h2v2H3zM5 5h2v2H5zM7 3h2v2H7z" fill={cor ?? PALETA.butter} />
-          <path d="M3 8h1v1H3zM5 6h1v1H5zM7 4h1v1H7z" fill={cor ? PALETA.ink : PALETA.peach} />
-          <path d="M9 1h2v2H9z" fill={PALETA.blush} />
-          <path d="M9 2h1v1H9z" fill={PALETA.rose} />
-        </g>
-      )}
-    </svg>
-  );
+  const nome = apagando ? 'borracha' : corId === LAPIS.id ? 'lapis' : `caneta-${corId}`;
+  return <img className="lapis-cursor pixel" src={urlDoCursor(nome)} width={12 * s} height={12 * s} style={posicaoDoCursor(x, y, apagando)} alt="" draggable={false} aria-hidden="true" />;
 }

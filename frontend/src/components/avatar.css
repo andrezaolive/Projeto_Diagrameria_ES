@@ -24,6 +24,9 @@
   box-shadow: inset 3px 3px 0 var(--c-orchid);
   cursor: pointer;
 }
-.seletor .seta:hover { background: var(--c-orchid); }
-.seletor .seta:active { transform: translateY(2px); }
+.seletor .seta:hover:not(:disabled) { background: var(--c-orchid); }
+.seletor .seta:disabled { opacity: 0.35; cursor: default; }
+.seletor .valor { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.seletor .na-lojinha { font-size: 15px; color: var(--c-violet); }
+.seletor .seta:active:not(:disabled) { transform: translateY(2px); }
 .editor-avatar .px-btn { margin-top: 8px; }

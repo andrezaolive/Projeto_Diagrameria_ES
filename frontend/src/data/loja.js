@@ -1,24 +1,19 @@
-import porDoSol from '../assets/scenes/wallpaper-por-do-sol-320x180.png';
-import noiteChuvosa from '../assets/scenes/wallpaper-noite-chuvosa-320x180.png';
-import campoLavanda from '../assets/scenes/wallpaper-campo-lavanda-320x180.png';
-import aurora from '../assets/scenes/wallpaper-aurora-320x180.png';
-import gradeNeon from '../assets/scenes/wallpaper-grade-neon-320x180.png';
-import planetas from '../assets/scenes/wallpaper-planetas-320x180.png';
-import cerejeiras from '../assets/scenes/wallpaper-cerejeiras-320x180.png';
+import { urlDoFundo } from './spritesFundos.js';
 import OBJETOS from '../art/objetos.json';
 import { chaveSprite, membrosDoGrupo, metaDe, podeDeitar } from '../lib/decoracao.js';
 import { arquivoDoPremio, conquistaDoObjeto, objetoDaConquista } from '../art/conquistas.js';
 import { spriteDoArquivo } from './premios.js';
+import { urlDoObjeto } from './spritesObjetos.js';
 import { ITENS_AVATAR } from '../lib/avatar.js';
 
 export { spriteDoArquivo };
 
-// Sprites dos objetos do escritório, gerados por scripts/gen-assets.mjs
-const SPRITES = import.meta.glob('../assets/objetos/*.png', { eager: true, import: 'default' });
+// Sprites dos objetos do escritório, gerados por scripts/gen-assets.mjs (trocam na hora no dev:
+// data/spritesObjetos.js)
 // prêmio de conquista: PNG editável de assets/conquistas/ (data/premios.js)
 export const spriteObjeto = (nome) => {
   const cq = conquistaDoObjeto(nome);
-  return cq ? spriteDoArquivo(arquivoDoPremio(cq)) : SPRITES[`../assets/objetos/${nome}.png`];
+  return cq ? spriteDoArquivo(arquivoDoPremio(cq)) : urlDoObjeto(nome);
 };
 // { x, y, w, h, zona } em pixels de arte; zona = mesa | parede | fixo
 export const metaObjeto = (nome) => OBJETOS[nome];
@@ -43,24 +38,27 @@ export const OBJETOS_BASE = [
 export { podeDeitar, metaDe };
 export const spriteDe = (nome, deitado = false) => spriteObjeto(chaveSprite(nome, deitado));
 
-const fundo = (id, nome, preco, img) => ({ id: `fundo-${id}`, categoria: 'fundo', nome, preco, img });
+// `img` é lida na hora (getter): o PNG editado no `npm run dev` aparece sem recarregar a página
+const fundo = (id, nome, preco) => ({ id: `fundo-${id}`, categoria: 'fundo', nome, preco, get img() { return urlDoFundo(id); } });
 const obj = (nome, rotulo, preco) => ({
   id: `obj-${nome}`,
   categoria: OBJETOS[nome].zona === 'mesa' ? 'mesa' : 'parede',
   nome: rotulo,
   preco,
   objeto: nome,
-  img: spriteObjeto(nome),
+  get img() {
+    return spriteObjeto(nome);
+  },
 });
 
 export const ITENS_LOJA = [
-  fundo('por-do-sol', 'Pôr do sol', 0, porDoSol),
-  fundo('noite-chuvosa', 'Noite chuvosa', 380, noiteChuvosa),
-  fundo('campo-lavanda', 'Campo de lavanda', 500, campoLavanda),
-  fundo('aurora', 'Aurora', 620, aurora),
-  fundo('grade-neon', 'Grade neon', 550, gradeNeon),
-  fundo('planetas', 'Planetas pastel', 650, planetas),
-  fundo('cerejeiras', 'Cerejeiras', 1000, cerejeiras),
+  fundo('por-do-sol', 'Pôr do sol', 0),
+  fundo('noite-chuvosa', 'Noite chuvosa', 380),
+  fundo('campo-lavanda', 'Campo de lavanda', 500),
+  fundo('aurora', 'Aurora', 620),
+  fundo('grade-neon', 'Grade neon', 550),
+  fundo('planetas', 'Planetas pastel', 650),
+  fundo('cerejeiras', 'Cerejeiras', 1000),
 
   obj('vela', 'Vela aromática', 130),
   obj('pato', 'Pato de borracha', 150),

@@ -170,3 +170,17 @@ describe('Museu Particular', () => {
     expect(naSala(s)).toBe(base + 1);
   });
 });
+
+describe('Clode e conquistas', () => {
+  it('100% com o Clode não dá o Carimbo de Qualidade (sem o Clode, dá)', () => {
+    const entregar100 = (comClode) => {
+      let s = reducer({ ...estadoInicial(), dinheiro: 5000 }, { type: 'INICIAR_SESSAO', modo: 'infinito' });
+      const p = s.sessao.pedidos[0];
+      s = reducer(s, { type: 'ACEITAR', id: p.id });
+      if (comClode) s = reducer(s, { type: 'USAR_CLODE', id: p.id, chave: 'pedido:' + p.id, n: 1 });
+      return reducer(s, { type: 'ENTREGAR', id: p.id, nota: 100, valor: 10, erros: {} });
+    };
+    expect(entregar100(true).conquistas?.carimbo).toBeFalsy();
+    expect(entregar100(false).conquistas?.carimbo).toBeTruthy();
+  });
+});

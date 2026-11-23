@@ -78,7 +78,8 @@ function sistemaEmVolta(jogador, ne) {
 const nomeDo = (n) => (n.tipo === 'estadoInicial' || n.tipo === 'estadoFinal' ? NOME_TIPO[n.tipo] : `${NOME_TIPO[n.tipo]} "${n.rotulo}"`);
 
 // O que o Clode faria agora: { tipo: 'adicionar' | 'corrigir' | 'nada', texto, diagrama }
-export function acaoDoClode(jogador, esperado) {
+// `gerarId`: id do elemento/relação que ele cria (o reducer passa um fixo, para continuar puro)
+export function acaoDoClode(jogador, esperado, gerarId = novoId) {
   if (!esperado) return { tipo: 'nada', texto: 'Nada a ser feito.' };
   const d = { nodes: jogador.nodes ?? [], edges: jogador.edges ?? [] };
   const { nosE, casados, sobrando } = casarNos(d, esperado);
@@ -90,7 +91,7 @@ export function acaoDoClode(jogador, esperado) {
   if (faltando.length) {
     const ne = faltando[0];
     const pos = ne.tipo === 'sistema' ? sistemaEmVolta(d, ne) : posicaoLivre(d, esperado, ne, casados);
-    const novo = { ...ne, id: novoId(), ...pos };
+    const novo = { ...ne, id: gerarId(), ...pos };
     return { tipo: 'adicionar', texto: `Coloquei ${nomeDo(ne)}.`, diagrama: { ...d, nodes: [...d.nodes, novo] } };
   }
 
@@ -137,7 +138,7 @@ export function acaoDoClode(jogador, esperado) {
   for (const ee of pendentes) {
     const de = doJogador.get(ee.de), para = doJogador.get(ee.para);
     if (livresJ.some((ej) => par(ej.de, ej.para) === par(de, para))) continue;
-    const nova = { id: novoId(), tipo: ee.tipo, de, para, ...(ee.rotulo ? { rotulo: ee.rotulo } : {}), ...(ee.multDe ? { multDe: ee.multDe } : {}), ...(ee.multPara ? { multPara: ee.multPara } : {}) };
+    const nova = { id: gerarId(), tipo: ee.tipo, de, para, ...(ee.rotulo ? { rotulo: ee.rotulo } : {}), ...(ee.multDe ? { multDe: ee.multDe } : {}), ...(ee.multPara ? { multPara: ee.multPara } : {}) };
     return { tipo: 'corrigir', texto: `Liguei com a ${descr(ee)}${ee.rotulo ? ` ("${ee.rotulo}")` : ''}.`, diagrama: { ...d, edges: [...d.edges, nova] } };
   }
 

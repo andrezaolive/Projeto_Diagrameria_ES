@@ -1,3 +1,4 @@
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import { useEffect, useRef, useState } from 'react';
 import EfeitoCafe from '../components/EfeitoCafe.jsx';
 import iEditor from '../assets/ui/icon-editor-16.png';
@@ -139,6 +140,7 @@ export default function Computador({ desligando, onDesligar, onEntregue, pedidoF
 
   const novos = sessao?.pedidos.filter((p) => p.status === 'novo').length ?? 0;
   const ativo = sessao?.pedidos.find((p) => p.id === sessao.ativo);
+  useSpritesAtualizados(); // fundo de tela editado (npm run dev): desenha de novo
   const fundo = itemPorId(state.loja.fundo)?.img;
 
   // primeira vez no computador: tutorial antes do primeiro pedido (que chega com o pop-up no canto);

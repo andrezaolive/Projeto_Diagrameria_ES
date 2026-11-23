@@ -201,9 +201,9 @@ function officeItems() {
 
   // Caneca: vem vazia; enche na cafeteira (variantes caneca-cheia-<tipo>, mesmo recorte; a cor do café
   // mostra a força). O vapor é um sprite à parte, desenhado por cima da caneca cheia no jogo.
-  // Posição inicial: canto esquerdo da mesa, ao lado do calendário (canto do sprite em 51,116).
+  // Posição inicial: na mesa, à direita do calendário (canto do sprite em 77,116).
   // O desenho foi feito em 240,126; KX/KY deslocam caneca, variantes e vapor juntos.
-  const KX = 51 - 240, KY = 116 - 126;
+  const KX = 77 - 240, KY = 116 - 126;
   const desenharCaneca = (c, topo, fundo, crema) => {
     c.box(KX + 240, KY + 126, 12, 14, 'blush');
     c.hline(KX + 241, KX + 250, KY + 127, topo);
@@ -227,7 +227,7 @@ function officeItems() {
   // Cafeteira de cápsula (item da loja): a caneca encaixa na bandeja, debaixo do bico
   // (`bandeja`: x da caneca e base dela, relativos ao canto do sprite). Os 3 botões da coluna têm as
   // cores das cápsulas (descafeinado, café, extra forte).
-  const CF = { x: 211, y: 120 }; // à direita do teclado
+  const CF = { x: 252, y: 101 }; // na mesa, à direita (base em 131)
   objeto('cafeteira', 'mesa', (c) => {
     c.box(CF.x + 15, CF.y + 4, 9, 24, 'violet'); // coluna
     c.vline(CF.x + 16, CF.y + 9, CF.y + 25, 'orchid');
@@ -254,8 +254,8 @@ function officeItems() {
 
   // Calendário de mesa (vem no escritório): clicar abre o calendário da campanha (Escritorio.jsx)
   objeto('calendario-mesa', 'mesa', (c) => {
-    // posição inicial: canto esquerdo da mesa (canto do sprite, com as argolas, em 8,107)
-    const x = 8, y = 109, w = 22, h = 20;
+    // posição inicial: canto esquerdo da mesa (canto do sprite, com as argolas, em 35,108)
+    const x = 35, y = 110, w = 22, h = 20;
     c.rect(x + 2, y + h, w - 4, 1, 'grape'); // pezinho de apoio, atrás da folha
     c.box(x, y, w, h, 'cream');
     c.rect(x + 1, y + 1, w - 2, 5, 'rose'); // cabeçalho do mês

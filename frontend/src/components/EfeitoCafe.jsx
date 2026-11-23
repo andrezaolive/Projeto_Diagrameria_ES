@@ -1,3 +1,4 @@
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import { capsulaPorId, iconeCapsula } from '../data/cafe.js';
 import { useGame } from '../state/GameContext.jsx';
 
@@ -5,6 +6,7 @@ import { useGame } from '../state/GameContext.jsx';
 // lento e por mais quantos segundos. Some quando não há café fazendo efeito.
 export default function EfeitoCafe() {
   const { efeito } = useGame().state.cafe;
+  useSpritesAtualizados(); // PNG da cápsula editado (npm run dev): desenha de novo
   if (!efeito) return null;
   const c = capsulaPorId(efeito.tipo);
   return (

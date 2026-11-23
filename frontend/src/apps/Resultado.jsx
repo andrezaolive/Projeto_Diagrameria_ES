@@ -2,19 +2,14 @@ import { useState } from 'react';
 import { Botao, Modal } from '../components/ui.jsx';
 import { DiagramaEstatico, SECOES } from '../editor/Formas.jsx';
 import { REACOES, reacaoMascote } from '../lib/mascote.js';
-import { sortearMascoteFeliz } from '../data/mascote.js';
+import { sortearNomeFeliz, spriteMascote } from '../data/mascote.js';
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import { diagramaVazio } from '../lib/feedback.js';
 import Feedback from './Feedback.jsx';
 import ZoomDiagrama from '../components/ZoomDiagrama.jsx';
 import './apps.css';
 
-// sprites das reações do mascote (50x50, desenhados à mão pela equipe), indexados pelo nome da reação
-const SPRITES = Object.fromEntries(
-  Object.entries(import.meta.glob('../assets/sprites/mascote-*-50x50.png', { eager: true, import: 'default' })).map(([caminho, url]) => [
-    caminho.match(/mascote-(\w+)-50x50/)[1],
-    url,
-  ]),
-);
+// sprites das reações do mascote (50x50, desenhados à mão pela equipe): spriteMascote(nome da reação)
 
 function Barra({ rotulo, valor }) {
   return (
@@ -30,7 +25,8 @@ export const nomeDaParte = (secao) => `Diagrama de ${SECOES.find((s) => s.id ===
 
 export default function Resultado({ resultado, onOk }) {
   const reacao = reacaoMascote(resultado.nota);
-  const [feliz] = useState(sortearMascoteFeliz); // reação "feliz": um dos dois desenhos, sorteado por entrega
+  const [feliz] = useState(sortearNomeFeliz); // reação "feliz": um dos dois desenhos, sorteado por entrega
+  useSpritesAtualizados(); // PNG do mascote editado (npm run dev): desenha de novo
   // pedido JUMBO: `partes` traz um resultado por diagrama; os botões escolhem qual mostrar
   const [indiceParte, setIndiceParte] = useState(0);
   const parte = resultado.partes?.[indiceParte];
@@ -55,7 +51,7 @@ export default function Resultado({ resultado, onOk }) {
         </div>
         <div className={`meio ${compacto ? 'compacto' : ''}`}>
           <div className={`reacao reacao-${reacao}`}>
-            <img src={reacao === 'feliz' ? feliz : SPRITES[reacao]} alt={`Mascote: ${REACOES[reacao].rotulo}`} className="pixel" width={compacto ? 100 : 150} height={compacto ? 100 : 150} />
+            <img src={spriteMascote(reacao === 'feliz' ? feliz : reacao)} alt={`Mascote: ${REACOES[reacao].rotulo}`} className="pixel" width={compacto ? 100 : 150} height={compacto ? 100 : 150} />
             <span className="fala">{REACOES[reacao].fala}</span>
           </div>
           <span className="nota">{nota}%</span>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Botao } from '../components/ui.jsx';
-import fala1 from '../assets/sprites/mascote-fala1-50x50.png';
-import fala2 from '../assets/sprites/mascote-fala2-50x50.png';
+import { spriteMascote } from '../data/mascote.js';
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import { MAX_ACEITOS_INFINITO, MEDIA_MINIMA, VIDAS_INFINITO } from '../state/reducer.js';
 import { pixelDaCelula } from '../lib/areaTrabalho.js';
 
@@ -20,6 +20,7 @@ const duracaoDaFala = (texto) => Math.min(3200, 500 + texto.join(' ').length * 1
 function MascoteFalando({ texto }) {
   const [boca, setBoca] = useState(true);
   const [falando, setFalando] = useState(true);
+  useSpritesAtualizados(); // PNG do mascote editado (npm run dev): desenha de novo
   useEffect(() => {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return setFalando(false);
     const t = setInterval(() => setBoca((b) => !b), QUADRO_FALA_MS);
@@ -29,7 +30,7 @@ function MascoteFalando({ texto }) {
       clearTimeout(fim);
     };
   }, [texto]);
-  return <img src={falando && boca ? fala1 : fala2} alt="" className="pixel tutorial-mascote" />;
+  return <img src={spriteMascote(falando && boca ? 'fala1' : 'fala2')} alt="" className="pixel tutorial-mascote" />;
 }
 
 // `revendo`: aberto de novo pelo Guia (os pedidos já estão chegando; o relógio fica parado)

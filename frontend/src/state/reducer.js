@@ -6,7 +6,7 @@ import { NOTA_AUDITORIA, aplicarModificador, avancarCiclo, caixaInicial, chanceD
 import { ALEATORIA, faixasDoJogador, temTocaFitas } from '../data/musicas.js';
 import { avatarPadrao } from '../lib/avatar.js';
 import { dataDoDia, niveisNoInfinito, nivelDoModelo, sextaAntes } from '../lib/dificuldade.js';
-import { AUMENTO_CLODE, PRECO_CLODE, PRECO_CLODE_INFINITO } from '../lib/clode.js';
+import { AUMENTO_CLODE, PRECO_CLODE, PRECO_CLODE_INFINITO, acaoDoClode } from '../lib/clode.js';
 import { CAPSULAS, EFEITO_SEGUNDOS, cafeInicial, motivoSemCafe, ritmoDoJogo, temCafeteira, tempoDePreparo } from '../data/cafe.js';
 import { conteudoDe, ehPorta, grupoDoObjeto, membrosDoGrupo, moverComConteudo, soltarDependentes } from '../lib/decoracao.js';
 import { arrumarPremios, desbloquear, marcosIniciais, verificarConquistas } from '../lib/conquistas.js';
@@ -753,19 +753,27 @@ function reducerBase(state, action) {
     // Dica: compra um pedaço da imagem-resposta do pedido em andamento
     // Clode (lib/clode.js): o editor calcula a ação e manda o diagrama já mexido; aqui só cobra e grava.
     // Preço pelo nível do pedido (PRECO_CLODE, "bem caro"), com o orçamento apertado do infinito.
+    // A ação é calculada AQUI, com o diagrama e o preço do momento: vários cliques seguidos viram
+    // várias ações em sequência, cada uma cobrada pelo preço certo. `secao`: aba do JUMBO; `n`: número
+    // do clique (id do que ele criar e da fala). A fala vai para `sessao.falaClode` (o editor mostra).
     case 'USAR_CLODE': {
       const s = state.sessao;
       const p = s?.pedidos.find((x) => x.id === action.id && x.status === 'aceito');
-      if (!p || !action.chave || !action.diagrama) return state;
+      if (!p || !action.chave) return state;
+      const m = modeloPorId(p.modelo);
+      const esperado = ehJumbo(m) ? m.partes.find((x) => x.secao === action.secao)?.esperado : m.esperado;
+      const n = action.n ?? (s.falaClode?.n ?? 0) + 1;
+      const a = acaoDoClode(diagramaDe(state, action.chave), esperado, () => `cl${n}`);
+      if (a.tipo === 'nada') return { ...state, sessao: { ...s, falaClode: { n, texto: a.texto, nada: true } } };
       const preco = precoDoClode(p, s);
-      if (state.dinheiro < preco) return state;
+      if (state.dinheiro < preco) return { ...state, sessao: { ...s, falaClode: { n, texto: 'Dinheiro insuficiente.', nada: true } } };
       const clode = { usos: (s.clode?.usos ?? 0) + 1, ultimo: precoBrutoDoClode(p, s) };
       return {
         ...state,
         dinheiro: state.dinheiro - preco,
         estatisticas: gastar(state.estatisticas, 'clode', preco),
-        diagramas: { ...state.diagramas, [action.chave]: action.diagrama },
-        sessao: { ...s, clode, pedidos: s.pedidos.map((x) => (x.id === p.id ? { ...x, clode: (x.clode ?? 0) + 1 } : x)) },
+        diagramas: { ...state.diagramas, [action.chave]: a.diagrama },
+        sessao: { ...s, clode, falaClode: { n, texto: a.texto }, pedidos: s.pedidos.map((x) => (x.id === p.id ? { ...x, clode: (x.clode ?? 0) + 1 } : x)) },
       };
     }
 
@@ -938,11 +946,15 @@ const pedidoDaChave = (chave) => chave.replace(/^pedido:/, '').replace(/:(casos|
 
 // Desempenho do dia: média de todos os pedidos normais do dia. Entregue vale a nota, recusado vale
 // DESEMPENHO_RECUSADO (10%) e perdido (cliente foi embora) vale 0%. Urgentes não entram na média.
+// Sem nenhuma entrega no dia (recusou tudo), os recusados também valem 0%: o dia fica em 0%.
 export const DESEMPENHO_RECUSADO = 10;
-export const desempenhoDoPedido = (p) => (p.status === 'entregue' ? p.nota ?? 0 : p.status === 'recusado' ? DESEMPENHO_RECUSADO : 0);
+export const desempenhoDoPedido = (p, entregouAlgum = true) =>
+  p.status === 'entregue' ? p.nota ?? 0 : p.status === 'recusado' && entregouAlgum ? DESEMPENHO_RECUSADO : 0;
+export const entregouAlgumNoDia = (pedidos) => pedidos.some((p) => !p.urgente && p.status === 'entregue');
 export function desempenhoDoDia(pedidos) {
   const contam = pedidos.filter((p) => !p.urgente && FINALIZADOS.includes(p.status));
-  return contam.length ? Math.round(contam.reduce((t, p) => t + desempenhoDoPedido(p), 0) / contam.length) : 0;
+  const algum = entregouAlgumNoDia(pedidos);
+  return contam.length ? Math.round(contam.reduce((t, p) => t + desempenhoDoPedido(p, algum), 0) / contam.length) : 0;
 }
 
 // Fim do dia da campanha: com média >= MEDIA_MINIMA o dia conta como concluído e libera o seguinte;

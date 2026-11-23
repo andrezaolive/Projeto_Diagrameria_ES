@@ -59,7 +59,7 @@ export const CANSACO = {
   aPartirDe: 300, // 5 minutos no mesmo dia
   intervalo: 60, // um sorteio por minuto (no segundo 0 do minuto)
   chance: 1 / 3,
-  escurecer: 30, // segundos até a tela ficar preta; aí o jogador dorme
+  escurecer: 20, // segundos até a tela ficar preta; aí o jogador dorme
   sono: 5, // segundos (reais) dormindo
   descanso: 60, // depois de acordar, sem cansaço por esse tempo
   urgentesAoDormir: [1, 2], // campanha: urgentes que chegam enquanto dorme

@@ -133,7 +133,7 @@ describe('semana e cansaço', () => {
   it('a tela escurece em 34 s; o café tira o cansaço por 1, 2 ou 3 min; cansado derrama mais', () => {
     const s = { modo: 'infinito', segundos: 317, cansaco: { inicio: 300 } };
     expect(nivelDoCansaco(s)).toBeCloseTo(17 / CANSACO.escurecer);
-    expect(CANSACO.escurecer).toBe(30);
+    expect(CANSACO.escurecer).toBe(20);
     expect(nivelDoCansaco({ ...s, segundos: 400 })).toBe(1);
     expect(chanceDeDerramar({ modo: 'infinito' })).toBeCloseTo(CHANCE_DERRAMAR);
     expect(chanceDeDerramar({ ...s, segundos: 400 })).toBeCloseTo(CHANCE_DERRAMAR * 3);

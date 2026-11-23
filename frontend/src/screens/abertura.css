@@ -64,7 +64,8 @@
 .menu-icone-moldura { width: 88px; height: 88px; display: grid; place-items: center; }
 .menu-icone:hover { background: var(--c-mist); transform: translateY(4px); box-shadow: inset var(--px) var(--px) 0 var(--c-cream), inset -4px -4px 0 var(--c-lavender), 6px 2px 0 var(--c-ink); }
 .menu-icone:focus-visible { outline: 3px dashed var(--c-butter); outline-offset: 4px; }
-.menu-config { position: absolute; left: 16px; top: 116px; z-index: 2; }
+/* engrenagem embaixo do perfil: 100px (altura do perfil + folga) na escala da interface */
+.menu-config { position: absolute; left: calc(16px / var(--ui-btn, 1)); top: calc(16px / var(--ui-btn, 1) + 100px); z-index: 2; }
 .menu .versao { position: absolute; right: 16px; bottom: 10px; color: var(--c-violet); font-size: 20px; }
 
 .config { padding: 24px 36px; display: flex; flex-direction: column; gap: 22px; height: 100%; }
@@ -180,13 +181,15 @@ button.dia:hover:not(:disabled) { background: var(--c-butter); }
 /* aba de perfil no canto do menu */
 .menu-perfil {
   position: absolute;
-  left: 16px;
-  top: 16px;
+  /* segue o tamanho da interface (zoom); a posição é dividida pelo zoom para ficar sempre a 16px do canto */
+  zoom: var(--ui-btn, 1);
+  left: calc(16px / var(--ui-btn, 1));
+  top: calc(16px / var(--ui-btn, 1));
   z-index: 2;
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: 236px;
+  max-width: calc(236px / var(--ui-btn, 1)); /* na tela, nunca passa de ~236px (não cobre o título) */
   padding: 6px 16px 6px 6px;
   text-align: left;
   background: var(--c-lilac);

@@ -210,7 +210,7 @@
     "rotulo": "Post-it azul"
   },
   "caneca": {
-    "x": 51,
+    "x": 77,
     "y": 116,
     "w": 16,
     "h": 14,
@@ -220,7 +220,7 @@
     "rotulo": "Caneca"
   },
   "caneca-cheia-descafeinado": {
-    "x": 51,
+    "x": 77,
     "y": 116,
     "w": 16,
     "h": 14,
@@ -228,7 +228,7 @@
     "variante": true
   },
   "caneca-cheia-normal": {
-    "x": 51,
+    "x": 77,
     "y": 116,
     "w": 16,
     "h": 14,
@@ -236,7 +236,7 @@
     "variante": true
   },
   "caneca-cheia-forte": {
-    "x": 51,
+    "x": 77,
     "y": 116,
     "w": 16,
     "h": 14,
@@ -244,7 +244,7 @@
     "variante": true
   },
   "vapor": {
-    "x": 56,
+    "x": 82,
     "y": 104,
     "w": 5,
     "h": 11,
@@ -252,8 +252,8 @@
     "variante": true
   },
   "cafeteira": {
-    "x": 211,
-    "y": 120,
+    "x": 252,
+    "y": 101,
     "w": 24,
     "h": 30,
     "zona": "mesa",
@@ -272,8 +272,8 @@
     "rotulo": "Papéis"
   },
   "calendario-mesa": {
-    "x": 8,
-    "y": 107,
+    "x": 35,
+    "y": 108,
     "w": 22,
     "h": 23,
     "zona": "mesa",

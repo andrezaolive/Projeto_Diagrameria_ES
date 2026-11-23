@@ -3,7 +3,8 @@ import escritorio from '../assets/scenes/office-320x180.png';
 import { Botao, Modal } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { useGame } from '../state/GameContext.jsx';
-import { sortearMascoteFeliz } from '../data/mascote.js';
+import { sortearNomeFeliz, spriteMascote } from '../data/mascote.js';
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import Configuracoes from './Configuracoes.jsx';
 import Perfil from './Perfil.jsx';
 import Estatisticas from './Estatisticas.jsx';
@@ -35,7 +36,8 @@ export function FundoMenu() {
 export default function Menu({ onJogar, onEditarPerfil, onConta, onResetado, sobreposto = false }) {
   const { state, dispatch } = useGame();
   const [modal, setModal] = useState(null);
-  const [mascote] = useState(sortearMascoteFeliz); // um dos dois felizes, sorteado a cada vez que o menu abre
+  const [mascote] = useState(sortearNomeFeliz); // um dos dois felizes, sorteado a cada vez que o menu abre
+  useSpritesAtualizados(); // PNG do mascote editado (npm run dev): desenha de novo
   // as estatísticas abrem do menu ou do perfil; fechar volta para onde estava
   const [voltarEstatisticas, setVoltarEstatisticas] = useState(null);
   const abrirEstatisticas = (de) => { setVoltarEstatisticas(de); setModal('estatisticas'); };
@@ -53,7 +55,7 @@ export default function Menu({ onJogar, onEditarPerfil, onConta, onResetado, sob
       <div className="menu">
         <h1 className="titulo-px logo">DIAGRAMERIA</h1>
         <p className="subtitulo">sua agência de diagramas sob demanda</p>
-        <img src={mascote} alt="" className="mascote pixel flutuar" />
+        <img src={spriteMascote(mascote)} alt="" className="mascote pixel flutuar" />
         {/* estatísticas (gráfico) à esquerda do Jogar, conquistas (medalha) à direita */}
         <div className="menu-jogar">
           <BotaoIcone rotulo="Estatísticas" onClick={() => abrirEstatisticas(null)}>

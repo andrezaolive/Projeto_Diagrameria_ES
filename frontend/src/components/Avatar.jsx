@@ -62,14 +62,22 @@ export function EditorAvatar({ avatar, onChange, possui }) {
         <Avatar avatar={avatar} tamanho={192} />
       </div>
       <div className="seletores">
-        {CAMPOS.map(([campo, rotulo]) => (
-          <div className="seletor" key={campo}>
-            <span className="rotulo">{rotulo}</span>
-            <button type="button" className="seta" aria-label={`${rotulo} anterior`} onClick={() => onChange(alternar(avatar, campo, -1, opcoes))}>‹</button>
-            <span className="valor">{nomeOpcao(campo, avatar[campo] ?? opcoes[campo][0])}</span>
-            <button type="button" className="seta" aria-label={`${rotulo} seguinte`} onClick={() => onChange(alternar(avatar, campo, 1, opcoes))}>›</button>
-          </div>
-        ))}
+        {CAMPOS.map(([campo, rotulo]) => {
+          // só uma opção (roupa e acessório sem nada comprado): setas desligadas e o aviso da lojinha
+          const unica = opcoes[campo].length <= 1;
+          const dica = unica ? 'Mais opções na lojinha do computador (aba Avatar)' : undefined;
+          return (
+            <div className={`seletor ${unica ? 'unica' : ''}`} key={campo}>
+              <span className="rotulo">{rotulo}</span>
+              <button type="button" className="seta" disabled={unica} title={dica} aria-label={`${rotulo} anterior`} onClick={() => onChange(alternar(avatar, campo, -1, opcoes))}>‹</button>
+              <span className="valor" title={dica}>
+                {nomeOpcao(campo, avatar[campo] ?? opcoes[campo][0])}
+                {unica && <small className="na-lojinha">mais na lojinha</small>}
+              </span>
+              <button type="button" className="seta" disabled={unica} title={dica} aria-label={`${rotulo} seguinte`} onClick={() => onChange(alternar(avatar, campo, 1, opcoes))}>›</button>
+            </div>
+          );
+        })}
         <Botao type="button" tamanho="pequeno" variante="claro" onClick={aleatorio}>Sortear</Botao>
       </div>
     </div>

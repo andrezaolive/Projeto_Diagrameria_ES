@@ -4,7 +4,7 @@ import { Botao, Modal, formatarReais } from '../components/ui.jsx';
 import Resultado from '../apps/Resultado.jsx';
 import { avaliar, avaliarPartes } from '../lib/avaliacao.js';
 import { ehComplexo, ehJumbo, modeloPorId } from '../data/pedidos.js';
-import { desempenhoDoPedido } from '../state/reducer.js';
+import { desempenhoDoPedido, entregouAlgumNoDia } from '../state/reducer.js';
 
 // Linha do resumo: o que aconteceu com o pedido
 const SITUACAO = {
@@ -13,7 +13,7 @@ const SITUACAO = {
   expirado: (p) => `Cliente foi embora${p.multa ? ` · −R$ ${p.multa}` : ''}`,
 };
 // quanto o pedido pesa no desempenho do dia (urgentes ficam de fora)
-const naMedia = (p) => (p.urgente ? 'fora da média' : `conta ${desempenhoDoPedido(p)}%`);
+const naMedia = (p, algum) => (p.urgente ? 'fora da média' : `conta ${desempenhoDoPedido(p, algum)}%`);
 
 // Monta o mesmo objeto que a tela de resultado recebe logo após a entrega
 export function resultadoDoPedido(pedido) {
@@ -54,7 +54,7 @@ export default function ResumoDia({ pedidos, dia, onFechar }) {
                       {p.cliente}
                     </span>
                     <span className="assunto">{p.urgente ? p.assunto.replace(/^URGENTE: /, '') : p.assunto}</span>
-                    <span className="situacao">{(SITUACAO[p.status] ?? (() => p.status))(p)} · {naMedia(p)}</span>
+                    <span className="situacao">{(SITUACAO[p.status] ?? (() => p.status))(p)} · {naMedia(p, entregouAlgumNoDia(pedidos))}</span>
                     {revisavel && <span className="ver">ver ›</span>}
                   </button>
                 </li>

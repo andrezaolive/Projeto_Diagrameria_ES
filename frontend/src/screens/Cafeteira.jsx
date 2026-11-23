@@ -1,3 +1,4 @@
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import { Botao, Modal } from '../components/ui.jsx';
 import { CAPSULAS, EFEITO_SEGUNDOS, capsulaPorId, iconeCapsula, motivoSemCafe } from '../data/cafe.js';
 import { useGame } from '../state/GameContext.jsx';
@@ -7,6 +8,7 @@ import { sfx } from '../lib/sfx.js';
 // quantas ainda tem no centro. Só faz café com a caneca vazia encaixada na cafeteira.
 export default function Cafeteira({ onFechar }) {
   const { state, dispatch } = useGame();
+  useSpritesAtualizados(); // PNG da cápsula editado (npm run dev): desenha de novo
   const { capsulas, preparando, xicara, efeito } = state.cafe;
   const geral = motivoSemCafe(state, null);
 
@@ -52,7 +54,6 @@ export default function Cafeteira({ onFechar }) {
             Efeito: {capsulaPorId(efeito.tipo).curto} · relógio {Math.round(capsulaPorId(efeito.tipo).lentidao * 100)}% mais lento · {efeito.falta} s
           </p>
         )}
-        <p className="aviso-loja">Compre cápsulas na lojinha do computador (aba Cafeteira).</p>
         <Botao tamanho="pequeno" variante="claro" onClick={onFechar}>
           Fechar
         </Botao>

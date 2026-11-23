@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import escritorio from '../assets/scenes/office-320x180.png';
+// depois de uma pane que falhou: o mesmo escritório com o monitor em tela azul (desenho da equipe)
+import escritorioTelaAzul from '../assets/scenes/office-blue_screen.png';
 import fundoSala from '../assets/scenes/sala-320x180.png';
 import vidroSala from '../assets/scenes/sala-vidro-320x180.png';
 import iconeBau from '../assets/ui/icon-bau-16.png';
@@ -74,6 +76,7 @@ const NOME_SALA = { escritorio: 'Escritório', sala: 'Sala de exposição' };
 export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafeteira, onConquistas, onCalendario, desativado, sala = 'escritorio', onTrocarSala, chamarComputador = false, reiniciando = null }) {
   const { state, dispatch } = useGame();
   const [avisoReinicio, setAvisoReinicio] = useState(0);
+  const telaAzul = reiniciando === 'pane'; // computador reiniciando depois da pane: monitor em tela azul
   useEffect(() => {
     if (!avisoReinicio) return;
     const t = setTimeout(() => setAvisoReinicio(0), 1500);
@@ -408,12 +411,12 @@ export default function Escritorio({ onComputador, onTocaFitas, onPapel, onCafet
       onWheel={roda}
     >
       <img
-        src={sala === 'sala' ? fundoSala : escritorio}
-        alt={sala === 'sala' ? 'Sala de exposição: quadro de broches, armário de vidro e prateleiras' : 'Escritório: mesa com computador'}
+        src={sala === 'sala' ? fundoSala : telaAzul ? escritorioTelaAzul : escritorio}
+        alt={sala === 'sala' ? 'Sala de exposição: quadro de broches, armário de vidro e prateleiras' : telaAzul ? 'Escritório: o computador travou na tela azul' : 'Escritório: mesa com computador'}
         className="cena pixel"
         draggable={false}
       />
-      {sala === 'escritorio' && <div className="tela-brilho" />}
+      {sala === 'escritorio' && !telaAzul && <div className="tela-brilho" />}
       {sala === 'escritorio' && <button
         className="monitor-hotspot"
         style={{
