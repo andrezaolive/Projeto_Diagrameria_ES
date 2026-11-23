@@ -20,12 +20,12 @@ jobs:
         working-directory: ./backend
     steps:
       - name: Clonar o repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -82,12 +82,12 @@ jobs:
 
     steps:
       - name: Clonar o repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -114,12 +114,12 @@ jobs:
         working-directory: ./frontend
     steps:
       - name: Clonar o repositório
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Configurar Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Instalar dependências
         run: npm install
