@@ -1,8 +1,8 @@
 // Mini biblioteca de pixel art: desenha num buffer RGBA e exporta PNG sem dependências.
-import { deflateSync } from 'node:zlib';
-import { writeFileSync, mkdirSync } from 'node:fs';
+import { deflateSync, inflateSync } from 'node:zlib';
+import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { PALETTE, TINTAS } from '../src/art/palette.js';
+import { METAIS, PALETTE, TINTAS } from '../src/art/palette.js';
 
 const rgba = (hex) => [
   parseInt(hex.slice(1, 3), 16),
@@ -14,6 +14,8 @@ const COLORS = {
   ...Object.fromEntries(Object.entries(PALETTE).map(([k, v]) => [k, rgba(v)])),
   // tintas das canetas: 'tinta-azul', 'tinta-verde'... (exceção à paleta, ver palette.js)
   ...Object.fromEntries(Object.entries(TINTAS).map(([k, v]) => [`tinta-${k}`, rgba(v)])),
+  // metais das medalhas e troféus das conquistas: 'ouro-base', 'prata-brilho'... (exceção à paleta)
+  ...Object.fromEntries(Object.entries(METAIS).flatMap(([m, tons]) => Object.entries(tons).map(([k, v]) => [`${m}-${k}`, rgba(v)]))),
 };
 
 // Letras usadas nos sprites em ASCII
@@ -135,6 +137,41 @@ export class Canvas {
     for (let y = y0; y <= y1; y++)
       out.data.set(this.data.subarray((y * this.w + x0) * 4, (y * this.w + x1 + 1) * 4), ((y - y0) * out.w) * 4);
     return { sprite: out, x: x0, y: y0, w: out.w, h: out.h };
+  }
+
+  // Lê um PNG (8 bits por canal: RGBA, RGB, cinza ou paleta; sem entrelaçamento), por exemplo um
+  // sprite editado à mão num editor de pixel art
+  static ler(path) {
+    const buf = readFileSync(path);
+    let w, h, prof, tipo, entrel, paleta = [], transp = [];
+    const idat = [];
+    for (let o = 8; o < buf.length; ) {
+      const len = buf.readUInt32BE(o), t = buf.toString('ascii', o + 4, o + 8), d = buf.subarray(o + 8, o + 8 + len);
+      if (t === 'IHDR') [w, h, prof, tipo, entrel] = [d.readUInt32BE(0), d.readUInt32BE(4), d[8], d[9], d[12]];
+      else if (t === 'PLTE') for (let i = 0; i < len; i += 3) paleta.push([d[i], d[i + 1], d[i + 2]]);
+      else if (t === 'tRNS') transp = [...d];
+      else if (t === 'IDAT') idat.push(d);
+      o += 12 + len;
+    }
+    const bpp = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[tipo];
+    if (prof !== 8 || entrel || !bpp) throw new Error(`${path}: salve o PNG com 8 bits por canal (RGBA), sem entrelaçamento`);
+    const raw = inflateSync(Buffer.concat(idat)), linha = w * bpp, px = Buffer.alloc(linha * h);
+    for (let y = 0; y < h; y++) {
+      const f = raw[y * (linha + 1)], src = raw.subarray(y * (linha + 1) + 1, (y + 1) * (linha + 1));
+      for (let i = 0; i < linha; i++) {
+        const a = i >= bpp ? px[y * linha + i - bpp] : 0, b = y ? px[(y - 1) * linha + i] : 0, c = y && i >= bpp ? px[(y - 1) * linha + i - bpp] : 0;
+        const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);
+        const pred = [0, a, b, (a + b) >> 1, pa <= pb && pa <= pc ? a : pb <= pc ? b : c][f];
+        px[y * linha + i] = (src[i] + pred) & 255;
+      }
+    }
+    const out = new Canvas(w, h);
+    for (let k = 0; k < w * h; k++) {
+      const q = px.subarray(k * bpp, k * bpp + bpp);
+      const cor = tipo === 6 ? [...q] : tipo === 2 ? [...q, 255] : tipo === 0 ? [q[0], q[0], q[0], 255] : tipo === 4 ? [q[0], q[0], q[0], q[1]] : [...(paleta[q[0]] ?? [0, 0, 0]), transp[q[0]] ?? 255];
+      out.data.set(cor, k * 4);
+    }
+    return out;
   }
 
   save(path) {

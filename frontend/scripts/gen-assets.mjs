@@ -1,9 +1,11 @@
 // Gera os assets em pixel art (PNG) usando só a paleta oficial.
 // Uso: npm run assets
 import { Canvas, rng } from './pixel.mjs';
-import { DESK_Y, ESTANTE, MONITOR, MONITOR_SCREEN, SCENE_W, SCENE_H } from '../src/art/layout.js';
+import { DESK_Y, ESTANTE, MONITOR, MONITOR_SCREEN, SALA, SCENE_W, SCENE_H } from '../src/art/layout.js';
 import { fileURLToPath } from 'node:url';
-import { writeFileSync } from 'node:fs';
+import { existsSync, writeFileSync } from 'node:fs';
+import { albumConquistas, conquistas } from './arte-conquistas.mjs';
+import { avatar } from './arte-avatar.mjs';
 
 const OUT = fileURLToPath(new URL('../src/assets/', import.meta.url));
 const W = SCENE_W, H = SCENE_H;
@@ -136,12 +138,20 @@ const OBJETOS = {};
 //   empilhavel: outros objetos podem ficar em cima dele (livros)
 //   rotulo: nome exibido no inventário (itens da loja usam o nome da loja)
 //   variante: sprite alternativo de outro objeto (ex.: livro deitado); não é um objeto próprio
-function objeto(id, zona, draw, extra = {}) {
+// `arquivo`: onde o PNG fica (padrão: assets/objetos/<id>.png). Com `preservar`, um PNG que já existe
+// (editado à mão) não é sobrescrito: vale o desenho do arquivo, com a base e o centro do gerado.
+function objeto(id, zona, draw, extra = {}, { arquivo = OUT + `objetos/${id}.png`, preservar = false } = {}) {
   const c = new Canvas(W, H);
   draw(c);
-  const { sprite, x, y, w, h } = c.crop();
-  sprite.save(OUT + `objetos/${id}.png`);
+  let { sprite, x, y, w, h } = c.crop();
+  if (preservar && existsSync(arquivo)) {
+    const lido = Canvas.ler(arquivo);
+    x += Math.round((w - lido.w) / 2);
+    y += h - lido.h;
+    [sprite, w, h] = [lido, lido.w, lido.h];
+  } else sprite.save(arquivo);
   OBJETOS[id] = { x, y, w, h, zona, ...extra };
+  return { sprite, x, y, w, h };
 }
 const overlay = (id, draw, zona = 'mesa') => objeto(id, zona, draw);
 
@@ -191,14 +201,17 @@ function officeItems() {
 
   // Caneca: vem vazia; enche na cafeteira (variantes caneca-cheia-<tipo>, mesmo recorte; a cor do café
   // mostra a força). O vapor é um sprite à parte, desenhado por cima da caneca cheia no jogo.
+  // Posição inicial: na mesa, à direita do calendário (canto do sprite em 77,116).
+  // O desenho foi feito em 240,126; KX/KY deslocam caneca, variantes e vapor juntos.
+  const KX = 77 - 240, KY = 116 - 126;
   const desenharCaneca = (c, topo, fundo, crema) => {
-    c.box(240, 126, 12, 14, 'blush');
-    c.hline(241, 250, 127, topo);
-    c.hline(241, 250, 128, fundo);
-    if (crema) for (const x of [243, 246, 248]) c.px(x, 127, crema);
-    c.box(251, 129, 5, 7, 'blush');
-    c.rect(252, 130, 3, 5, 'grape');
-    c.vline(243, 132, 136, 'cream');
+    c.box(KX + 240, KY + 126, 12, 14, 'blush');
+    c.hline(KX + 241, KX + 250, KY + 127, topo);
+    c.hline(KX + 241, KX + 250, KY + 128, fundo);
+    if (crema) for (const x of [243, 246, 248]) c.px(KX + x, KY + 127, crema);
+    c.box(KX + 251, KY + 129, 5, 7, 'blush');
+    c.rect(KX + 252, KY + 130, 3, 5, 'grape');
+    c.vline(KX + 243, KY + 132, KY + 136, 'cream');
   };
   objeto('caneca', 'mesa', (c) => desenharCaneca(c, 'plum', 'grape'), { elevavel: true, xicara: true, rotulo: 'Caneca' });
   const CAFES = { descafeinado: ['peach', 'peach', 'cream'], normal: ['plum', 'plum', 'peach'], forte: ['night', 'night', 'plum'] };
@@ -206,15 +219,15 @@ function officeItems() {
     objeto(`caneca-cheia-${tipo}`, 'mesa', (c) => desenharCaneca(c, topo, fundo, crema), { variante: true });
   objeto('vapor', 'mesa', (c) => {
     for (let j = 0; j < 7; j++) {
-      c.px(245 + (j % 2), 124 - j * 1.5, 'mist');
-      c.px(249 - (j % 2), 122 - j * 1.4, 'lilac');
+      c.px(KX + 245 + (j % 2), KY + 124 - j * 1.5, 'mist');
+      c.px(KX + 249 - (j % 2), KY + 122 - j * 1.4, 'lilac');
     }
   }, { variante: true });
 
   // Cafeteira de cápsula (item da loja): a caneca encaixa na bandeja, debaixo do bico
   // (`bandeja`: x da caneca e base dela, relativos ao canto do sprite). Os 3 botões da coluna têm as
   // cores das cápsulas (descafeinado, café, extra forte).
-  const CF = { x: 211, y: 120 }; // à direita do teclado
+  const CF = { x: 252, y: 101 }; // na mesa, à direita (base em 131)
   objeto('cafeteira', 'mesa', (c) => {
     c.box(CF.x + 15, CF.y + 4, 9, 24, 'violet'); // coluna
     c.vline(CF.x + 16, CF.y + 9, CF.y + 25, 'orchid');
@@ -238,6 +251,23 @@ function officeItems() {
     c.px(55, 163, 'ink');
     c.px(77, 154, 'rose');
   }, { rotulo: 'Papéis' });
+
+  // Calendário de mesa (vem no escritório): clicar abre o calendário da campanha (Escritorio.jsx)
+  objeto('calendario-mesa', 'mesa', (c) => {
+    // posição inicial: canto esquerdo da mesa (canto do sprite, com as argolas, em 35,108)
+    const x = 35, y = 110, w = 22, h = 20;
+    c.rect(x + 2, y + h, w - 4, 1, 'grape'); // pezinho de apoio, atrás da folha
+    c.box(x, y, w, h, 'cream');
+    c.rect(x + 1, y + 1, w - 2, 5, 'rose'); // cabeçalho do mês
+    c.hline(x + 1, x + w - 2, y + 6, 'ink');
+    c.hline(x + 7, x + w - 8, y + 3, 'cream');
+    // argolas
+    for (const ax of [x + 5, x + w - 6]) { c.rect(ax, y - 2, 1, 3, 'ink'); c.px(ax, y - 2, 'lavender'); }
+    // dias: grade de pontinhos, com o dia de hoje marcado
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) c.px(x + 3 + i * 4, y + 9 + j * 3, j === 0 && i < 2 ? 'mint' : 'grape');
+    c.rect(x + 10, y + 11, 3, 3, 'butter');
+    c.px(x + 11, y + 12, 'rose');
+  }, { rotulo: 'Calendário' });
 
   overlay('planta', (c) => {
     const r = rng(3);
@@ -657,6 +687,142 @@ function postersExtras() {
   }, { rotulo: 'Pôster gato e lua' });
 }
 
+// ---------------------------------------------------------------- sala de exposição
+// Sala ao lado do escritório: quadro de broches (cortiça com coisas presas por alfinetes), armário de
+// portas de vidro e prateleiras. O vidro é um sprite à parte, desenhado por cima dos objetos.
+function prateleira(c, p, grossa = false) {
+  const h = grossa ? 5 : 4;
+  c.box(p.x, p.y, p.w, h, 'violet');
+  c.hline(p.x + 1, p.x + p.w - 2, p.y + 1, 'orchid');
+  if (!grossa) {
+    c.rect(p.x + 8, p.y + h, 2, 4, 'ink');
+    c.rect(p.x + p.w - 10, p.y + h, 2, 4, 'ink');
+  }
+}
+
+function sala() {
+  const c = new Canvas(W, H);
+  const r = rng(21);
+  // parede com a luz do abajur do escritório chegando pela esquerda
+  c.rect(0, 0, W, H, 'night');
+  for (let x = 10; x < W; x += 20) c.vline(x, 0, SALA.chao, 'ink');
+  c.ellipse(120, 70, 190, 110, 'plum', 'dither');
+  c.ellipse(110, 70, 120, 70, 'plum');
+  c.ellipse(100, 70, 70, 46, 'grape', 'dither');
+  // rodapé e chão
+  c.rect(0, SALA.chao, W, H - SALA.chao, 'plum');
+  c.hline(0, W, SALA.chao, 'ink');
+  c.hline(0, W, SALA.chao + 1, 'grape');
+
+  // quadro de broches: moldura e cortiça
+  const q = SALA.quadro;
+  c.box(q.x, q.y, q.w, q.h, 'grape');
+  c.rect(q.x + 1, q.y + 1, q.w - 2, 2, 'violet');
+  c.rect(q.x + 4, q.y + 4, q.w - 8, q.h - 8, 'peach');
+  c.dither(q.x + 4, q.y + 4, q.w - 8, q.h - 8, 'butter', true);
+  for (let i = 0; i < 90; i++) c.px(q.x + 5 + Math.floor(r() * (q.w - 10)), q.y + 5 + Math.floor(r() * (q.h - 10)), r() > 0.5 ? 'blush' : 'cream');
+  c.rect(q.x + 3, q.y + 3, q.w - 6, 1, 'ink');
+  // (o quadro fica vazio por enquanto: broches e coisas presas virão depois)
+
+  // armário de portas de vidro (o vidro vem no sprite de cima)
+  const a = SALA.armario;
+  c.box(a.x, a.y, a.w, a.h, 'violet');
+  c.rect(a.x + 1, a.y + 1, a.w - 2, 2, 'orchid');
+  c.rect(a.x + 3, a.y + 3, a.w - 6, a.h - 6, 'plum');
+  c.dither(a.x + 3, a.y + 3, a.w - 6, a.h - 6, 'night');
+  c.rect(a.x + 3, SALA.prateleiras['armario-cima'].y, a.w - 6, 3, 'grape');
+  c.hline(a.x + 3, a.x + a.w - 4, SALA.prateleiras['armario-cima'].y, 'orchid');
+  c.rect(a.x + 3, SALA.prateleiras['armario-baixo'].y - 1, a.w - 6, 2, 'grape');
+  // prateleiras da parede
+  prateleira(c, SALA.prateleiras.p1);
+  prateleira(c, SALA.prateleiras.p2);
+  prateleira(c, SALA.prateleiras['p-baixo'], true);
+  c.save(OUT + 'scenes/sala-320x180.png');
+
+  // vidro das portas: brilho em diagonal e reflexo pontilhado, por cima do que estiver dentro
+  const v = new Canvas(W, H);
+  const meio = a.x + Math.floor(a.w / 2);
+  // brilho fino nas bordas do vidro (o meio fica limpo para ver o que está dentro)
+  v.hline(a.x + 3, a.x + a.w - 4, a.y + 3, 'lilac');
+  v.vline(a.x + 3, a.y + 3, a.y + a.h - 4, 'lilac');
+  v.vline(meio + 1, a.y + 3, a.y + a.h - 4, 'lilac');
+  for (const x0 of [a.x + 14, a.x + 22, meio + 12, meio + 20])
+    for (let k = 0; k < 18; k++) v.px(x0 + k, a.y + 46 - k * 2, 'cream'), v.px(x0 + k, a.y + 47 - k * 2, 'cream');
+  v.rect(meio - 1, a.y + 2, 2, a.h - 4, 'violet');
+  v.vline(meio - 1, a.y + 2, a.y + a.h - 3, 'orchid');
+  v.rect(meio - 5, a.y + 28, 2, 6, 'butter');
+  v.rect(meio + 3, a.y + 28, 2, 6, 'butter');
+  v.save(OUT + 'scenes/sala-vidro-320x180.png');
+}
+
+// Objetos básicos da sala (móveis como os do escritório; `sala` e `apoio` dão o lugar padrão)
+function salaItems() {
+  const P = SALA.prateleiras;
+  // boneco do mascote na prateleira de cima
+  objeto('boneco-mascote', 'mesa', (c) => {
+    const x = 196, b = P.p1.y;
+    c.box(x, b - 4, 18, 4, 'grape');
+    c.hline(x + 1, x + 16, b - 3, 'violet');
+    c.box(x + 4, b - 22, 11, 18, 'cream');
+    c.rect(x + 11, b - 22, 3, 3, 'lilac');
+    c.px(x + 7, b - 16, 'ink'); c.px(x + 11, b - 16, 'ink');
+    c.hline(x + 8, x + 10, b - 13, 'ink');
+    c.px(x + 6, b - 14, 'blush'); c.px(x + 12, b - 14, 'blush');
+    c.hline(x + 6, x + 12, b - 9, 'lavender');
+    c.line(x + 4, b - 13, x + 1, b - 19, 'ink');
+    c.line(x + 14, b - 13, x + 17, b - 19, 'ink');
+  }, { elevavel: true, sala: 'sala', apoio: 'p1', rotulo: 'Boneco do mascote' });
+  // globo terrestre
+  objeto('globo', 'mesa', (c) => {
+    const x = 270, b = P.p1.y;
+    c.box(x, b - 3, 14, 3, 'grape');
+    c.vline(x + 7, b - 6, b - 3, 'ink');
+    c.circle(x + 7, b - 13, 7, 'ink');
+    c.circle(x + 7, b - 13, 6, 'sky');
+    c.rect(x + 3, b - 17, 4, 3, 'mint');
+    c.rect(x + 7, b - 12, 4, 4, 'mint');
+    c.px(x + 5, b - 9, 'mint');
+    c.px(x + 4, b - 16, 'cream');
+  }, { elevavel: true, sala: 'sala', apoio: 'p1', rotulo: 'Globo' });
+  // pilha de discos de vinil na prateleira de baixo
+  objeto('discos', 'mesa', (c) => {
+    const x = 200, b = P.p2.y;
+    for (let i = 0; i < 4; i++) {
+      c.box(x + i, b - 4 - i * 4, 26 - i * 2, 4, ['violet', 'blush', 'sky', 'mint'][i]);
+      c.px(x + 12, b - 3 - i * 4, 'cream');
+    }
+  }, { elevavel: true, empilhavel: true, sala: 'sala', apoio: 'p2', rotulo: 'Discos de vinil' });
+  // planta grande no chão (prateleira baixa)
+  objeto('planta-sala', 'mesa', (c) => {
+    const x = 160, b = P['p-baixo'].y;
+    c.box(x, b - 12, 16, 12, 'blush');
+    c.hline(x + 1, x + 14, b - 10, 'rose');
+    c.vline(x + 8, b - 30, b - 13, 'grape');
+    for (const [fx, fy, rr] of [[x + 8, b - 31, 4], [x + 2, b - 24, 4], [x + 14, b - 26, 4], [x + 3, b - 16, 3], [x + 13, b - 17, 3]]) {
+      c.circle(fx, fy, rr, 'ink');
+      c.circle(fx, fy, rr - 1, 'mint');
+      c.px(fx - 1, fy - 1, 'cream');
+    }
+  }, { elevavel: true, sala: 'sala', apoio: 'p-baixo', rotulo: 'Planta grande' });
+  // dentro do armário: porta-retrato e vasinho com flor
+  // porta-retrato com a foto do jogador: a janela (`foto`, relativa ao sprite) recebe o avatar no jogo
+  objeto('porta-retrato', 'mesa', (c) => {
+    const x = 200, y = P['armario-baixo'].y - 24;
+    c.box(x, y, 22, 24, 'butter');
+    c.hline(x + 1, x + 20, y + 1, 'cream');
+    c.rect(x + 2, y + 21, 18, 2, 'peach');
+    c.box(x + 2, y + 2, 18, 18, 'sky', 'grape');
+    c.dither(x + 3, y + 12, 16, 7, 'lilac');
+  }, { elevavel: true, sala: 'sala', apoio: 'armario-baixo', rotulo: 'Porta-retrato', foto: { x: 3, y: 3, w: 16, h: 16 } });
+  objeto('vaso-flor', 'mesa', (c) => {
+    const x = 280, b = P['armario-cima'].y;
+    c.box(x, b - 10, 8, 10, 'sky');
+    c.vline(x + 4, b - 18, b - 10, 'mint');
+    c.circle(x + 4, b - 19, 2, 'rose');
+    c.px(x + 4, b - 19, 'butter');
+  }, { elevavel: true, sala: 'sala', apoio: 'armario-cima', rotulo: 'Vasinho com flor' });
+}
+
 // -------------------------------------------------------- papéis de parede
 function bands(c, y0, colors, bandH) {
   colors.forEach((col, i) => {
@@ -890,6 +1056,25 @@ const ICONS = {
     '.....kk..kk.....',
     '................',
   ],
+  // musicas: nota musical dupla (colcheias ligadas), app de músicas que aparece com o toca-fitas
+  musicas: [
+    '................',
+    '................',
+    '................',
+    '......kkkkkkkk..',
+    '......kooooook..',
+    '......kkkkkkkk..',
+    '......k......k..',
+    '......k......k..',
+    '......k......k..',
+    '......k......k..',
+    '...kkkk...kkkk..',
+    '..kvvok..kvvok..',
+    '..kvvvk..kvvvk..',
+    '...kkk....kkk...',
+    '................',
+    '................',
+  ],
   // guia: livro aberto (app de ajuda da área de trabalho)
   guia: [
     '................',
@@ -1108,194 +1293,18 @@ function icons() {
 }
 
 // ------------------------------------------------------------------ mascote
-// Folha de papel do mascote (18x26) com a orelha dobrada; (x, y) = canto superior esquerdo
-function folha(c, x, y) {
-  c.box(x, y, 18, 26, 'mist');
-  c.rect(x + 1, y + 1, 16, 2, 'cream');
-  for (let i = 0; i < 6; i++) c.clear(x + 17 - i, y + i);
-  c.line(x + 12, y, x + 17, y + 5, 'ink');
-  c.rect(x + 12, y + 1, 1, 5, 'ink');
-  c.hline(x + 12, x + 17, y + 5, 'ink');
-  c.line(x + 13, y + 2, x + 15, y + 4, 'lilac');
-  c.vline(x + 16, y + 6, y + 24, 'lilac');
-  // "texto" do documento
-  c.hline(x + 2, x + 14, y + 19, 'lavender');
-  c.hline(x + 2, x + 11, y + 21, 'lavender');
-}
-const ROSTO = {
-  olhosPonto(c, x, y) {
-    c.rect(x + 4, y + 9, 2, 3, 'ink');
-    c.rect(x + 11, y + 9, 2, 3, 'ink');
-    c.px(x + 4, y + 9, 'cream');
-    c.px(x + 11, y + 9, 'cream');
-  },
-  olhosFelizes(c, x, y) {
-    for (const ox of [3, 10]) {
-      c.px(x + ox, y + 11, 'ink');
-      c.px(x + ox + 1, y + 10, 'ink');
-      c.px(x + ox + 2, y + 10, 'ink');
-      c.px(x + ox + 3, y + 11, 'ink');
-    }
-  },
-  olhosTristes(c, x, y) {
-    c.rect(x + 4, y + 10, 2, 2, 'ink');
-    c.rect(x + 11, y + 10, 2, 2, 'ink');
-    c.line(x + 3, y + 9, x + 5, y + 8, 'ink'); // sobrancelhas caídas
-    c.line(x + 12, y + 8, x + 14, y + 9, 'ink');
-  },
-  bochechas(c, x, y) {
-    c.rect(x + 2, y + 13, 2, 1, 'blush');
-    c.rect(x + 13, y + 13, 2, 1, 'blush');
-  },
-  sorriso(c, x, y) {
-    c.hline(x + 6, x + 10, y + 15, 'ink');
-    c.px(x + 5, y + 14, 'ink');
-    c.px(x + 11, y + 14, 'ink');
-  },
-  bocaAberta(c, x, y) {
-    c.rect(x + 5, y + 13, 7, 3, 'ink');
-    c.rect(x + 6, y + 15, 5, 1, 'rose');
-    c.clear(x + 5, y + 15);
-    c.clear(x + 11, y + 15);
-  },
-  bocaReta(c, x, y) {
-    c.hline(x + 6, x + 10, y + 15, 'ink');
-  },
-  bocaTriste(c, x, y) {
-    c.hline(x + 6, x + 10, y + 14, 'ink');
-    c.px(x + 5, y + 15, 'ink');
-    c.px(x + 11, y + 15, 'ink');
-  },
-};
-// braços: mãos como bolinhas de 1px de raio
-function braco(c, pontos) {
-  for (let i = 1; i < pontos.length; i++) c.line(...pontos[i - 1], ...pontos[i], 'ink');
-  const [hx, hy] = pontos.at(-1);
-  c.circle(hx, hy, 1, 'ink');
-}
-function pernas(c, x, y, abertas = false) {
-  const d = abertas ? 2 : 0;
-  c.line(x + 5, y + 26, x + 5 - d, y + 33, 'ink');
-  c.line(x + 12, y + 26, x + 12 + d, y + 33, 'ink');
-  c.hline(x + 2 - d, x + 5 - d, y + 34, 'ink');
-  c.hline(x + 12 + d, x + 15 + d, y + 34, 'ink');
-  c.hline(x + 2 - d, x + 5 - d, y + 35, 'violet');
-  c.hline(x + 12 + d, x + 15 + d, y + 35, 'violet');
-}
-function estrela(c, x, y, cor) {
-  c.px(x, y, cor);
-  c.px(x - 1, y, cor);
-  c.px(x + 1, y, cor);
-  c.px(x, y - 1, cor);
-  c.px(x, y + 1, cor);
-}
+// Os sprites do mascote (menu, favicon, reações do resultado e fala do tutorial) são desenhados à mão
+// pela equipe: ficam em src/assets/sprites/mascote-*-50x50.png e public/favicon.png, e o gerador não
+// mexe neles. Originais em ../arte e sprites/mascote/.
 
-const REACOES = {
-  // >= 85%: pulando com os braços para cima e confete
-  comemorando(c) {
-    const x = 11, y = 3;
-    braco(c, [[x - 1, y + 12], [x - 5, y + 4]]);
-    braco(c, [[x + 18, y + 12], [x + 22, y + 4]]);
-    pernas(c, x, y, true);
-    folha(c, x, y);
-    ROSTO.olhosFelizes(c, x, y);
-    ROSTO.bochechas(c, x, y);
-    ROSTO.bocaAberta(c, x, y);
-    const confete = [[2, 3, 'butter'], [36, 2, 'blush'], [1, 16, 'sky'], [38, 14, 'mint'], [4, 28, 'blush'], [36, 26, 'butter'], [8, 1, 'mint'], [31, 8, 'sky']];
-    for (const [cx, cy, cor] of confete) c.rect(cx, cy, 2, 2, cor);
-    estrela(c, 3, 9, 'butter');
-    estrela(c, 36, 20, 'butter');
-  },
-  // 60–85%: acenando (pose original)
-  feliz(c) {
-    const x = 11, y = 2;
-    braco(c, [[x - 1, y + 14], [x - 6, y + 8], [x - 7, y + 4]]);
-    braco(c, [[x + 18, y + 14], [x + 22, y + 21]]);
-    pernas(c, x, y);
-    folha(c, x, y);
-    ROSTO.olhosPonto(c, x, y);
-    ROSTO.bochechas(c, x, y);
-    ROSTO.sorriso(c, x, y);
-  },
-  // 30–60%: mãos na cintura, cara de "dá pra melhorar"
-  neutro(c) {
-    const x = 11, y = 2;
-    braco(c, [[x - 1, y + 12], [x - 4, y + 15], [x - 1, y + 18]]);
-    braco(c, [[x + 18, y + 12], [x + 21, y + 15], [x + 18, y + 18]]);
-    pernas(c, x, y);
-    folha(c, x, y);
-    ROSTO.olhosPonto(c, x, y);
-    ROSTO.bocaReta(c, x, y);
-  },
-  // 0–30%: braços caídos, lágrima
-  triste(c) {
-    const x = 11, y = 2;
-    braco(c, [[x - 1, y + 15], [x - 3, y + 22]]);
-    braco(c, [[x + 18, y + 15], [x + 20, y + 22]]);
-    pernas(c, x, y);
-    folha(c, x, y);
-    ROSTO.olhosTristes(c, x, y);
-    ROSTO.bocaTriste(c, x, y);
-    c.rect(x + 4, y + 12, 1, 2, 'sky');
-    c.rect(x + 3, y + 14, 2, 2, 'sky');
-  },
-  // 0%: deitado espatifado no chão, olhos em X, estrelinhas rodando
-  espatifado(c) {
-    c.hline(2, 37, 38, 'plum'); // sombra no chão
-    c.hline(4, 35, 39, 'plum');
-    braco(c, [[7, 28], [2, 25]]);
-    braco(c, [[32, 28], [37, 25]]);
-    c.line(14, 35, 11, 37, 'ink');
-    c.line(25, 35, 28, 37, 'ink');
-    c.hline(8, 11, 37, 'violet');
-    c.hline(28, 31, 37, 'violet');
-    // folha achatada e amassada
-    c.box(6, 23, 27, 13, 'mist');
-    c.rect(7, 24, 25, 1, 'cream');
-    for (let i = 0; i < 4; i++) c.clear(32 - i, 23 + i);
-    c.line(28, 23, 32, 27, 'ink');
-    c.vline(28, 24, 27, 'ink');
-    c.hline(28, 32, 27, 'ink');
-    c.px(29, 25, 'lilac');
-    c.line(9, 31, 12, 33, 'lilac'); // vincos
-    c.line(24, 33, 27, 31, 'lilac');
-    // olhos em X
-    for (const ox of [12, 22]) {
-      c.line(ox, 26, ox + 2, 28, 'ink');
-      c.line(ox + 2, 26, ox, 28, 'ink');
-    }
-    // boca torta
-    [[15, 31], [16, 30], [17, 31], [18, 30], [19, 31], [20, 30]].forEach(([px, py]) => c.px(px, py, 'ink'));
-    estrela(c, 11, 17, 'butter');
-    estrela(c, 19, 14, 'butter');
-    estrela(c, 27, 17, 'butter');
-    c.line(13, 18, 17, 16, 'lavender');
-    c.line(21, 15, 25, 17, 'lavender');
-  },
-};
-
-function mascot() {
-  // sprite principal (menu, favicon): o mesmo desenho do "feliz", em 32x40
-  const c = new Canvas(32, 40);
-  braco(c, [[7, 16], [2, 10], [1, 6]]);
-  braco(c, [[26, 16], [30, 23]]);
-  pernas(c, 8, 2);
-  folha(c, 8, 2);
-  ROSTO.olhosPonto(c, 8, 2);
-  ROSTO.bochechas(c, 8, 2);
-  ROSTO.sorriso(c, 8, 2);
-  c.save(OUT + 'sprites/mascote-32x40.png');
-  c.save(fileURLToPath(new URL('../public/favicon.png', import.meta.url)));
-
-  for (const [nome, desenha] of Object.entries(REACOES)) {
-    const r = new Canvas(40, 40);
-    desenha(r);
-    r.save(OUT + `sprites/mascote-${nome}-40x40.png`);
-  }
-}
 
 office();
 officeItems();
+sala();
+salaItems();
+albumConquistas(objeto);
+conquistas(objeto, OUT);
+avatar(OUT);
 postersExtras();
 wallpaperSunset();
 wallpaperRain();
@@ -1305,6 +1314,5 @@ wallpaperGradeNeon();
 wallpaperPlanetas();
 wallpaperCerejeiras();
 icons();
-mascot();
 writeFileSync(fileURLToPath(new URL('../src/art/objetos.json', import.meta.url)), JSON.stringify(OBJETOS, null, 2) + '\n');
 console.log('Assets gerados em', OUT);

@@ -1,23 +1,10 @@
-import { composicaoDoDia, nivelDoModelo } from '../lib/dificuldade.js';
+import { composicaoDoDia, composicaoDoFimDeSemana, nivelDoModelo } from '../lib/dificuldade.js';
 import { tipoDoDiagrama } from '../lib/categorias.js';
+import { c, e, n, t } from './gabarito.js';
+import { COMPLEXOS } from './complexos.js';
+import { TREINOS } from './treino.js';
 // Modelos de pedidos recebidos por e-mail. "esperado" é o diagrama-gabarito usado na avaliação.
 // Coordenadas do gabarito já estão no grid (múltiplos de 20).
-
-// w/h: só no sistema (fronteira), que tem tamanho próprio
-const n = (id, tipo, rotulo, x, y, w, h) => ({ id, tipo, rotulo, x, y, ...(w ? { w, h } : {}) });
-// multDe / multPara: multiplicidade em cada ponta (só associação, agregação e composição; ver lib/multiplicidade.js)
-const e = (tipo, de, para, multDe, multPara) => ({
-  id: `${de}-${tipo}-${para}`,
-  tipo,
-  de,
-  para,
-  ...(multDe ? { multDe } : {}),
-  ...(multPara ? { multPara } : {}),
-});
-// Classe com atributos e métodos (uma linha UML por membro: "- saldo: float", "+ sacar(valor: float): bool")
-const c = (id, rotulo, x, y, atributos = [], metodos = []) => ({ id, tipo: 'classe', rotulo, x, y, atributos, metodos });
-// Transição do diagrama de estados: `evento` vai no rótulo da seta (vazio saindo do início e chegando ao fim)
-const t = (de, para, evento = '') => ({ id: `${de}-transicao-${para}`, tipo: 'transicao', de, para, rotulo: evento });
 
 export const MODELOS = [
   {
@@ -27,12 +14,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 120,
     corpo: [
-      'Olá! Precisamos de um diagrama de casos de uso.',
-      'O sistema se chama "Sistema da Biblioteca".',
-      'Atores: "Aluno" e "Bibliotecário".',
-      'O Aluno pode "Consultar acervo" e "Emprestar livro".',
-      'O Bibliotecário participa de "Emprestar livro" e "Devolver livro".',
-      'Todo empréstimo inclui "Verificar cadastro".',
+      'Olá! A biblioteca da escola vai ganhar um sistema e queremos ver quem faz o quê nele.',
+      'Vamos chamá-lo de "Sistema da Biblioteca".',
+      'O "Aluno" entra para "Consultar acervo" e, quando acha o que quer, "Emprestar livro". O empréstimo é feito junto com o "Bibliotecário", que também cuida de "Devolver livro".',
+      'Nenhum livro sai sem "Verificar cadastro": isso acontece em todo empréstimo.',
     ],
     esperado: {
       nodes: [
@@ -58,12 +43,11 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 130,
     corpo: [
-      'Boa noite! Queremos um diagrama de casos de uso do nosso app.',
-      'O sistema se chama "App da Pizzaria".',
-      'Atores: "Cliente" e "Entregador".',
-      'O Cliente pode "Fazer pedido" e "Acompanhar entrega".',
-      'Fazer pedido sempre inclui "Pagar".',
-      'O Entregador realiza "Entregar pedido".',
+      'Boa noite! Nosso app de delivery está saindo do forno e precisamos do mapa de quem usa o quê.',
+      'O nome dele é "App da Pizzaria".',
+      'O "Cliente" abre o app para "Fazer pedido" e depois "Acompanhar entrega".',
+      'Pedido nenhum é fechado sem "Pagar": faz parte de todo pedido.',
+      'Do outro lado, o "Entregador" usa o app para "Entregar pedido".',
     ],
     esperado: {
       nodes: [
@@ -89,11 +73,10 @@ export const MODELOS = [
     tempo: 230,
     recompensa: 140,
     corpo: [
-      'Oi! Precisamos modelar a venda online.',
-      'O sistema se chama "Site do Cinema".',
-      'Ator: "Cliente". Ele pode "Comprar ingresso".',
-      'Comprar ingresso inclui "Escolher assento".',
-      'Opcionalmente, "Aplicar cupom" estende Comprar ingresso.',
+      'Oi! Vamos vender ingressos pela internet e queremos ver como o cliente usa o site.',
+      'O site se chama "Site do Cinema".',
+      'O "Cliente" entra para "Comprar ingresso", e toda compra passa por "Escolher assento".',
+      'Quem tem um código de desconto pode "Aplicar cupom" durante a compra, mas isso é só de vez em quando.',
     ],
     esperado: {
       nodes: [
@@ -117,10 +100,9 @@ export const MODELOS = [
     tempo: 220,
     recompensa: 150,
     corpo: [
-      'Olá, agência! Queremos um diagrama de classes.',
-      'Classes: "Animal", "Cachorro", "Gato" e "Dono".',
-      'Cachorro e Gato herdam de Animal.',
-      'Dono tem associação com Animal.',
+      'Olá, agência! Queremos organizar o cadastro dos bichinhos do petshop.',
+      'Atendemos "Cachorro" e "Gato", e os dois são tipos de "Animal".',
+      'Todo animal tem um "Dono", que é quem traz ele aqui e com quem a gente fala.',
     ],
     esperado: {
       nodes: [
@@ -141,10 +123,10 @@ export const MODELOS = [
     tempo: 230,
     recompensa: 140,
     corpo: [
-      'Prezados, precisamos do diagrama de casos de uso do caixa.',
-      'O sistema se chama "Caixa Eletrônico".',
-      'Ator: "Cliente". Ele pode "Sacar" e "Depositar".',
-      'Tanto Sacar quanto Depositar incluem "Autenticar".',
+      'Prezados, o caixa eletrônico da agência vai ser trocado e precisamos do mapa do que o cliente faz nele.',
+      'O sistema é o "Caixa Eletrônico".',
+      'O "Cliente" chega para "Sacar" ou "Depositar".',
+      'Seja qual for a operação, antes de tudo ele precisa "Autenticar": acontece no saque e no depósito, sempre.',
     ],
     esperado: {
       nodes: [
@@ -167,10 +149,9 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 160,
     corpo: [
-      'Bom dia! Precisamos de um diagrama de classes.',
-      'Classes: "Pessoa", "Aluno", "Professor" e "Turma".',
-      'Aluno e Professor herdam de Pessoa.',
-      'Turma se associa a Aluno e a Professor.',
+      'Bom dia! Queremos organizar quem é quem na escola.',
+      'Aqui tem "Aluno" e "Professor", e os dois são tipos de "Pessoa".',
+      'Cada "Turma" reúne os seus alunos e o professor que dá aula para ela.',
     ],
     esperado: {
       nodes: [
@@ -192,12 +173,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'E aí! Queremos um diagrama de casos de uso.',
-      'O sistema se chama "Sistema da Academia".',
-      'Atores: "Aluno" e "Instrutor".',
-      'O Aluno pode "Matricular" e "Registrar presença".',
-      'O Instrutor pode "Montar treino".',
-      '"Avaliar físico" estende Montar treino.',
+      'E aí! A academia vai ter um sistema novo e queremos ver quem usa o quê.',
+      'Ele vai se chamar "Sistema da Academia".',
+      'O "Aluno" usa para "Matricular" e para "Registrar presença" quando chega para treinar.',
+      'O "Instrutor" usa para "Montar treino". Às vezes, enquanto monta, ele aproveita para "Avaliar físico" do aluno, mas nem sempre.',
     ],
     esperado: {
       nodes: [
@@ -223,10 +202,10 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 110,
     corpo: [
-      'Oi, pessoal da agência :)',
-      'O sistema se chama "App da Cafeteria".',
-      'Ator: "Cliente". Ele pode "Ver cardápio" e "Pedir café".',
-      'Pedir café inclui "Pagar".',
+      'Oi, pessoal da agência :) Estamos lançando um app para a cafeteria!',
+      'O nome é "App da Cafeteria".',
+      'O "Cliente" abre o app para "Ver cardápio" e "Pedir café".',
+      'Todo café pedido passa por "Pagar" antes de ir para a máquina.',
     ],
     esperado: {
       nodes: [
@@ -252,12 +231,11 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Olá! Queremos um diagrama de casos de uso das reservas.',
+      'Olá! As reservas do hotel vão para o computador e queremos o mapa de quem faz o quê.',
       'O sistema se chama "Sistema de Reservas".',
-      'Atores: "Hóspede" e "Recepcionista".',
-      'O Hóspede pode "Reservar quarto" e "Cancelar reserva".',
-      'O Recepcionista faz o "Fazer check-in".',
-      'Cancelar reserva depende de Reservar quarto, e Fazer check-in também depende de Reservar quarto (use dependência).',
+      'O "Hóspede" pode "Reservar quarto" e, se mudar de ideia, "Cancelar reserva".',
+      'No balcão, o "Recepcionista" cuida de "Fazer check-in".',
+      'Só dá para cancelar ou fazer o check-in de algo que já foi reservado: os dois dependem de Reservar quarto (é uma dependência, não um passo incluído).',
     ],
     esperado: {
       nodes: [
@@ -282,10 +260,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Oi! Precisamos do diagrama de casos de uso do nosso app.',
-      'O sistema se chama "App de Streaming".',
-      'Ator: "Assinante". Ele pode "Assinar plano", "Assistir filme" e "Baixar episódio".',
-      'Assistir filme depende de Assinar plano, e Baixar episódio também depende de Assinar plano (use dependência).',
+      'Oi! Estamos montando o nosso app de filmes e séries.',
+      'O nome é "App de Streaming".',
+      'O "Assinante" usa para "Assinar plano", "Assistir filme" e "Baixar episódio".',
+      'Assistir e baixar só funcionam para quem já tem plano: os dois dependem de Assinar plano (é uma dependência, não um passo incluído).',
     ],
     esperado: {
       nodes: [
@@ -308,12 +286,10 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 170,
     corpo: [
-      'Boa tarde! Queremos um diagrama de casos de uso da farmácia.',
+      'Boa tarde! A farmácia vai vender pelo sistema e queremos ver quem participa do quê.',
       'O sistema se chama "Sistema da Farmácia".',
-      'Atores: "Cliente" e "Farmacêutico".',
-      'O Cliente pode "Comprar remédio". O Farmacêutico faz o "Validar receita".',
-      'Comprar remédio depende de Validar receita (use dependência).',
-      'Comprar remédio sempre inclui "Pagar".',
+      'O "Cliente" vem para "Comprar remédio", e toda compra termina em "Pagar".',
+      'O "Farmacêutico" é quem faz "Validar receita". A compra depende dessa validação (é uma dependência, não um passo incluído).',
     ],
     esperado: {
       nodes: [
@@ -340,10 +316,10 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 110,
     corpo: [
-      'Olá! Queremos um diagrama de casos de uso da nossa loja de flores.',
-      'O sistema se chama "Site da Floricultura".',
-      'Ator: "Cliente". Ele pode "Ver buquês" e "Encomendar buquê".',
-      'Encomendar buquê sempre inclui "Pagar".',
+      'Olá! Nossa floricultura vai vender pela internet.',
+      'O site se chama "Site da Floricultura".',
+      'O "Cliente" entra para "Ver buquês" e, quando escolhe, "Encomendar buquê".',
+      'Toda encomenda passa por "Pagar".',
     ],
     esperado: {
       nodes: [
@@ -366,9 +342,9 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 100,
     corpo: [
-      'Namastê! Precisamos de um diagrama de casos de uso bem simples.',
-      'O sistema se chama "App do Estúdio".',
-      'Ator: "Aluno". Ele pode "Ver horários" e "Agendar aula".',
+      'Namastê! Queremos algo bem simples para o estúdio.',
+      'O app se chama "App do Estúdio".',
+      'O "Aluno" usa para "Ver horários" e "Agendar aula". Só isso!',
     ],
     esperado: {
       nodes: [
@@ -389,11 +365,10 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 120,
     corpo: [
-      'Oi! Queremos o diagrama de casos de uso da sorveteria.',
-      'O sistema se chama "Balcão Digital".',
-      'Atores: "Cliente" e "Atendente".',
-      'O Cliente pode "Ver sabores" e "Pedir sorvete".',
-      'O Atendente também participa de "Pedir sorvete".',
+      'Oi! O balcão da sorveteria vai ganhar uma tela de pedidos.',
+      'Ela se chama "Balcão Digital".',
+      'O "Cliente" usa a tela para "Ver sabores" e "Pedir sorvete".',
+      'O "Atendente" acompanha cada pedido de sorvete junto com o cliente.',
     ],
     esperado: {
       nodes: [
@@ -416,10 +391,9 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 100,
     corpo: [
-      'Olá! Precisamos de um diagrama de casos de uso da nossa lojinha.',
-      'O sistema se chama "Loja da Papelaria".',
-      'Ator: "Cliente". Ele pode "Comprar caderno".',
-      'Comprar caderno inclui "Pagar".',
+      'Olá! Nossa lojinha de papelaria vai para a internet.',
+      'Ela se chama "Loja da Papelaria".',
+      'Por enquanto o "Cliente" só vai "Comprar caderno", e toda compra passa por "Pagar".',
     ],
     esperado: {
       nodes: [
@@ -441,12 +415,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Boa noite! Queremos o diagrama de casos de uso das visitas ao observatório.',
+      'Boa noite! Queremos organizar as visitas noturnas ao observatório.',
       'O sistema se chama "Agenda do Observatório".',
-      'Atores: "Visitante" e "Guia".',
-      'O Visitante pode "Ver eventos" e "Agendar visita".',
-      'Agendar visita sempre inclui "Escolher horário".',
-      'O Guia realiza "Conduzir visita".',
+      'O "Visitante" pode "Ver eventos" do céu e "Agendar visita". Todo agendamento passa por "Escolher horário".',
+      'Na noite marcada, o "Guia" é quem vai "Conduzir visita".',
     ],
     esperado: {
       nodes: [
@@ -472,12 +444,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Olá! Precisamos do diagrama de casos de uso da bilheteria.',
+      'Olá! A bilheteria do aquário vai ser informatizada.',
       'O sistema se chama "Bilheteria do Aquário".',
-      'Atores: "Visitante" e "Funcionário".',
-      'O Visitante pode "Comprar ingresso" e "Ver programação".',
-      'Opcionalmente, "Usar meia-entrada" estende Comprar ingresso.',
-      'O Funcionário faz o "Validar ingresso".',
+      'O "Visitante" pode "Ver programação" e "Comprar ingresso". Estudantes e idosos às vezes aproveitam a compra para "Usar meia-entrada", mas não é todo mundo.',
+      'Na entrada, o "Funcionário" faz "Validar ingresso".',
     ],
     esperado: {
       nodes: [
@@ -503,12 +473,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 160,
     corpo: [
-      'Oi! Queremos o diagrama de casos de uso do nosso spa.',
+      'Oi! O spa vai ter agendamento online e queremos o mapa de quem usa o quê.',
       'O sistema se chama "Agenda do Spa".',
-      'Atores: "Cliente" e "Terapeuta".',
-      'O Cliente pode "Comprar pacote" e "Agendar massagem".',
-      'Agendar massagem sempre inclui "Escolher terapeuta".',
-      'O Terapeuta faz o "Confirmar horário".',
+      'O "Cliente" pode "Comprar pacote" e "Agendar massagem". Toda massagem agendada passa por "Escolher terapeuta".',
+      'O "Terapeuta" entra para "Confirmar horário".',
     ],
     esperado: {
       nodes: [
@@ -534,11 +502,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Bom dia! Precisamos do diagrama de casos de uso das encomendas.',
-      'O sistema se chama "Site da Padaria".',
-      'Ator: "Cliente". Ele pode "Ver vitrine" e "Encomendar bolo".',
-      'Encomendar bolo sempre inclui "Pagar".',
-      'Opcionalmente, "Escrever mensagem" estende Encomendar bolo.',
+      'Bom dia! Agora dá para encomendar bolo pelo site da padaria.',
+      'Ele se chama "Site da Padaria".',
+      'O "Cliente" pode "Ver vitrine" e "Encomendar bolo". Toda encomenda passa por "Pagar".',
+      'Se quiser, na encomenda ele pode "Escrever mensagem" no bolo, mas é opcional.',
     ],
     esperado: {
       nodes: [
@@ -563,12 +530,11 @@ export const MODELOS = [
     tempo: 360,
     recompensa: 210,
     corpo: [
-      'Olá! Queremos o diagrama de casos de uso das nossas oficinas.',
-      'O sistema se chama "Portal do Ateliê".',
-      'Atores: "Aluno" e "Professor".',
-      'O Aluno pode "Fazer inscrição" e "Enviar trabalho". O Professor pode "Corrigir trabalho" e "Criar oficina".',
-      'Fazer inscrição sempre inclui "Pagar".',
-      'Enviar trabalho depende de Fazer inscrição, e Corrigir trabalho depende de Enviar trabalho (use dependência).',
+      'Olá! O ateliê vai organizar as oficinas de pintura num portal.',
+      'Ele se chama "Portal do Ateliê".',
+      'O "Aluno" usa para "Fazer inscrição" (toda inscrição passa por "Pagar") e para "Enviar trabalho".',
+      'O "Professor" usa para "Criar oficina" e "Corrigir trabalho".',
+      'Só manda trabalho quem já se inscreveu, e só se corrige o que foi enviado: Enviar trabalho depende de Fazer inscrição, e Corrigir trabalho depende de Enviar trabalho (dependências, não passos incluídos).',
     ],
     esperado: {
       nodes: [
@@ -596,12 +562,10 @@ export const MODELOS = [
     tempo: 360,
     recompensa: 210,
     corpo: [
-      'Oi! Precisamos do diagrama de casos de uso da agência de viagens.',
-      'O sistema se chama "Site de Viagens".',
-      'Atores: "Viajante" e "Agente".',
-      'O Viajante pode "Buscar pacote" e "Reservar viagem".',
-      'Reservar viagem sempre inclui "Pagar", e "Contratar seguro" estende Reservar viagem (é opcional).',
-      'O Agente faz o "Confirmar reserva", que depende de Reservar viagem (use dependência).',
+      'Oi! A agência de viagens vai vender pacotes pelo site.',
+      'O site se chama "Site de Viagens".',
+      'O "Viajante" pode "Buscar pacote" e "Reservar viagem". Toda reserva passa por "Pagar", e quem quiser pode, na reserva, "Contratar seguro" (opcional).',
+      'Depois, o "Agente" faz "Confirmar reserva", que depende da reserva feita (é uma dependência, não um passo incluído).',
     ],
     esperado: {
       nodes: [
@@ -630,12 +594,11 @@ export const MODELOS = [
     tempo: 390,
     recompensa: 220,
     corpo: [
-      'Olá! Queremos o diagrama de casos de uso do nosso coworking.',
-      'O sistema se chama "App do Coworking".',
-      'Atores: "Membro" e "Recepcionista".',
-      'O Membro pode "Reservar sala", "Reservar mesa" e "Cancelar reserva".',
-      'Reservar sala sempre inclui "Pagar".',
-      'Cancelar reserva depende de Reservar mesa. O Recepcionista faz o "Liberar acesso", que também depende de Reservar mesa (use dependência).',
+      'Olá! O coworking vai ganhar um app de reservas.',
+      'Ele se chama "App do Coworking".',
+      'O "Membro" pode "Reservar sala", "Reservar mesa" e "Cancelar reserva". Sala de reunião é paga: toda reserva de sala passa por "Pagar".',
+      'Na entrada, o "Recepcionista" faz "Liberar acesso".',
+      'Cancelar e liberar acesso só valem para uma mesa reservada: os dois dependem de Reservar mesa (dependências, não passos incluídos).',
     ],
     esperado: {
       nodes: [
@@ -667,12 +630,11 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Olá! Precisamos de um diagrama de estados das nossas entregas.',
-      'Estados: "Recebido", "Em preparo", "A caminho", "Entregue" e "Cancelado".',
-      'Tudo começa em Recebido.',
-      'Recebido vai para Em preparo com o evento "confirmar". Em preparo vai para A caminho com "despachar". A caminho vai para Entregue com "entregar".',
-      'Recebido também pode ir para Cancelado com o evento "cancelar".',
-      'Entregue e Cancelado terminam o processo.',
+      'Olá! Queremos mostrar no site em que pé está cada entrega.',
+      'Toda entrega chega como "Recebido". Quando a gente vai "confirmar", ela passa para "Em preparo".',
+      'Depois de "despachar", fica "A caminho", e quando o motorista vai "entregar", vira "Entregue".',
+      'Enquanto está em Recebido, o cliente ainda pode "cancelar", e aí fica "Cancelado".',
+      'Uma entrega Entregue ou Cancelada não muda mais: o processo acaba ali.',
     ],
     esperado: {
       nodes: [
@@ -699,11 +661,9 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 130,
     corpo: [
-      'Bom dia! Queremos o diagrama de estados do novo semáforo.',
-      'Estados: "Vermelho", "Verde" e "Amarelo".',
-      'O semáforo começa em Vermelho.',
-      'Vermelho vai para Verde, Verde vai para Amarelo e Amarelo volta para Vermelho, sempre com o evento "tempo esgotado".',
-      'Do Vermelho, o evento "desligar" encerra o funcionamento.',
+      'Bom dia! A prefeitura quer documentar como funciona o novo semáforo.',
+      'Ele liga no "Vermelho". Cada vez que dá "tempo esgotado", ele troca: do vermelho para o "Verde", do verde para o "Amarelo" e do amarelo de volta para o vermelho.',
+      'Quando alguém vai "desligar" o semáforo, isso só acontece no vermelho, e aí ele para de funcionar.',
     ],
     esperado: {
       nodes: [
@@ -727,11 +687,9 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 120,
     corpo: [
-      'Oi! Precisamos do diagrama de estados da catraca.',
-      'Estados: "Travada" e "Destravada". Ela começa Travada.',
-      'Travada vai para Destravada com o evento "inserir bilhete".',
-      'Destravada volta para Travada com o evento "passar".',
-      'Travada termina com o evento "desativar".',
+      'Oi! Precisamos explicar a catraca nova da estação.',
+      'Ela fica "Travada" quando está parada. Ao "inserir bilhete", fica "Destravada"; quando a pessoa vai "passar", trava de novo.',
+      'Para manutenção, a gente pode "desativar" a catraca, mas só quando ela está travada. Aí ela sai de funcionamento.',
     ],
     esperado: {
       nodes: [
@@ -754,11 +712,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'E aí! Queremos o diagrama de estados do nosso player.',
-      'Estados: "Parado", "Tocando" e "Pausado". O player começa Parado.',
-      'Parado vai para Tocando com "play". Tocando vai para Pausado com "pause", e Pausado volta para Tocando com "play".',
-      'Tocando volta para Parado com "stop".',
-      'Parado termina com o evento "fechar".',
+      'E aí! Queremos mostrar como o nosso player de música se comporta.',
+      'Ele abre "Parado". Com "play", fica "Tocando"; com "pause", fica "Pausado", e outro "play" volta a tocar.',
+      'Se a pessoa der "stop" enquanto toca, ele volta a ficar parado.',
+      'Parado, dá para "fechar" o player, e aí acabou.',
     ],
     esperado: {
       nodes: [
@@ -782,11 +739,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 160,
     corpo: [
-      'Olá! Precisamos do diagrama de estados de um chamado de suporte.',
-      'Estados: "Aberto", "Em atendimento" e "Resolvido". Todo chamado começa Aberto.',
-      'Aberto vai para Em atendimento com "atribuir". Em atendimento vai para Resolvido com "resolver".',
-      'Resolvido pode voltar para Em atendimento com "reabrir".',
-      'Resolvido termina com o evento "fechar".',
+      'Olá! Queremos acompanhar a vida de um chamado de suporte.',
+      'Todo chamado nasce "Aberto". Quando a gente vai "atribuir" para alguém, ele fica "Em atendimento", e depois de "resolver", fica "Resolvido".',
+      'Se o problema voltar, o cliente pode "reabrir", e o chamado volta para atendimento.',
+      'Um chamado resolvido pode ser encerrado com "fechar", e aí acabou.',
     ],
     esperado: {
       nodes: [
@@ -804,7 +760,7 @@ export const MODELOS = [
     },
   },
   // Estados com decisão (losango): a pergunta fica dentro do losango e cada seta que sai leva a
-  // condição entre colchetes ("[sim]" / "[não]"; na nota os colchetes são opcionais).
+  // condição ("sim" / "não"; na nota os colchetes, se o jogador puser, são ignorados).
   {
     id: 'login-app',
     cliente: 'Banco Estrela Roxa',
@@ -812,12 +768,11 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 170,
     corpo: [
-      'Olá! Precisamos do diagrama de estados do login do nosso app.',
-      'Estados: "Digitando senha", "Logado" e "Bloqueado". Tudo começa em Digitando senha.',
-      'Com o evento "enviar", o app chega a uma decisão (losango) com a pergunta "Senha certa?".',
-      'Da decisão, com a condição "[sim]" vai para Logado; com "[não]" volta para Digitando senha.',
-      'Digitando senha vai para Bloqueado com o evento "errar 3 vezes".',
-      'Logado termina com o evento "sair", e Bloqueado termina o processo.',
+      'Olá! Precisamos explicar como funciona o login do nosso app.',
+      'Tudo começa em "Digitando senha". Quando a pessoa vai "enviar", o app se pergunta: "Senha certa?".',
+      'Se "sim", fica "Logado"; se "não", volta a pedir a senha.',
+      'Se a pessoa "errar 3 vezes" enquanto digita, o app fica "Bloqueado", e aí não tem volta: acabou.',
+      'Logado, a pessoa pode "sair", e o processo termina.',
     ],
     esperado: {
       nodes: [
@@ -830,7 +785,7 @@ export const MODELOS = [
       ],
       edges: [
         t('i', 'e1'),
-        t('e1', 'd', 'enviar'), t('d', 'e2', '[sim]'), t('d', 'e1', '[não]'),
+        t('e1', 'd', 'enviar'), t('d', 'e2', 'sim'), t('d', 'e1', 'não'),
         t('e1', 'e3', 'errar 3 vezes'),
         t('e2', 'f', 'sair'), t('e3', 'f'),
       ],
@@ -843,12 +798,10 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 170,
     corpo: [
-      'Oi! Queremos o diagrama de estados do pagamento dos pedidos da loja.',
-      'Estados: "Aguardando pagamento", "Pago" e "Recusado". O pedido começa em Aguardando pagamento.',
-      'Com o evento "pagar", o pedido passa por uma decisão (losango): "Aprovado?".',
-      'Com a condição "[sim]" vai para Pago; com "[não]" vai para Recusado.',
-      'Recusado volta para Aguardando pagamento com "tentar de novo", ou termina com "desistir".',
-      'Pago termina o processo.',
+      'Oi! Queremos mostrar o que acontece com o pagamento de um pedido da loja.',
+      'Todo pedido começa "Aguardando pagamento". Quando o cliente vai "pagar", a operadora decide: "Aprovado?".',
+      'Se "sim", fica "Pago" e pronto, acabou. Se "não", fica "Recusado".',
+      'Recusado, o cliente pode "tentar de novo" (volta a aguardar pagamento) ou "desistir", e aí acaba.',
     ],
     esperado: {
       nodes: [
@@ -861,7 +814,7 @@ export const MODELOS = [
       ],
       edges: [
         t('i', 'e1'),
-        t('e1', 'd', 'pagar'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+        t('e1', 'd', 'pagar'), t('d', 'e2', 'sim'), t('d', 'e3', 'não'),
         t('e3', 'e1', 'tentar de novo'),
         t('e2', 'f'), t('e3', 'f', 'desistir'),
       ],
@@ -874,12 +827,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 160,
     corpo: [
-      'Olá! Precisamos do diagrama de estados de um livro na devolução.',
-      'Estados: "Emprestado", "Disponível" e "Com multa". O livro começa Emprestado.',
-      'Com o evento "devolver", há uma decisão (losango): "No prazo?".',
-      'Com a condição "[sim]" o livro fica Disponível; com "[não]" fica Com multa.',
-      'Com multa vai para Disponível com o evento "pagar multa".',
-      'Disponível termina o processo.',
+      'Olá! Queremos explicar o que acontece com um livro na devolução.',
+      'O livro está "Emprestado". Quando o leitor vai "devolver", a gente confere: "No prazo?".',
+      'Se "sim", ele fica "Disponível". Se "não", fica "Com multa" até o leitor "pagar multa", e aí também fica disponível.',
+      'Disponível, o livro termina o processo.',
     ],
     esperado: {
       nodes: [
@@ -892,7 +843,7 @@ export const MODELOS = [
       ],
       edges: [
         t('i', 'e1'),
-        t('e1', 'd', 'devolver'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+        t('e1', 'd', 'devolver'), t('d', 'e2', 'sim'), t('d', 'e3', 'não'),
         t('e3', 'e2', 'pagar multa'),
         t('e2', 'f'),
       ],
@@ -905,12 +856,10 @@ export const MODELOS = [
     tempo: 330,
     recompensa: 180,
     corpo: [
-      'Bom dia! Queremos o diagrama de estados das encomendas do nosso depósito.',
-      'Estados: "Recebido", "Separando", "Aguardando estoque" e "Enviado". Toda encomenda começa em Recebido.',
-      'Com o evento "conferir", a encomenda passa por uma decisão (losango): "Tem estoque?".',
-      'Com a condição "[sim]" vai para Separando; com "[não]" vai para Aguardando estoque.',
-      'Aguardando estoque volta para Recebido com o evento "chegar produto".',
-      'Separando vai para Enviado com "despachar", e Enviado termina o processo.',
+      'Bom dia! Queremos acompanhar cada encomenda do depósito.',
+      'Toda encomenda chega como "Recebido". Quando a gente vai "conferir", a pergunta é: "Tem estoque?".',
+      'Se "sim", fica "Separando". Se "não", fica "Aguardando estoque" até "chegar produto", e aí volta para recebido para conferir de novo.',
+      'Separando, a gente vai "despachar", e ela fica "Enviado". Aí termina.',
     ],
     esperado: {
       nodes: [
@@ -924,7 +873,7 @@ export const MODELOS = [
       ],
       edges: [
         t('i', 'e1'),
-        t('e1', 'd', 'conferir'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+        t('e1', 'd', 'conferir'), t('d', 'e2', 'sim'), t('d', 'e3', 'não'),
         t('e3', 'e1', 'chegar produto'),
         t('e2', 'e4', 'despachar'), t('e4', 'f'),
       ],
@@ -937,12 +886,10 @@ export const MODELOS = [
     tempo: 390,
     recompensa: 220,
     corpo: [
-      'Oi! Queremos o diagrama de estados do nosso caixa eletrônico. Ele tem duas decisões (losangos).',
-      'Estados: "Ocioso", "Aguardando saque" e "Entregando dinheiro". O caixa começa Ocioso.',
-      'Com o evento "inserir cartão", ele chega à decisão "Senha certa?": com "[sim]" vai para Aguardando saque; com "[não]" volta para Ocioso.',
-      'Em Aguardando saque, o evento "pedir saque" leva à decisão "Tem saldo?": com "[sim]" vai para Entregando dinheiro; com "[não]" volta para Aguardando saque.',
-      'Entregando dinheiro volta para Ocioso com o evento "retirar dinheiro".',
-      'Ocioso termina com o evento "desligar".',
+      'Oi! Queremos explicar como o caixa eletrônico funciona num saque. Ele faz duas perguntas no caminho.',
+      'O caixa fica "Ocioso" esperando. Quando a pessoa vai "inserir cartão", ele pergunta "Senha certa?": se "sim", fica "Aguardando saque"; se "não", volta a ficar ocioso.',
+      'Aguardando saque, a pessoa vai "pedir saque" e o caixa pergunta "Tem saldo?": se "sim", fica "Entregando dinheiro"; se "não", continua aguardando saque.',
+      'Depois de "retirar dinheiro", ele volta a ficar ocioso. Ocioso, dá para "desligar" o caixa, e acabou.',
     ],
     esperado: {
       nodes: [
@@ -956,8 +903,8 @@ export const MODELOS = [
       ],
       edges: [
         t('i', 'e1'),
-        t('e1', 'd1', 'inserir cartão'), t('d1', 'e2', '[sim]'), t('d1', 'e1', '[não]'),
-        t('e2', 'd2', 'pedir saque'), t('d2', 'e3', '[sim]'), t('d2', 'e2', '[não]'),
+        t('e1', 'd1', 'inserir cartão'), t('d1', 'e2', 'sim'), t('d1', 'e1', 'não'),
+        t('e2', 'd2', 'pedir saque'), t('d2', 'e3', 'sim'), t('d2', 'e2', 'não'),
         t('e3', 'e1', 'retirar dinheiro'),
         t('e1', 'f', 'desligar'),
       ],
@@ -972,10 +919,9 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 120,
     corpo: [
-      'Oi! Queremos o diagrama de estados da nossa luminária de toque.',
-      'Estados: "Apagada" e "Acesa". Ela começa Apagada.',
-      'Apagada vai para Acesa com o evento "tocar", e Acesa volta para Apagada também com "tocar".',
-      'Apagada termina com o evento "desconectar".',
+      'Oi! Nossa luminária de toque é bem simples, mas queremos documentar.',
+      'Ela começa "Apagada". Basta "tocar" para ficar "Acesa", e "tocar" de novo para apagar.',
+      'Apagada, dá para "desconectar" da tomada, e aí acabou.',
     ],
     esperado: {
       nodes: [
@@ -998,10 +944,9 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 120,
     corpo: [
-      'Olá! Precisamos do diagrama de estados da nossa chaleira.',
-      'Estados: "Desligada", "Aquecendo" e "Pronta". A chaleira começa Desligada.',
-      'Desligada vai para Aquecendo com "ligar". Aquecendo vai para Pronta com "ferver".',
-      'Pronta termina o processo.',
+      'Olá! Queremos mostrar como a chaleira elétrica funciona.',
+      'Ela começa "Desligada". Ao "ligar", fica "Aquecendo"; quando a água vai "ferver", fica "Pronta".',
+      'Pronta, o trabalho dela terminou.',
     ],
     esperado: {
       nodes: [
@@ -1025,10 +970,9 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 120,
     corpo: [
-      'E aí! Queremos o diagrama de estados da nossa máquina de fliperama.',
-      'Estados: "Esperando ficha" e "Jogando". A máquina começa em Esperando ficha.',
-      'Esperando ficha vai para Jogando com "inserir ficha". Jogando volta para Esperando ficha com "fim de jogo".',
-      'Esperando ficha termina com o evento "desligar".',
+      'E aí! Queremos mostrar como a máquina de fliperama funciona.',
+      'Ela fica "Esperando ficha". Ao "inserir ficha", fica "Jogando"; quando chega o "fim de jogo", volta a esperar ficha.',
+      'Esperando ficha, dá para "desligar" a máquina, e acabou.',
     ],
     esperado: {
       nodes: [
@@ -1051,10 +995,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Olá! Precisamos do diagrama de estados da irrigação da estufa.',
-      'Estados: "Seca", "Regando" e "Úmida". A estufa começa Seca.',
-      'Seca vai para Regando com "ativar". Regando vai para Úmida com "encher". Úmida volta para Seca com "evaporar".',
-      'Úmida termina com o evento "desligar".',
+      'Olá! A estufa tem irrigação automática e queremos documentar como ela funciona.',
+      'Começa "Seca". Quando o sensor vai "ativar", fica "Regando"; quando o solo vai "encher" de água, fica "Úmida".',
+      'Com o tempo, a água vai "evaporar" e ela volta a ficar seca.',
+      'Úmida, dá para "desligar" o sistema, e acabou.',
     ],
     esperado: {
       nodes: [
@@ -1078,10 +1022,9 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 160,
     corpo: [
-      'Bom dia! Queremos o diagrama de estados de um quarto da pousada.',
-      'Estados: "Livre", "Ocupado" e "Em limpeza". Todo quarto começa Livre.',
-      'Livre vai para Ocupado com "check-in". Ocupado vai para Em limpeza com "check-out". Em limpeza volta para Livre com "limpar".',
-      'Livre termina com o evento "fechar temporada".',
+      'Bom dia! Queremos acompanhar o que acontece com um quarto da pousada.',
+      'Todo quarto começa "Livre". No "check-in", fica "Ocupado"; no "check-out", fica "Em limpeza". Depois de "limpar", volta a ficar livre.',
+      'Quando é hora de "fechar temporada", isso só acontece com o quarto livre, e aí acabou.',
     ],
     esperado: {
       nodes: [
@@ -1105,11 +1048,10 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 160,
     corpo: [
-      'Oi! Precisamos do diagrama de estados das nossas bicicletas.',
-      'Estados: "Disponível", "Em uso" e "Em manutenção". Toda bicicleta começa Disponível.',
-      'Disponível vai para Em uso com "desbloquear", e Em uso volta para Disponível com "devolver".',
-      'Em uso vai para Em manutenção com "relatar defeito", e Em manutenção volta para Disponível com "consertar".',
-      'Disponível termina com o evento "aposentar".',
+      'Oi! Queremos acompanhar cada bicicleta compartilhada da cidade.',
+      'Toda bicicleta começa "Disponível". Ao "desbloquear", fica "Em uso"; ao "devolver", fica disponível de novo.',
+      'Se, em uso, a pessoa vai "relatar defeito", ela fica "Em manutenção" até a gente "consertar", e aí volta a ficar disponível.',
+      'Uma bicicleta disponível pode ser aposentada: com "aposentar", acabou.',
     ],
     esperado: {
       nodes: [
@@ -1134,11 +1076,10 @@ export const MODELOS = [
     tempo: 270,
     recompensa: 150,
     corpo: [
-      'Oiê! Queremos o diagrama de estados do nosso bichinho virtual, o Mochi.',
-      'Estados: "Feliz", "Com fome" e "Dormindo". O Mochi começa Feliz.',
-      'Feliz vai para Com fome com "passar o tempo", e Com fome volta para Feliz com "alimentar".',
-      'Feliz vai para Dormindo com "apagar a luz", e Dormindo volta para Feliz com "acordar".',
-      'Dormindo termina com o evento "desligar".',
+      'Oiê! Queremos mostrar o humor do Mochi, nosso bichinho virtual.',
+      'Ele começa "Feliz". Ao "passar o tempo", fica "Com fome", e quando a pessoa vai "alimentar", fica feliz de novo.',
+      'Feliz, se a pessoa vai "apagar a luz", ele fica "Dormindo", e ao "acordar" volta a ficar feliz.',
+      'Dormindo, dá para "desligar" o jogo, e acabou.',
     ],
     esperado: {
       nodes: [
@@ -1163,12 +1104,9 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 170,
     corpo: [
-      'Olá! Precisamos do diagrama de estados de uma carta.',
-      'Estados: "Escrita", "Enviada" e "Devolvida". A carta começa Escrita.',
-      'Com o evento "postar", a carta chega a uma decisão (losango): "Endereço certo?".',
-      'Com a condição "[sim]" vai para Enviada; com "[não]" vai para Devolvida.',
-      'Devolvida volta para Escrita com o evento "corrigir endereço".',
-      'Enviada termina o processo.',
+      'Olá! Queremos explicar o caminho de uma carta no correio.',
+      'A carta começa "Escrita". Quando a pessoa vai "postar", a gente confere: "Endereço certo?".',
+      'Se "sim", fica "Enviada" e o processo termina. Se "não", fica "Devolvida", e a pessoa precisa "corrigir endereço" para a carta voltar a ser escrita e ir de novo.',
     ],
     esperado: {
       nodes: [
@@ -1181,7 +1119,7 @@ export const MODELOS = [
       ],
       edges: [
         t('i', 'e1'),
-        t('e1', 'd', 'postar'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+        t('e1', 'd', 'postar'), t('d', 'e2', 'sim'), t('d', 'e3', 'não'),
         t('e3', 'e1', 'corrigir endereço'),
         t('e2', 'f'),
       ],
@@ -1194,12 +1132,9 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 170,
     corpo: [
-      'Boa tarde! Queremos o diagrama de estados do preparo de um chá.',
-      'Estados: "Pedido feito", "Em infusão" e "Servido". Tudo começa em Pedido feito.',
-      'Pedido feito vai para Em infusão com o evento "aquecer água".',
-      'Em infusão, com o evento "provar", chega a uma decisão (losango): "No ponto?".',
-      'Com a condição "[sim]" vai para Servido; com "[não]" volta para Em infusão.',
-      'Servido termina o processo.',
+      'Boa tarde! Queremos mostrar como preparamos cada chá.',
+      'Tudo começa com o "Pedido feito". Ao "aquecer água", o chá fica "Em infusão".',
+      'De tempos em tempos a gente vai "provar" e se pergunta: "No ponto?". Se "sim", ele é "Servido" e acabou; se "não", continua em infusão.',
     ],
     esperado: {
       nodes: [
@@ -1213,7 +1148,7 @@ export const MODELOS = [
       edges: [
         t('i', 'e1'),
         t('e1', 'e2', 'aquecer água'), t('e2', 'd', 'provar'),
-        t('d', 'e3', '[sim]'), t('d', 'e2', '[não]'),
+        t('d', 'e3', 'sim'), t('d', 'e2', 'não'),
         t('e3', 'f'),
       ],
     },
@@ -1225,12 +1160,10 @@ export const MODELOS = [
     tempo: 360,
     recompensa: 210,
     corpo: [
-      'Olá! Precisamos do diagrama de estados de uma obra na galeria.',
-      'Estados: "Rascunho", "Em curadoria", "Em exposição" e "Arquivada". Toda obra começa como Rascunho.',
-      'Rascunho vai para Em curadoria com o evento "enviar obra".',
-      'Em curadoria, com o evento "avaliar", chega a uma decisão (losango): "Aprovada?".',
-      'Com a condição "[sim]" vai para Em exposição; com "[não]" volta para Rascunho.',
-      'Em exposição vai para Arquivada com "encerrar mostra", e Arquivada termina o processo.',
+      'Olá! Queremos acompanhar uma obra desde que chega até sair de exposição.',
+      'Toda obra começa como "Rascunho". Quando o artista vai "enviar obra", ela fica "Em curadoria".',
+      'Lá, a gente vai "avaliar" e decidir: "Aprovada?". Se "sim", fica "Em exposição"; se "não", volta para rascunho.',
+      'Ao "encerrar mostra", ela fica "Arquivada", e acabou.',
     ],
     esperado: {
       nodes: [
@@ -1245,7 +1178,7 @@ export const MODELOS = [
       edges: [
         t('i', 'e1'),
         t('e1', 'e2', 'enviar obra'), t('e2', 'd', 'avaliar'),
-        t('d', 'e3', '[sim]'), t('d', 'e1', '[não]'),
+        t('d', 'e3', 'sim'), t('d', 'e1', 'não'),
         t('e3', 'e4', 'encerrar mostra'), t('e4', 'f'),
       ],
     },
@@ -1261,11 +1194,10 @@ export const MODELOS = [
     tempo: 330,
     recompensa: 190,
     corpo: [
-      'Olá! Precisamos de um diagrama de classes com atributos e métodos.',
-      'Classe "Cliente" com os atributos "- nome: String" e "- cpf: String".',
-      'Classe "ContaBancaria" com os atributos "- numero: String", "- saldo: float" e "- titular: Cliente".',
-      'Métodos de ContaBancaria: "+ depositar(valor: float)", "+ sacar(valor: float): bool" e "+ consultarSaldo(): float".',
-      'Como o titular é um Cliente, ContaBancaria se associa a Cliente.',
+      'Olá! Queremos o modelo das contas do banco, já com o que cada uma guarda e sabe fazer.',
+      'Todo "Cliente" tem "- nome: String" e "- cpf: String".',
+      'A "ContaBancaria" guarda "- numero: String", "- saldo: float" e "- titular: Cliente" (o dono da conta é um cliente).',
+      'Na conta dá para "+ depositar(valor: float)", "+ sacar(valor: float): bool" (diz se deu certo) e "+ consultarSaldo(): float".',
     ],
     esperado: {
       nodes: [
@@ -1284,11 +1216,10 @@ export const MODELOS = [
     tempo: 360,
     recompensa: 210,
     corpo: [
-      'Oi! Queremos um diagrama de classes dos empréstimos, com atributos e métodos.',
-      'Classe "Livro" com "- titulo: String" e "- isbn: String".',
-      'Classe "Leitor" com "- nome: String" e "- matricula: int".',
-      'Classe "Emprestimo" com os atributos "- dataRetirada: Date", "- livro: Livro" e "- leitor: Leitor", e os métodos "+ renovar(): bool" e "+ calcularMulta(dias: int): float".',
-      'Os atributos livro e leitor ligam Emprestimo a Livro e a Leitor por associação.',
+      'Oi! Queremos o modelo dos empréstimos da biblioteca, com o que cada parte guarda e sabe fazer.',
+      'Cada "Livro" tem "- titulo: String" e "- isbn: String". Cada "Leitor" tem "- nome: String" e "- matricula: int".',
+      'O "Emprestimo" guarda "- dataRetirada: Date", qual livro saiu ("- livro: Livro") e com quem ("- leitor: Leitor").',
+      'O leitor pode "+ renovar(): bool" o empréstimo. Na renovação, o próprio empréstimo usa "- calcularMulta(dias: int): float", que é privado: ninguém de fora chama.',
     ],
     esperado: {
       nodes: [
@@ -1296,7 +1227,7 @@ export const MODELOS = [
         c('k2', 'Leitor', 40, 280, ['- nome: String', '- matricula: int']),
         c('k3', 'Emprestimo', 400, 140,
           ['- dataRetirada: Date', '- livro: Livro', '- leitor: Leitor'],
-          ['+ renovar(): bool', '+ calcularMulta(dias: int): float']),
+          ['+ renovar(): bool', '- calcularMulta(dias: int): float']),
       ],
       edges: [e('associacao', 'k3', 'k1'), e('associacao', 'k3', 'k2')],
     },
@@ -1308,10 +1239,10 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 180,
     corpo: [
-      'Boa tarde! Precisamos de um diagrama de classes com atributos e métodos.',
-      'Classe "Carro" com "- placa: String" e "- modelo: String", e os métodos "+ alugar()" e "+ devolver()".',
-      'Classe "RelatorioLocacao" com o atributo "- dataGeracao: Date" e o método "+ gerar(carro: Carro): String".',
-      'O RelatorioLocacao só usa Carro como parâmetro do método gerar: ele depende de Carro (use dependência, saindo do relatório).',
+      'Boa tarde! Queremos o modelo dos carros e dos relatórios da locadora.',
+      'Cada "Carro" tem "- placa: String" e "- modelo: String", e dá para "+ alugar()" e "+ devolver()".',
+      'O "RelatorioLocacao" guarda "- dataGeracao: Date" e sabe "+ gerar(carro: Carro): String".',
+      'O relatório não guarda carro nenhum: só recebe o carro na hora de gerar e consulta de passagem.',
     ],
     esperado: {
       nodes: [
@@ -1328,12 +1259,10 @@ export const MODELOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'Olá! Precisamos do diagrama de classes das comandas, com atributos e métodos.',
-      'Classe "Comanda" com "- mesa: int" e "- aberta: bool", e os métodos "+ adicionarItem(item: ItemComanda)" e "+ calcularTotal(): float".',
-      'Classe "ItemComanda" com "- quantidade: int" e "- produto: Produto", e o método "+ subtotal(): float".',
-      'Classe "Produto" com "- nome: String" e "- preco: float".',
-      'A Comanda é composta de ItemComanda (sem a comanda, os itens não existem): cada Comanda tem 1..* itens e cada item pertence a 1 comanda.',
-      'ItemComanda se associa a Produto pelo atributo produto.',
+      'Olá! A cozinha do bistrô vai trocar o papel por comandas no sistema.',
+      'Cada "Comanda" tem "- mesa: int" e "- aberta: bool", e dá para "+ adicionarItem(item: ItemComanda)" e "+ calcularTotal(): float".',
+      'A comanda é formada pelos seus "ItemComanda" (pelo menos um): se a comanda for apagada, os itens somem junto, e cada item é de uma comanda só.',
+      'Cada item tem "- quantidade: int" e qual "- produto: Produto" é, e sabe "+ subtotal(): float". O "Produto" tem "- nome: String" e "- preco: float".',
     ],
     esperado: {
       nodes: [
@@ -1351,10 +1280,9 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 190,
     corpo: [
-      'Oi! Queremos um diagrama de classes das nossas plantas, com atributos e métodos.',
-      'Classe "Casa" com "- endereco: String" e os métodos "+ adicionarComodo(comodo: Comodo)" e "+ calcularArea(): float".',
-      'Classe "Comodo" com "- nome: String" e "- area: float".',
-      'A Casa é composta de Comodo: se a casa é demolida, os cômodos deixam de existir (composição, com o losango cheio na Casa).',
+      'Oi! A construtora quer o modelo das plantas das casas.',
+      'Cada "Casa" tem "- endereco: String", e dá para "+ adicionarComodo(comodo: Comodo)" e "+ calcularArea(): float".',
+      'A casa é formada pelos seus "Comodo" ("- nome: String", "- area: float"): se a casa for demolida, os cômodos deixam de existir junto.',
     ],
     esperado: {
       nodes: [
@@ -1371,11 +1299,10 @@ export const MODELOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'Olá! Precisamos de um diagrama de classes da plataforma de cursos, com atributos e métodos.',
-      'Classe "Curso" com "- titulo: String" e "- cargaHoraria: int", e o método "+ publicar()".',
-      'Classe "Modulo" com "- titulo: String" e "- ordem: int".',
-      'Classe "Aula" com "- titulo: String" e "- duracao: int", e o método "+ assistir()".',
-      'O Curso é composto de Modulo, e o Modulo é composto de Aula (apagar o curso apaga os módulos e as aulas).',
+      'Olá! A plataforma de cursos precisa do seu modelo de classes.',
+      'Cada "Curso" tem "- titulo: String" e "- cargaHoraria: int", e dá para "+ publicar()".',
+      'O curso é formado pelos seus "Modulo" ("- titulo: String", "- ordem: int"), e cada módulo é formado pelas suas "Aula" ("- titulo: String", "- duracao: int", e o aluno pode "+ assistir()").',
+      'Apagar um curso apaga os módulos dele, e apagar um módulo apaga as aulas dele.',
     ],
     esperado: {
       nodes: [
@@ -1398,13 +1325,16 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 120,
     corpo: [
-      'Oi! Preciso de um diagrama de classes dos pedidos da lanchonete.',
-      'Classes: "Pedido" e "Item".',
-      'O Pedido é composto de Itens: se o pedido some, os itens somem junto.',
-      'Cada Pedido tem um ou mais Itens, e cada Item pertence a exatamente um Pedido.',
+      'Oi! Quero organizar os pedidos do balcão da lanchonete.',
+      'Cada "Pedido" tem "- numero: int" e "- total: float", e dá para "+ calcularTotal(): float" e "+ adicionarItem(item: Item)".',
+      'O pedido é formado pelos seus "Item" (pelo menos um): se o pedido for apagado, os itens somem junto, e cada item é de um pedido só.',
+      'Cada item tem "- descricao: String", "- quantidade: int" e "- precoUnitario: float", e sabe "+ subtotal(): float".',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Pedido', 120, 80), n('k2', 'classe', 'Item', 420, 80)],
+      nodes: [
+        c('k1', 'Pedido', 80, 80, ['- numero: int', '- total: float'], ['+ calcularTotal(): float', '+ adicionarItem(item: Item)']),
+        c('k2', 'Item', 500, 80, ['- descricao: String', '- quantidade: int', '- precoUnitario: float'], ['+ subtotal(): float']),
+      ],
       edges: [e('composicao', 'k1', 'k2', '1', '1..*')],
     },
   },
@@ -1415,12 +1345,16 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 120,
     corpo: [
-      'Olá! Coordeno uma escola de idiomas e quero um diagrama de classes.',
-      'Classes: "Aluno" e "Curso", ligadas por uma associação.',
-      'Um Aluno cursa um ou mais Cursos, e um Curso pode ter nenhum ou vários Alunos.',
+      'Olá! Coordeno uma escola de idiomas e quero organizar as matrículas.',
+      'Cada "Aluno" tem "- matricula: int" e "- nome: String", e pode "+ matricular(curso: Curso)".',
+      'Cada "Curso" tem "- codigo: String", "- nome: String" e "- cargaHoraria: int".',
+      'Todo aluno faz pelo menos um curso, e tem curso que ainda está sem nenhum aluno (ou com vários).',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Aluno', 80, 100), n('k2', 'classe', 'Curso', 400, 100)],
+      nodes: [
+        c('k1', 'Aluno', 80, 100, ['- matricula: int', '- nome: String'], ['+ matricular(curso: Curso)']),
+        c('k2', 'Curso', 480, 100, ['- codigo: String', '- nome: String', '- cargaHoraria: int']),
+      ],
       edges: [e('associacao', 'k1', 'k2', '0..*', '1..*')],
     },
   },
@@ -1431,13 +1365,16 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 120,
     corpo: [
-      'E aí! Estou montando um app de música. Preciso de um diagrama de classes.',
-      'Classes: "Playlist" e "Música".',
-      'A Playlist agrega Músicas: a música continua existindo se a playlist sumir.',
-      'Uma Playlist tem nenhuma ou várias Músicas, e uma Música pode estar em nenhuma ou várias Playlists.',
+      'E aí! Estou montando um app de música e preciso organizar as playlists.',
+      'Cada "Playlist" tem "- nome: String", e dá para "+ adicionarMusica(musica: Música)" e ver a "+ duracaoTotal(): int".',
+      'Cada "Música" tem "- titulo: String" e "- duracaoSegundos: int".',
+      'A playlist reúne músicas, mas se a playlist for apagada as músicas continuam no app. Uma playlist pode estar vazia ou ter várias, e uma música pode estar em nenhuma ou em várias playlists.',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Playlist', 80, 100), n('k2', 'classe', 'Música', 400, 100)],
+      nodes: [
+        c('k1', 'Playlist', 60, 100, ['- nome: String'], ['+ adicionarMusica(musica: Música)', '+ duracaoTotal(): int']),
+        c('k2', 'Música', 520, 100, ['- titulo: String', '- duracaoSegundos: int']),
+      ],
       edges: [e('agregacao', 'k1', 'k2', '0..*', '0..*')],
     },
   },
@@ -1448,12 +1385,16 @@ export const MODELOS = [
     tempo: 180,
     recompensa: 120,
     corpo: [
-      'Bom dia! Tenho uma cooperativa de crédito e preciso de um diagrama de classes.',
-      'Classes: "Cliente" e "Conta", ligadas por uma associação.',
-      'Cada Cliente possui uma ou mais Contas, e cada Conta pertence a exatamente um Cliente.',
+      'Bom dia! Tenho uma cooperativa de crédito e quero organizar as contas.',
+      'Cada "Cliente" tem "- nome: String" e "- cpf: String".',
+      'Cada "Conta" tem "- numero: int" e "- saldo: float", e dá para "+ depositar(valor: float)" e "+ sacar(valor: float): bool" (o saque diz se deu certo).',
+      'Todo cliente tem pelo menos uma conta, e cada conta é de um cliente só.',
     ],
     esperado: {
-      nodes: [n('k1', 'classe', 'Cliente', 80, 100), n('k2', 'classe', 'Conta', 400, 100)],
+      nodes: [
+        c('k1', 'Cliente', 80, 100, ['- nome: String', '- cpf: String']),
+        c('k2', 'Conta', 420, 100, ['- numero: int', '- saldo: float'], ['+ depositar(valor: float)', '+ sacar(valor: float): bool']),
+      ],
       edges: [e('associacao', 'k1', 'k2', '1', '1..*')],
     },
   },
@@ -1464,16 +1405,16 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 150,
     corpo: [
-      'Olá! Minha loja online precisa de um carrinho. Quero um diagrama de classes.',
-      'Classes: "Carrinho", "ItemCarrinho" e "Produto".',
-      'O Carrinho é composto de ItemCarrinho (sem o carrinho, os itens não existem): cada Carrinho tem nenhum ou vários itens, e cada item é de exatamente um Carrinho.',
-      'Cada ItemCarrinho se associa a exatamente um Produto, e um Produto pode estar em nenhum ou vários itens.',
+      'Olá! Minha loja online precisa de um carrinho de compras.',
+      'O "Carrinho" tem "- total: float", e dá para "+ adicionar(item: ItemCarrinho)" e "+ calcularTotal(): float".',
+      'O carrinho é formado pelos seus "ItemCarrinho" (pode estar vazio): se o carrinho for apagado, os itens somem junto, e cada item é de um carrinho só. O item tem "- quantidade: int" e sabe "+ subtotal(): float".',
+      'Cada item é de um único "Produto" ("- nome: String", "- preco: float"), e um produto pode estar em nenhum ou em vários itens.',
     ],
     esperado: {
       nodes: [
-        n('k1', 'classe', 'Carrinho', 60, 100),
-        n('k2', 'classe', 'ItemCarrinho', 320, 100),
-        n('k3', 'classe', 'Produto', 580, 100),
+        c('k1', 'Carrinho', 40, 100, ['- total: float'], ['+ adicionar(item: ItemCarrinho)', '+ calcularTotal(): float']),
+        c('k2', 'ItemCarrinho', 480, 100, ['- quantidade: int'], ['+ subtotal(): float']),
+        c('k3', 'Produto', 800, 100, ['- nome: String', '- preco: float']),
       ],
       edges: [e('composicao', 'k1', 'k2', '1', '0..*'), e('associacao', 'k2', 'k3', '0..*', '1')],
     },
@@ -1485,17 +1426,17 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 150,
     corpo: [
-      'Olá! Administro uma clínica e preciso de um diagrama de classes.',
-      'Classes: "Pessoa", "Paciente", "Médico" e "Consulta".',
-      'Paciente e Médico são tipos de Pessoa (herdam de Pessoa).',
-      'Consulta se associa a Paciente e a Médico: cada Consulta tem exatamente um Paciente e exatamente um Médico, e cada um deles pode ter nenhuma ou várias Consultas.',
+      'Olá! Administro uma clínica e quero organizar as consultas.',
+      '"Paciente" e "Médico" são dois tipos de "Pessoa". Toda pessoa tem "# nome: String" e "# cpf: String" (protegidos, para os dois tipos usarem).',
+      'O paciente tem "- convenio: String". O médico tem "- crm: String" e é quem pode "+ atender(consulta: Consulta)".',
+      'Cada "Consulta" ("- data: String", "- horario: String") tem um paciente e um médico, e cada um deles pode ter nenhuma ou várias consultas.',
     ],
     esperado: {
       nodes: [
-        n('k1', 'classe', 'Pessoa', 300, 20),
-        n('k2', 'classe', 'Paciente', 120, 220),
-        n('k3', 'classe', 'Médico', 480, 220),
-        n('k4', 'classe', 'Consulta', 300, 420),
+        c('k1', 'Pessoa', 300, 20, ['# nome: String', '# cpf: String']),
+        c('k2', 'Paciente', 80, 220, ['- convenio: String']),
+        c('k3', 'Médico', 480, 220, ['- crm: String'], ['+ atender(consulta: Consulta)']),
+        c('k4', 'Consulta', 300, 420, ['- data: String', '- horario: String']),
       ],
       edges: [
         e('heranca', 'k2', 'k1'), e('heranca', 'k3', 'k1'),
@@ -1510,19 +1451,19 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 180,
     corpo: [
-      'Oi! Sou bibliotecária e preciso de um diagrama de classes do acervo.',
-      'Classes: "Usuário", "Aluno", "Professor", "Empréstimo" e "Livro".',
-      'Aluno e Professor são tipos de Usuário (herdam de Usuário).',
-      'Usuário se associa a Empréstimo: um Usuário faz nenhum ou vários Empréstimos, e cada Empréstimo é de exatamente um Usuário.',
-      'Empréstimo se associa a Livro: cada Empréstimo é de exatamente um Livro, e um Livro pode ter nenhum ou vários Empréstimos.',
+      'Oi! Sou bibliotecária e quero organizar o acervo e os empréstimos.',
+      '"Aluno" e "Professor" são dois tipos de "Usuário". Todo usuário tem "# nome: String" e "# matricula: String" (protegidos, para os tipos usarem) e sabe "+ limiteEmprestimos(): int".',
+      'O aluno tem "- curso: String" e o professor tem "- departamento: String". Cada um calcula o próprio limite, então os dois também têm "+ limiteEmprestimos(): int".',
+      'Um usuário pode ter nenhum ou vários "Empréstimo"s, e cada empréstimo é de um usuário só. O empréstimo guarda "- dataRetirada: Date" e "- dataDevolucao: Date" e sabe "+ estaAtrasado(): bool".',
+      'Cada empréstimo é de um único "Livro" ("- titulo: String", "- isbn: String"), e um livro pode ter sido emprestado nenhuma ou várias vezes.',
     ],
     esperado: {
       nodes: [
-        n('k1', 'classe', 'Usuário', 100, 60),
-        n('k2', 'classe', 'Aluno', 20, 260),
-        n('k3', 'classe', 'Professor', 240, 260),
-        n('k4', 'classe', 'Empréstimo', 480, 60),
-        n('k5', 'classe', 'Livro', 480, 280),
+        c('k1', 'Usuário', 160, 60, ['# nome: String', '# matricula: String'], ['+ limiteEmprestimos(): int']),
+        c('k2', 'Aluno', 20, 300, ['- curso: String'], ['+ limiteEmprestimos(): int']),
+        c('k3', 'Professor', 340, 300, ['- departamento: String'], ['+ limiteEmprestimos(): int']),
+        c('k4', 'Empréstimo', 560, 60, ['- dataRetirada: Date', '- dataDevolucao: Date'], ['+ estaAtrasado(): bool']),
+        c('k5', 'Livro', 700, 320, ['- titulo: String', '- isbn: String']),
       ],
       edges: [
         e('heranca', 'k2', 'k1'), e('heranca', 'k3', 'k1'),
@@ -1537,12 +1478,11 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 230,
     corpo: [
-      'Boa noite! Modele minha frota num diagrama de classes.',
-      'Classes: "Manutenivel", "Veículo", "Caminhão", "Motor", "TipoCombustivel" e "RelatorioFrota".',
-      'Veículo herda de Manutenivel (uma interface), e Caminhão herda de Veículo.',
-      'O Veículo agrega um Motor: cada Veículo tem exatamente um Motor, e cada Motor é de exatamente um Veículo.',
-      'O Motor se associa a um TipoCombustivel: cada Motor usa exatamente um tipo, e um tipo serve para nenhum ou vários Motores.',
-      'O RelatorioFrota depende de Veículo.',
+      'Boa noite! Quero organizar a minha frota.',
+      'Todo "Veículo" segue as regras de "Manutenivel" (é um tipo dela), e o "Caminhão" é um tipo de veículo.',
+      'Cada veículo tem o seu "Motor", e cada motor é de um veículo só. Mas o motor pode ser trocado: se o veículo sair da frota, o motor continua no estoque.',
+      'Cada motor usa um único "TipoCombustivel", e um mesmo tipo serve para nenhum ou vários motores.',
+      'O "RelatorioFrota" só consulta os veículos de passagem, sem guardar nenhum.',
     ],
     esperado: {
       nodes: [
@@ -1570,10 +1510,9 @@ export const MODELOS = [
     tempo: 210,
     recompensa: 130,
     corpo: [
-      'Olá! Estamos fazendo um atlas interativo. Precisamos de um diagrama de classes.',
-      'Classes: "País", "Capital" e "Hino".',
-      'País se associa a Capital: cada País tem exatamente uma Capital, e cada Capital é de exatamente um País (1:1).',
-      'País se associa a Hino: cada País tem exatamente um Hino, e cada Hino é de exatamente um País.',
+      'Olá! Estamos fazendo um atlas interativo.',
+      'Cada "País" tem a sua "Capital", e cada capital é de um país só.',
+      'Do mesmo jeito, cada país tem o seu "Hino", e cada hino é de um país só.',
     ],
     esperado: {
       nodes: [n('k1', 'classe', 'País', 300, 40), n('k2', 'classe', 'Capital', 80, 240), n('k3', 'classe', 'Hino', 520, 240)],
@@ -1587,10 +1526,9 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 150,
     corpo: [
-      'Oi! Sou do RH e preciso de um diagrama de classes da equipe.',
-      'Classes: "Departamento", "Funcionário" e "Vaga" (de estacionamento).',
-      'Departamento se associa a Funcionário: cada Departamento tem um ou mais Funcionários, e cada Funcionário trabalha em exatamente um Departamento (1:*).',
-      'Funcionário se associa a Vaga: cada Funcionário tem no máximo uma Vaga (pode não ter), e cada Vaga é de exatamente um Funcionário.',
+      'Oi! Sou do RH e quero organizar a equipe.',
+      'Cada "Departamento" tem pelo menos um "Funcionário", e cada funcionário trabalha num departamento só.',
+      'Alguns funcionários têm uma "Vaga" no estacionamento (no máximo uma, e tem quem não tenha); cada vaga é de um funcionário só.',
     ],
     esperado: {
       nodes: [n('k1', 'classe', 'Departamento', 60, 100), n('k2', 'classe', 'Funcionário', 340, 100), n('k3', 'classe', 'Vaga', 620, 100)],
@@ -1604,10 +1542,9 @@ export const MODELOS = [
     tempo: 240,
     recompensa: 150,
     corpo: [
-      'Boa noite! Queremos um diagrama de classes do nosso catálogo.',
-      'Classes: "Ator", "Filme" e "Gênero".',
-      'Filme se associa a Ator: cada Filme tem um ou mais Atores, e um Ator pode estar em nenhum ou vários Filmes (*:*).',
-      'Filme se associa a Gênero: cada Filme tem um ou mais Gêneros, e um Gênero pode ter nenhum ou vários Filmes.',
+      'Boa noite! Queremos organizar o catálogo da cinemateca.',
+      'Todo "Filme" tem pelo menos um "Ator" no elenco, e um ator pode estar em nenhum ou em vários filmes.',
+      'Todo filme tem pelo menos um "Gênero", e um gênero pode ter nenhum ou vários filmes.',
     ],
     esperado: {
       nodes: [n('k1', 'classe', 'Ator', 60, 100), n('k2', 'classe', 'Filme', 340, 100), n('k3', 'classe', 'Gênero', 620, 100)],
@@ -1621,11 +1558,10 @@ export const MODELOS = [
     tempo: 300,
     recompensa: 190,
     corpo: [
-      'Olá! Precisamos organizar o conservatório num diagrama de classes.',
-      'Classes: "Professor", "Turma", "Aluno" e "Aula".',
-      'Professor se associa a Turma: cada Professor dá nenhuma ou várias Turmas, e cada Turma tem exatamente um Professor.',
-      'Turma se associa a Aluno: cada Turma tem um ou mais Alunos, e um Aluno pode estar em nenhuma ou várias Turmas.',
-      'A Turma é composta de Aulas (sem a turma, as aulas não existem): cada Turma tem uma ou mais Aulas, e cada Aula é de exatamente uma Turma.',
+      'Olá! Precisamos organizar as turmas do conservatório.',
+      'Cada "Turma" tem um único "Professor", e um professor pode dar nenhuma ou várias turmas.',
+      'Cada turma tem pelo menos um "Aluno", e um aluno pode estar em nenhuma ou em várias turmas.',
+      'A turma é formada pelas suas "Aula"s (pelo menos uma): se a turma acabar, as aulas dela somem junto, e cada aula é de uma turma só.',
     ],
     esperado: {
       nodes: [
@@ -1660,10 +1596,9 @@ export const JUMBOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'Oi! Pedido JUMBO: precisamos de DOIS diagramas, um de casos de uso e um de classes.',
-      'Casos de uso: o sistema se chama "App Fidelidade". Ator: "Cliente". Ele pode "Juntar pontos" e "Trocar pontos".',
-      'Classes: "Cliente", "Cartão Fidelidade" e "Recompensa".',
-      'Cliente se associa a Cartão Fidelidade, e Cartão Fidelidade se associa a Recompensa.',
+      'Oi! Pedido JUMBO: o programa de fidelidade precisa de DOIS diagramas, um de casos de uso e um de classes.',
+      'No app, que se chama "App Fidelidade", o "Cliente" pode "Juntar pontos" e "Trocar pontos".',
+      'Por trás, todo "Cliente" tem o seu "Cartão Fidelidade", e os pontos do cartão viram uma "Recompensa".',
     ],
     partes: [
       parte('casos', {
@@ -1692,10 +1627,9 @@ export const JUMBOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'Olá! Pedido JUMBO: queremos um diagrama de casos de uso e um de classes.',
-      'Casos de uso: o sistema se chama "Clube da Papelaria". Ator: "Assinante". Ele pode "Assinar clube" e "Receber kit".',
-      'Classes: "Produto", "Caderno" e "Caneta".',
-      'Caderno e Caneta herdam de Produto.',
+      'Olá! Pedido JUMBO: o clube do caderno precisa de um diagrama de casos de uso e um de classes.',
+      'No "Clube da Papelaria", o "Assinante" pode "Assinar clube" e "Receber kit" todo mês.',
+      'No kit vêm "Caderno" e "Caneta", e os dois são tipos de "Produto".',
     ],
     partes: [
       parte('casos', {
@@ -1724,10 +1658,10 @@ export const JUMBOS = [
     tempo: 450,
     recompensa: 280,
     corpo: [
-      'Olá! Pedido JUMBO: precisamos de um diagrama de casos de uso e um de classes do hotel.',
-      'Casos de uso: o sistema se chama "Portal do Hotel". Atores: "Hóspede" e "Recepcionista". O Hóspede pode "Reservar quarto" e "Ver fotos"; o Recepcionista faz o "Fazer check-in". Reservar quarto sempre inclui "Pagar".',
-      'Classes: "Hotel", "Quarto", "Suíte", "Reserva" e "Hóspede".',
-      'Hotel é composto de Quarto (composição). Suíte herda de Quarto. Reserva se associa a Quarto e a Hóspede.',
+      'Olá! Pedido JUMBO: o hotel precisa de um diagrama de casos de uso e um de classes.',
+      'No "Portal do Hotel", o "Hóspede" pode "Ver fotos" e "Reservar quarto", e toda reserva passa por "Pagar". O "Recepcionista" cuida de "Fazer check-in".',
+      'Por trás: o "Hotel" é formado pelos seus "Quarto"s (se o hotel fechar, os quartos deixam de existir junto), e a "Suíte" é um tipo de quarto.',
+      'Cada "Reserva" liga um quarto a um "Hóspede".',
     ],
     partes: [
       parte('casos', {
@@ -1769,10 +1703,9 @@ export const JUMBOS = [
     tempo: 450,
     recompensa: 280,
     corpo: [
-      'E aí! Pedido JUMBO: um diagrama de casos de uso e um de classes.',
-      'Casos de uso: o sistema se chama "App da Academia". Atores: "Aluno" e "Instrutor". O Aluno pode "Assinar plano" e "Ver treino"; o Instrutor pode "Montar treino". Opcionalmente, "Avaliar físico" estende Montar treino.',
-      'Classes: "Aluno", "Treino" e "Exercício".',
-      'Aluno se associa a Treino, e Treino agrega Exercício (agregação: o exercício existe sem o treino).',
+      'E aí! Pedido JUMBO: a academia precisa de um diagrama de casos de uso e um de classes.',
+      'No "App da Academia", o "Aluno" pode "Assinar plano" e "Ver treino". O "Instrutor" pode "Montar treino" e, às vezes, aproveita para "Avaliar físico" (nem sempre).',
+      'Por trás: cada "Aluno" tem o seu "Treino", e o treino reúne vários "Exercício"s, que continuam existindo se o treino for apagado.',
     ],
     partes: [
       parte('casos', {
@@ -1808,10 +1741,10 @@ export const JUMBOS = [
     tempo: 540,
     recompensa: 340,
     corpo: [
-      'Prezados, pedido JUMBO: precisamos de um diagrama de casos de uso e um de classes da conta digital.',
-      'Casos de uso: o sistema se chama "App do Banco". Ator: "Cliente". Ele pode "Fazer Pix", "Pagar boleto" e "Ver extrato". Fazer Pix e Pagar boleto sempre incluem "Autenticar". Opcionalmente, "Agendar pagamento" estende Pagar boleto.',
-      'Classes: "Cliente", "Conta", "Conta Poupança" e "Transação". Cliente se associa a Conta. Conta é composta de Transação (composição). Conta Poupança herda de Conta.',
-      'Conta tem o atributo "- saldo: float" e o método "+ transferir(valor: float): bool".',
+      'Prezados, pedido JUMBO: a conta digital precisa de um diagrama de casos de uso e um de classes.',
+      'No "App do Banco", o "Cliente" pode "Fazer Pix", "Pagar boleto" e "Ver extrato". Pix e boleto sempre passam por "Autenticar", e no boleto dá para, se quiser, "Agendar pagamento".',
+      'Por trás: cada "Cliente" tem a sua "Conta", com "- saldo: float" e "+ transferir(valor: float): bool". A "Conta Poupança" é um tipo de conta.',
+      'A conta é formada pelas suas "Transação"s: se a conta for encerrada, as transações somem junto.',
     ],
     partes: [
       parte('casos', {
@@ -1853,10 +1786,9 @@ export const JUMBOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'Oi! Pedido JUMBO: um diagrama de casos de uso e um de estados.',
-      'Casos de uso: o sistema se chama "Site do Cine". Ator: "Cliente". Ele pode "Ver sessões" e "Comprar ingresso".',
-      'Estados do ingresso: "Comprado" e "Usado". Tudo começa em Comprado.',
-      'Comprado vai para Usado com o evento "entrar na sala", e Usado termina o processo.',
+      'Oi! Pedido JUMBO: o cinema precisa de um diagrama de casos de uso e um de estados.',
+      'No "Site do Cine", o "Cliente" pode "Ver sessões" e "Comprar ingresso".',
+      'Depois da compra, o ingresso fica "Comprado". Quando a pessoa vai "entrar na sala", ele fica "Usado", e acabou.',
     ],
     partes: [
       parte('casos', {
@@ -1886,10 +1818,9 @@ export const JUMBOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'E aí! Pedido JUMBO: queremos um diagrama de casos de uso e um de estados.',
-      'Casos de uso: o sistema se chama "App da Lanchonete". Ator: "Cliente". Ele pode "Fazer pedido", que sempre inclui "Pagar".',
-      'Estados do pedido: "Na cozinha", "Pronto" e "Retirado". Tudo começa Na cozinha.',
-      'Na cozinha vai para Pronto com "finalizar", Pronto vai para Retirado com "retirar", e Retirado termina o processo.',
+      'E aí! Pedido JUMBO: a lanchonete precisa de um diagrama de casos de uso e um de estados.',
+      'No "App da Lanchonete", o "Cliente" pode "Fazer pedido", e todo pedido passa por "Pagar".',
+      'O pedido começa "Na cozinha". Ao "finalizar", fica "Pronto"; quando o cliente vai "retirar", fica "Retirado", e acabou.',
     ],
     partes: [
       parte('casos', {
@@ -1920,10 +1851,10 @@ export const JUMBOS = [
     tempo: 450,
     recompensa: 280,
     corpo: [
-      'Oi! Pedido JUMBO: um diagrama de casos de uso e um de estados.',
-      'Casos de uso: o sistema se chama "App de Streaming". Ator: "Assinante". Ele pode "Assinar plano", "Assistir série" e "Baixar episódio". Assistir série e Baixar episódio dependem de Assinar plano (use dependência).',
-      'Estados do player: "Parado", "Reproduzindo" e "Pausado". O player começa Parado.',
-      'Parado vai para Reproduzindo com "play". Reproduzindo vai para Pausado com "pause", e Pausado volta para Reproduzindo com "play". Reproduzindo termina com o evento "terminar".',
+      'Oi! Pedido JUMBO: o streaming precisa de um diagrama de casos de uso e um de estados.',
+      'No "App de Streaming", o "Assinante" pode "Assinar plano", "Assistir série" e "Baixar episódio". Assistir e baixar só funcionam com plano: dependem de Assinar plano (dependências, não passos incluídos).',
+      'O player abre "Parado". Com "play", fica "Reproduzindo"; com "pause", fica "Pausado", e outro "play" volta a reproduzir.',
+      'Quando o episódio vai "terminar" durante a reprodução, acabou.',
     ],
     partes: [
       parte('casos', {
@@ -1962,10 +1893,9 @@ export const JUMBOS = [
     tempo: 450,
     recompensa: 280,
     corpo: [
-      'Olá! Pedido JUMBO: precisamos de um diagrama de casos de uso e um de estados.',
-      'Casos de uso: o sistema se chama "App de Entregas". Atores: "Cliente" e "Entregador". O Cliente pode "Rastrear pacote" e "Agendar entrega"; o Entregador faz o "Confirmar entrega".',
-      'Estados do pacote: "Postado", "Em trânsito" e "Entregue". Todo pacote começa Postado.',
-      'Postado vai para Em trânsito com "coletar". Em trânsito vai para Entregue com "entregar", ou volta para Postado com "devolver". Entregue termina o processo.',
+      'Olá! Pedido JUMBO: o rastreio precisa de um diagrama de casos de uso e um de estados.',
+      'No "App de Entregas", o "Cliente" pode "Rastrear pacote" e "Agendar entrega", e o "Entregador" faz "Confirmar entrega".',
+      'Todo pacote começa "Postado". Ao "coletar", fica "Em trânsito". De lá, ao "entregar", fica "Entregue" e acabou; ou, se precisar "devolver", volta a ficar postado.',
     ],
     partes: [
       parte('casos', {
@@ -2002,11 +1932,9 @@ export const JUMBOS = [
     tempo: 540,
     recompensa: 340,
     corpo: [
-      'Olá! Pedido JUMBO: um diagrama de casos de uso e um de estados das consultas.',
-      'Casos de uso: o sistema se chama "Portal da Clínica". Atores: "Paciente" e "Médico". O Paciente pode "Marcar consulta" e "Cancelar consulta"; o Médico faz o "Atender paciente". Marcar consulta sempre inclui "Escolher horário", e Cancelar consulta depende de Marcar consulta (use dependência).',
-      'Estados da consulta: "Marcada", "Realizada" e "Faltou". Toda consulta começa Marcada.',
-      'Com o evento "chegar o horário", a consulta chega a uma decisão (losango): "Paciente veio?". Com a condição "[sim]" vai para Realizada; com "[não]" vai para Faltou.',
-      'Realizada e Faltou terminam o processo.',
+      'Olá! Pedido JUMBO: as consultas precisam de um diagrama de casos de uso e um de estados.',
+      'No "Portal da Clínica", o "Paciente" pode "Marcar consulta" (toda marcação passa por "Escolher horário") e "Cancelar consulta", que só vale para uma consulta marcada (é uma dependência, não um passo incluído). O "Médico" faz "Atender paciente".',
+      'Toda consulta começa "Marcada". Ao "chegar o horário", a pergunta é: "Paciente veio?". Se "sim", fica "Realizada"; se "não", fica "Faltou". Nos dois casos, acabou.',
     ],
     partes: [
       parte('casos', {
@@ -2037,7 +1965,7 @@ export const JUMBOS = [
         ],
         edges: [
           t('i', 'e1'),
-          t('e1', 'd', 'chegar o horário'), t('d', 'e2', '[sim]'), t('d', 'e3', '[não]'),
+          t('e1', 'd', 'chegar o horário'), t('d', 'e2', 'sim'), t('d', 'e3', 'não'),
           t('e2', 'f'), t('e3', 'f'),
         ],
       }),
@@ -2051,10 +1979,9 @@ export const JUMBOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'Olá, agência! Pedido JUMBO: um diagrama de classes e um de estados.',
-      'Classes: "Dono", "Pet" e "Agendamento". Dono se associa a Pet, e Agendamento se associa a Pet.',
-      'Estados do banho: "Esperando", "No banho" e "Pronto". Tudo começa em Esperando.',
-      'Esperando vai para No banho com "começar", No banho vai para Pronto com "secar", e Pronto termina o processo.',
+      'Olá, agência! Pedido JUMBO: o banho e tosa precisa de um diagrama de classes e um de estados.',
+      'Todo "Pet" tem um "Dono", e cada "Agendamento" é de um pet.',
+      'No dia, o pet fica "Esperando". Ao "começar", fica "No banho"; depois de "secar", fica "Pronto", e acabou.',
     ],
     partes: [
       parte('classes', {
@@ -2084,10 +2011,10 @@ export const JUMBOS = [
     tempo: 360,
     recompensa: 220,
     corpo: [
-      'Olá! Pedido JUMBO: precisamos de um diagrama de classes e um de estados.',
-      'Classes: "Item", "Livro" e "Revista". Livro e Revista herdam de Item.',
-      'Estados do livro: "Na estante" e "Emprestado". Todo livro começa Na estante.',
-      'Na estante vai para Emprestado com "emprestar", e Emprestado volta para Na estante com "devolver". Na estante termina com o evento "descartar".',
+      'Olá! Pedido JUMBO: o acervo precisa de um diagrama de classes e um de estados.',
+      'No acervo tem "Livro" e "Revista", e os dois são tipos de "Item".',
+      'Todo livro começa "Na estante". Ao "emprestar", fica "Emprestado", e ao "devolver", volta para a estante.',
+      'Na estante, um livro velho pode ser descartado: com "descartar", acabou.',
     ],
     partes: [
       parte('classes', {
@@ -2116,11 +2043,10 @@ export const JUMBOS = [
     tempo: 450,
     recompensa: 280,
     corpo: [
-      'Boa noite! Pedido JUMBO: um diagrama de classes e um de estados.',
-      'Classes: "Cliente", "Pedido", "Item do Pedido" e "Pizza". Cliente se associa a Pedido. Pedido é composto de Item do Pedido (composição). Item do Pedido se associa a Pizza.',
-      'Estados do pedido: "Recebido", "No forno", "Saiu para entrega", "Entregue" e "Cancelado". Tudo começa em Recebido.',
-      'Recebido vai para No forno com "assar", No forno vai para Saiu para entrega com "despachar", e Saiu para entrega vai para Entregue com "entregar". Recebido também pode ir para Cancelado com "cancelar".',
-      'Entregue e Cancelado terminam o processo.',
+      'Boa noite! Pedido JUMBO: a pizzaria precisa de um diagrama de classes e um de estados.',
+      'Cada "Cliente" faz o seu "Pedido". O pedido é formado pelos seus "Item do Pedido" (se o pedido for apagado, os itens somem junto), e cada item é de uma "Pizza".',
+      'O pedido começa "Recebido". Ao "assar", fica "No forno"; ao "despachar", fica "Saiu para entrega"; ao "entregar", fica "Entregue".',
+      'Recebido, o cliente ainda pode "cancelar", e aí fica "Cancelado". Entregue ou cancelado, acabou.',
     ],
     partes: [
       parte('classes', {
@@ -2158,11 +2084,10 @@ export const JUMBOS = [
     tempo: 450,
     recompensa: 280,
     corpo: [
-      'E aí! Pedido JUMBO: um diagrama de classes e um de estados.',
-      'Classes: "Locutor", "Programa", "Música" e "Vinheta". Locutor se associa a Programa. Programa agrega Música (agregação: a música existe sem o programa). Vinheta herda de Música.',
-      'Estados da transmissão: "Fora do ar", "No ar" e "Intervalo". Tudo começa Fora do ar.',
-      'Fora do ar vai para No ar com "ligar transmissor", e No ar volta para Fora do ar com "desligar". No ar vai para Intervalo com "chamar comercial", e Intervalo volta para No ar com "voltar".',
-      'Fora do ar termina com o evento "encerrar".',
+      'E aí! Pedido JUMBO: a rádio precisa de um diagrama de classes e um de estados.',
+      'Cada "Locutor" apresenta o seu "Programa". O programa reúne várias "Música"s, mas as músicas continuam no acervo se o programa acabar. A "Vinheta" é um tipo de música.',
+      'A transmissão começa "Fora do ar". Ao "ligar transmissor", fica "No ar", e ao "desligar", sai do ar de novo.',
+      'No ar, ao "chamar comercial", entra no "Intervalo"; ao "voltar", fica no ar de novo. Fora do ar, dá para "encerrar" o dia, e acabou.',
     ],
     partes: [
       parte('classes', {
@@ -2198,11 +2123,10 @@ export const JUMBOS = [
     tempo: 540,
     recompensa: 340,
     corpo: [
-      'Oi! Pedido JUMBO: precisamos de um diagrama de classes e um de estados da loja.',
-      'Classes: "Cliente", "Pedido", "Item" e "Produto". Cliente se associa a Pedido: cada Cliente faz zero ou mais Pedidos, e cada Pedido é de exatamente um Cliente. Pedido é composto de Item (composição): cada Pedido tem um ou mais Itens, e cada Item é de exatamente um Pedido. Item se associa a Produto.',
-      'Estados do pagamento: "Carrinho", "Pago" e "Enviado". Tudo começa em Carrinho.',
-      'Com o evento "finalizar compra", chega a uma decisão (losango): "Cartão aprovado?". Com a condição "[sim]" vai para Pago; com "[não]" volta para Carrinho.',
-      'Pago vai para Enviado com "despachar", e Enviado termina o processo.',
+      'Oi! Pedido JUMBO: a loja precisa de um diagrama de classes e um de estados.',
+      'Cada "Cliente" pode ter feito nenhum ou vários "Pedido"s, e cada pedido é de um cliente só. O pedido é formado pelos seus "Item"s (pelo menos um; se o pedido for apagado, os itens somem junto), e cada item é de um "Produto".',
+      'O pagamento começa no "Carrinho". Ao "finalizar compra", a pergunta é: "Cartão aprovado?". Se "sim", fica "Pago"; se "não", volta para o carrinho.',
+      'Pago, a gente vai "despachar", e fica "Enviado". Aí acabou.',
     ],
     partes: [
       parte('classes', {
@@ -2229,7 +2153,7 @@ export const JUMBOS = [
         ],
         edges: [
           t('i', 'e1'),
-          t('e1', 'd', 'finalizar compra'), t('d', 'e2', '[sim]'), t('d', 'e1', '[não]'),
+          t('e1', 'd', 'finalizar compra'), t('d', 'e2', 'sim'), t('d', 'e1', 'não'),
           t('e2', 'e3', 'despachar'), t('e3', 'f'),
         ],
       }),
@@ -2237,24 +2161,40 @@ export const JUMBOS = [
   },
 ];
 
-// Todos os modelos que chegam por e-mail (normais + JUMBO). Urgentes saem só de MODELOS.
-export const TODOS_MODELOS = [...MODELOS, ...JUMBOS];
-export const modeloPorId = (id) => TODOS_MODELOS.find((m) => m.id === id);
+// Todos os modelos que chegam por e-mail (normais + JUMBO + complexos). Urgentes saem só de MODELOS.
+export const TODOS_MODELOS = [...MODELOS, ...JUMBOS, ...COMPLEXOS];
+export { COMPLEXOS };
+// (o pedido de treino do tutorial, data/treino.js, não chega por e-mail, mas também tem modelo)
+export const modeloPorId = (id) => TODOS_MODELOS.find((m) => m.id === id) ?? TREINOS.find((m) => m.id === id);
 export const ehJumbo = (modelo) => Boolean(modelo?.partes);
+// Pedido complexo (data/complexos.js): só nos fins de semana da campanha e no modo infinito
+export const ehComplexo = (modelo) => Boolean(modelo?.complexo);
 // Diagramas pedidos pelo modelo: [{ secao, esperado }] (pedido normal = uma parte só)
 export const partesDoModelo = (modelo) => modelo.partes ?? [{ secao: tipoDoDiagrama(modelo.esperado), esperado: modelo.esperado }];
 
 // Quantos pedidos chegam num dia da campanha (soma da composição do dia, `composicaoDoDia`)
 export const pedidosNoDia = (dia) => Object.values(composicaoDoDia(dia)).reduce((a, b) => a + b, 0);
-// Pedidos de um dia da campanha: para cada nível, a quantidade da composição do dia
+// Pedidos de um dia útil da campanha: para cada nível, a quantidade da composição do dia
 // (`composicaoDoDia`), sorteada entre os modelos daquele nível (JUMBO só a partir do dia
-// JUMBO_NA_CAMPANHA). Dia novo: em cada nível, primeiro os que o jogador ainda não tem na coleção
-// (nunca entregou), depois os outros. Dia já concluído jogado de novo (`repeticao`): só os
-// desbloqueados (já entregues); faltando do nível, completa com desbloqueados de outros níveis
+// JUMBO_NA_CAMPANHA; complexos nunca). Dia novo: em cada nível, primeiro os que o jogador ainda não
+// tem na coleção (nunca entregou), depois os outros. Dia já concluído jogado de novo (`repeticao`):
+// só os desbloqueados (já entregues); faltando do nível, completa com desbloqueados de outros níveis
 // (pode vir menos pedidos se não houver o bastante). A ordem de chegada também é sorteada.
 // `semente` torna o sorteio reproduzível (o reducer continua puro).
 export const JUMBO_NA_CAMPANHA = 5;
 export function sortearPedidosDoDia(dia, { colecao = {}, repeticao = false, semente = dia } = {}) {
+  const modelos = TODOS_MODELOS.filter((m) => !ehComplexo(m) && (dia >= JUMBO_NA_CAMPANHA || !ehJumbo(m)));
+  return sortearComposicao(composicaoDoDia(dia), modelos, { colecao, repeticao, semente });
+}
+
+// Fim de semana da campanha: só pedidos complexos, na composição da data (`composicaoDoFimDeSemana`),
+// com as mesmas regras de coleção e de dia repetido
+export function pedidosDoFimDeSemana(data, { colecao = {}, repeticao = false, semente = data } = {}) {
+  return sortearComposicao(composicaoDoFimDeSemana(data), COMPLEXOS, { colecao, repeticao, semente });
+}
+export const pedidosNoFimDeSemana = (data) => Object.values(composicaoDoFimDeSemana(data)).reduce((a, b) => a + b, 0);
+
+function sortearComposicao(composicao, modelos, { colecao, repeticao, semente }) {
   const sorteio = gerador(semente);
   const embaralhar = (lista) => {
     const l = [...lista];
@@ -2264,15 +2204,13 @@ export function sortearPedidosDoDia(dia, { colecao = {}, repeticao = false, seme
     }
     return l;
   };
-  const composicao = composicaoDoDia(dia);
-  const podeVir = TODOS_MODELOS.filter((m) => dia >= JUMBO_NA_CAMPANHA || !ehJumbo(m));
-  const doNivel = (nivel) => podeVir.filter((m) => nivelDoModelo(m).id === nivel);
+  const doNivel = (nivel) => modelos.filter((m) => nivelDoModelo(m).id === nivel);
   const tem = (m) => (colecao[m.id]?.entregas ?? 0) > 0;
-  const total = pedidosNoDia(dia);
-  let escolhidos = [];
-  if (repeticao && TODOS_MODELOS.some(tem)) {
+  const total = Object.values(composicao).reduce((a, b) => a + b, 0);
+  const escolhidos = [];
+  if (repeticao && modelos.some(tem)) {
     for (const [nivel, qtd] of Object.entries(composicao)) escolhidos.push(...embaralhar(doNivel(nivel).filter(tem)).slice(0, qtd));
-    const sobra = embaralhar(TODOS_MODELOS.filter((m) => tem(m) && !escolhidos.includes(m)));
+    const sobra = embaralhar(modelos.filter((m) => tem(m) && !escolhidos.includes(m)));
     escolhidos.push(...sobra.slice(0, total - escolhidos.length));
   } else {
     for (const [nivel, qtd] of Object.entries(composicao)) {
@@ -2297,9 +2235,19 @@ function gerador(semente) {
 
 // Dia já concluído jogado de novo: todos os pedidos pagam metade (a multa também, por ser sobre o pagamento)
 export const FATOR_REPETICAO = 0.5;
+// Modo infinito: todos os pedidos pagam 60% (não vira uma fonte de dinheiro sem fim)
+export const FATOR_INFINITO = 0.6;
 
-// Pagamento cresce levemente com o dia
-export const bonusDoDia = (dia) => 1 + (dia - 1) * 0.05;
+// Pagamento cresce levemente com o dia: +2% por dia, até +40% (a quantidade de pedidos do dia já
+// faz a renda crescer)
+export const BONUS_DIA = { porDia: 0.02, maximo: 0.4 };
+export const bonusDoDia = (dia) => 1 + Math.min(BONUS_DIA.maximo, (dia - 1) * BONUS_DIA.porDia);
+
+// Despesa fixa do escritório ("aluguel e luz"), cobrada no fim de cada dia útil da campanha: cresce
+// de R$ 30 (dia 1) a R$ 200 (último dia), uns 15% do que um dia bem jogado rende. Fim de semana não paga.
+export const DESPESA = { inicio: 30, fim: 200, dias: 23 };
+export const despesaDoDia = (dia) =>
+  Math.round((DESPESA.inicio + ((Math.min(dia, DESPESA.dias) - 1) * (DESPESA.fim - DESPESA.inicio)) / (DESPESA.dias - 1)) / 10) * 10;
 
 // Multa por pedido perdido (recusado ou cliente que foi embora): metade do que ele pagaria.
 // Quem já está devendo (saldo negativo no momento da multa) paga só um quarto.
@@ -2357,6 +2305,8 @@ export function criarPedidoUrgente(modeloId, seq, dia = 1) {
     urgente: true,
     assunto: `URGENTE: ${p.assunto}`,
     recompensa: Math.round(p.recompensa * URGENTE.pagamento),
+    // entregue atrasado, o urgente perde o bônus e paga como um pedido normal atrasado
+    recompensaNormal: p.recompensa,
     tempo,
     tempoRestante: tempo,
     paciencia,
@@ -2364,7 +2314,24 @@ export function criarPedidoUrgente(modeloId, seq, dia = 1) {
   };
 }
 
-// Aba de dicas: a resposta é dividida numa grade; cada pedaço custa parte do pagamento
+// Aba de dicas: a resposta é dividida numa grade; cada pedaço revela uma parte.
+// Preço pelo nível do pedido (`PRECO_DICA`) e cada pedaço comprado encarece o próximo do mesmo
+// diagrama: grade 2x2 → +25%, +50% e +100% sobre o primeiro (`AUMENTO_DICA`); pedido complexo
+// (grade 4x4, 16 pedaços) → +10% sobre o primeiro a cada pedaço (`AUMENTO_COMPLEXA`).
+export const PRECO_DICA = { facil: 100, medio: 150, dificil: 200 };
+export const AUMENTO_DICA = [0, 0.25, 0.5, 1];
+export const AUMENTO_COMPLEXA = 0.1;
 export const GRADE_PEDACOS = { colunas: 2, linhas: 2 };
+export const GRADE_COMPLEXA = { colunas: 4, linhas: 4 };
 export const TOTAL_PEDACOS = GRADE_PEDACOS.colunas * GRADE_PEDACOS.linhas;
-export const precoPedaco = (pedido) => Math.max(10, Math.round(pedido.recompensa * 0.15));
+export const gradeDePedacos = (modelo) => (ehComplexo(modelo) ? GRADE_COMPLEXA : GRADE_PEDACOS);
+export const pedacosDoModelo = (modelo) => gradeDePedacos(modelo).colunas * gradeDePedacos(modelo).linhas;
+// Preço do próximo pedaço da parte `parte` (pedido JUMBO: cada diagrama conta os seus)
+export function precoPedaco(pedido, parte = 0) {
+  const m = modeloPorId(pedido.modelo);
+  const total = m ? pedacosDoModelo(m) : TOTAL_PEDACOS;
+  const comprados = (pedido.pedacos ?? []).filter((i) => i >= parte * total && i < (parte + 1) * total).length;
+  const base = PRECO_DICA[m ? nivelDoModelo(m).id : 'facil'];
+  const aumento = m && ehComplexo(m) ? AUMENTO_COMPLEXA * comprados : AUMENTO_DICA[Math.min(comprados, AUMENTO_DICA.length - 1)];
+  return Math.round(base * (1 + aumento));
+}

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { MEDIA_MINIMA, desempenhoDoDia, estadoInicial, migrar, reducer } from './reducer.js';
+import { MEDIA_MINIMA, desempenhoDoDia, diaEncerrado, estadoInicial, migrar, reducer } from './reducer.js';
 import { avaliar } from '../lib/avaliacao.js';
-import { MODELOS, TOTAL_PEDACOS, modeloPorId, pedidosNoDia, precoPedaco } from '../data/pedidos.js';
+import { chegarAgora, chegarFilaAgora } from './testeAjuda.js';
+import { MODELOS, TOTAL_PEDACOS, despesaDoDia, modeloPorId, pedidosNoDia, precoPedaco } from '../data/pedidos.js';
 
-const rodar = (state, ...acoes) => acoes.reduce(reducer, state);
+// (na campanha, o próximo pedido da fila chega na hora: chegarFilaAgora)
+const rodar = (state, ...acoes) => acoes.reduce((s, a) => chegarFilaAgora(reducer(s, a)), state);
+const ticks = (state, n) => rodar(state, ...Array.from({ length: n }, () => ({ type: 'TICK' })));
 
 describe('avaliação', () => {
   it('gabarito idêntico tira 100', () => {
@@ -41,10 +44,10 @@ describe('campanha', () => {
     expect(s.campanha.desbloqueado).toBe(1); // o segundo pedido chegou na hora e ainda falta
     const id2 = s.sessao.pedidos[1].id;
     s = rodar(s, { type: 'ACEITAR', id: id2 }, { type: 'ENTREGAR', id: id2, nota: 80, valor: 50 });
-    expect(s.dinheiro).toBe(200);
+    expect(s.dinheiro).toBe(200 - despesaDoDia(1)); // aluguel e luz no fim do dia
     expect(s.campanha.desbloqueado).toBe(2);
     expect(s.campanha.concluidos[1]).toEqual({ ganho: 100, media: 80 });
-    expect(s.sessao.relatorio).toEqual({ media: 80, aprovado: true, ganho: 100 });
+    expect(s.sessao.relatorio).toEqual({ media: 80, aprovado: true, ganho: 100, despesa: despesaDoDia(1) });
   });
 
   // entrega todos os pedidos do dia com as notas dadas (a última se repete) e recusa o resto
@@ -66,7 +69,7 @@ describe('campanha', () => {
     expect(s.sessao.relatorio).toMatchObject({ media: 59, aprovado: false });
     expect(s.campanha.desbloqueado).toBe(1);
     expect(s.campanha.concluidos[1]).toBeUndefined();
-    expect(s.dinheiro).toBe(100 + 59 * s.sessao.pedidos.length);
+    expect(s.dinheiro).toBe(100 + 59 * s.sessao.pedidos.length - despesaDoDia(1));
   });
 
   it(`com ${MEDIA_MINIMA}% exatos libera`, () => {
@@ -133,6 +136,7 @@ describe('campanha', () => {
     s = rodar(s, { type: 'RECUSAR', id: a.id });
     expect(s.sessao.ativo).toBe(null);
     // entregar um que não está aberto não troca o aberto
+    s = chegarAgora(s);
     const [c, d] = s.sessao.pedidos.filter((p) => p.status === 'novo');
     s = rodar(s, { type: 'ACEITAR', id: c.id }, { type: 'ACEITAR', id: d.id }, { type: 'ENTREGAR', id: c.id, nota: 50, valor: 5 });
     expect(s.sessao.ativo).toBe(d.id);
@@ -143,10 +147,19 @@ describe('campanha', () => {
     expect(rodar(s, { type: 'ATIVAR', id: s.sessao.pedidos[0].id })).toBe(s);
   });
 
-  it('modo infinito sempre traz um pedido novo após entregar', () => {
+  it('modo infinito traz um pedido novo de 10 a 20 s de jogo depois de entregar', () => {
     let s = rodar(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'infinito' });
     const id = s.sessao.pedidos[0].id;
-    s = rodar(s, { type: 'ACEITAR', id }, { type: 'ENTREGAR', id, nota: 100, valor: 10 });
+    s = rodar(s, { type: 'ACEITAR', id }, { type: 'ENTREGAR', id, nota: 100, valor: 10, sorteio: 0.5 });
+    expect(s.sessao.pedidos).toHaveLength(2); // não chega na hora
+    expect(s.sessao.chegadas).toHaveLength(1);
+    const espera = s.sessao.chegadas[0] - s.sessao.segundos;
+    expect(espera).toBeGreaterThanOrEqual(10);
+    expect(espera).toBeLessThanOrEqual(20);
+    s = ticks(s, espera - 1);
+    expect(s.sessao.pedidos).toHaveLength(2);
+    s = ticks(s, 1);
+    expect(s.sessao.chegadas).toEqual([]);
     expect(s.sessao.pedidos).toHaveLength(3);
     expect(new Set(s.sessao.pedidos.map((p) => p.id)).size).toBe(3);
   });
@@ -243,5 +256,47 @@ describe('debug: refresh de pedidos', () => {
     expect(new Set(s.sessao.pedidos.map((p) => p.id)).size).toBe(s.sessao.pedidos.length);
     expect(s.dinheiro).toBe(100); // sem multa
     expect(s.estatisticas.recusados).toBe(0);
+  });
+});
+
+describe('botões de debug do painel Dev', () => {
+  it('terminar diagrama entrega o pedido aberto com a nota escolhida', () => {
+    let s = reducer(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'campanha', dia: 1 });
+    const p = s.sessao.pedidos[0];
+    s = reducer(s, { type: 'ACEITAR', id: p.id });
+    s = reducer(s, { type: 'DEBUG_ENTREGAR', nota: 73 });
+    const entregue = s.sessao.pedidos.find((x) => x.id === p.id);
+    expect(entregue).toMatchObject({ status: 'entregue', nota: 73 });
+    expect(s.estatisticas.entregues).toBe(1);
+    expect(s.colecao[p.modelo]).toBeTruthy();
+  });
+
+  it('terminar dia entrega tudo (fila inclusa) e abre o relatório', () => {
+    let s = reducer(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'campanha', dia: 3 });
+    s = reducer(s, { type: 'DEBUG_TERMINAR_DIA', nota: 90 });
+    expect(diaEncerrado(s.sessao)).toBe(true);
+    expect(s.sessao.relatorio.aprovado).toBe(true);
+    expect(s.sessao.pedidos.every((p) => p.status === 'entregue' && p.nota === 90)).toBe(true);
+    expect(s.campanha.concluidos[3]).toBeTruthy();
+    // com nota baixa, o dia termina reprovado
+    let r = reducer(estadoInicial(), { type: 'INICIAR_SESSAO', modo: 'campanha', dia: 1 });
+    r = reducer(r, { type: 'DEBUG_TERMINAR_DIA', nota: 10 });
+    expect(r.sessao.relatorio.aprovado).toBe(false);
+  });
+
+  it('liberar conquista desbloqueia com prêmio e aviso', () => {
+    const s = reducer(estadoInicial(), { type: 'DEBUG_CONQUISTA', id: 'semana-dourada' });
+    expect(s.conquistas['semana-dourada']).toBeTruthy();
+    expect(s.avisosConquista.at(-1).id).toBe('semana-dourada');
+  });
+});
+
+describe('dia sem nenhuma entrega', () => {
+  it('recusar todos os pedidos deixa o desempenho em 0% (com uma entrega, recusado vale 10%)', () => {
+    const r = (status, extra = {}) => ({ status, ...extra });
+    expect(desempenhoDoDia([r('recusado'), r('recusado'), r('recusado')])).toBe(0);
+    expect(desempenhoDoDia([r('recusado'), r('expirado')])).toBe(0);
+    expect(desempenhoDoDia([r('recusado'), r('entregue', { nota: 90 })])).toBe(50); // (10 + 90) / 2
+    expect(desempenhoDoDia([r('recusado'), r('entregue', { nota: 90, urgente: true })])).toBe(0); // urgente não conta
   });
 });

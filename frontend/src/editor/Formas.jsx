@@ -12,7 +12,7 @@ export const ELEMENTOS = [
   { tipo: 'estadoInicial', nome: 'Início', rotulo: 'Início', fixo: true },
   { tipo: 'estado', nome: 'Estado', rotulo: 'Estado' },
   { tipo: 'estadoFinal', nome: 'Fim', rotulo: 'Fim', fixo: true },
-  // decisão (losango): a pergunta fica dentro; as setas que saem levam a condição, ex.: [sim] / [não]
+  // decisão (losango): a pergunta fica dentro; as setas que saem levam a condição, ex.: sim / não
   { tipo: 'decisao', nome: 'Decisão', rotulo: 'Decisão?' },
 ];
 export const ROTULO_FIXO = Object.fromEntries(ELEMENTOS.filter((e) => e.fixo).map((e) => [e.tipo, e.rotulo]));
@@ -153,8 +153,8 @@ export function Forma({ node, selecionado, destaque, alerta }) {
             <line x1={0} y1={TOPO_CLASSE} x2={w} y2={TOPO_CLASSE} stroke={contorno} strokeWidth={T} />
             <line x1={0} y1={divisoria} x2={w} y2={divisoria} stroke={contorno} strokeWidth={T} />
             <Texto x={w / 2} y={17} peso="bold">{node.rotulo}</Texto>
-            {atr.length ? atr.map((t, i) => linha(t, i, TOPO_CLASSE, `a${i}`)) : <Texto x={w / 2} y={TOPO_CLASSE + 16} tamanho={18} cor="var(--c-lavender)">- atributos</Texto>}
-            {met.length ? met.map((t, i) => linha(t, i, divisoria, `m${i}`)) : <Texto x={w / 2} y={divisoria + 16} tamanho={18} cor="var(--c-lavender)">+ métodos()</Texto>}
+            {atr.length ? atr.map((t, i) => linha(t, i, TOPO_CLASSE, `a${i}`)) : <GuiaMembro w={w} y={TOPO_CLASSE + 16} texto="atributos" />}
+            {met.length ? met.map((t, i) => linha(t, i, divisoria, `m${i}`)) : <GuiaMembro w={w} y={divisoria + 16} texto="métodos()" />}
           </g>
         );
       }
@@ -350,6 +350,18 @@ export function IconePaleta({ tipo }) {
 }
 
 // Diagrama estático ajustado ao espaço (tela de resultado)
+// Texto-guia da parte vazia da classe: o quadradinho da visibilidade e "atributos"/"métodos()"
+function GuiaMembro({ w, y, texto }) {
+  const largura = texto.length * 9;
+  const x = w / 2 - (largura + 16) / 2;
+  return (
+    <g>
+      <rect x={x} y={y - 6} width={11} height={11} fill="none" stroke="var(--c-lavender)" strokeWidth={2} />
+      <Texto x={x + 16 + largura / 2} y={y} tamanho={18} cor="var(--c-lavender)">{texto}</Texto>
+    </g>
+  );
+}
+
 export function DiagramaEstatico({ diagrama, prefixo }) {
   const { nodes, edges } = diagrama;
   if (!nodes.length) {
@@ -358,7 +370,12 @@ export function DiagramaEstatico({ diagrama, prefixo }) {
     );
   }
   const rs = nodes.map(retangulo);
-  const xs = rs.flatMap((r) => [r.x, r.x + r.w]);
+  // o nome do ator fica embaixo do boneco e pode ser mais largo que ele: entra no enquadramento
+  const nomesDeAtor = nodes.filter((n) => n.tipo === 'ator').map((n) => {
+    const r = retangulo(n), meia = ((n.rotulo ?? '').length * 10) / 2;
+    return { x: r.x + r.w / 2 - meia, w: 2 * meia };
+  });
+  const xs = [...rs, ...nomesDeAtor].flatMap((r) => [r.x, r.x + r.w]);
   const ys = rs.flatMap((r) => [r.y, r.y + r.h]);
   const pad = 30;
   const minX = Math.min(...xs) - pad, minY = Math.min(...ys) - pad;

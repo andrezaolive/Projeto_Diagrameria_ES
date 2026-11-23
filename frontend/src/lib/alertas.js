@@ -3,10 +3,23 @@
 //  - "saiu": o cliente foi embora, mas ainda há outros pedidos na fila
 //    (se era o último pedido do dia, nada aparece)
 //  - "urgente": chegou um pedido urgente (paga mais, prazo curto)
+//  - "novo": chegou um pedido normal (só com `vistos.novo`, ou seja, depois de vistosIniciais: os
+//    pedidos que já estavam na caixa ao abrir o jogo não avisam)
+// Os que falam de um pedido ainda esperando resposta (novo, urgente, atenção) são clicáveis:
+// levam ao e-mail com o pedido aberto (CLICAVEIS).
 
 export const LIMITE_ATENCAO = 0.25;
 
+export const CLICAVEIS = ['novo', 'urgente', 'atencao'];
+
 export const FRASES = {
+  novo: [
+    'Oi! Tenho um pedido novo para vocês.',
+    'Boa! Mandei um e-mail com o que preciso.',
+    'Olá! Vocês pegam mais um pedido?',
+    'Acabei de mandar meu pedido, dá uma olhada!',
+    'Tenho um trabalhinho para a agência.',
+  ],
   atencao: [
     'Olá? Tem alguém aí?',
     'Oi! Alguém leu meu e-mail?',
@@ -45,8 +58,13 @@ export function detectarAlertas(pedidos = [], vistos = { atencao: new Set(), sai
   const atencao = new Set(vistos.atencao);
   const saiu = new Set(vistos.saiu);
   const urgente = new Set(vistos.urgente ?? []);
+  const novo = vistos.novo ? new Set(vistos.novo) : null;
   const alertas = [];
   for (const p of pedidos) {
+    if (novo && !p.urgente && p.status === 'novo' && !novo.has(p.id)) {
+      novo.add(p.id);
+      alertas.push({ tipo: 'novo', pedido: p });
+    }
     if (p.urgente && p.status === 'novo' && !urgente.has(p.id)) {
       urgente.add(p.id);
       alertas.push({ tipo: 'urgente', pedido: p });
@@ -61,7 +79,7 @@ export function detectarAlertas(pedidos = [], vistos = { atencao: new Set(), sai
       if (temFila) alertas.push({ tipo: 'saiu', pedido: p });
     }
   }
-  return { alertas, vistos: { atencao, saiu, urgente } };
+  return { alertas, vistos: { atencao, saiu, urgente, ...(novo ? { novo } : {}) } };
 }
 
 // Ponto de partida ao abrir o jogo: o que já estava expirado não gera alerta de novo
@@ -69,4 +87,5 @@ export const vistosIniciais = (pedidos = []) => ({
   atencao: new Set(pedidos.filter((p) => p.status !== 'novo').map((p) => p.id)),
   saiu: new Set(pedidos.filter((p) => p.status === 'expirado').map((p) => p.id)),
   urgente: new Set(pedidos.filter((p) => p.urgente).map((p) => p.id)),
+  novo: new Set(pedidos.map((p) => p.id)),
 });

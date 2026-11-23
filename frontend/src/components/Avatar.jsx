@@ -1,19 +1,22 @@
 import { useMemo } from 'react';
 import { Botao } from './ui.jsx';
-import { OPCOES_AVATAR, TAM_AVATAR, alternar, montarAvatar, nomeOpcao } from '../lib/avatar.js';
+import { TAM_AVATAR, alternar, montarAvatar, nomeOpcao, opcoesDoJogador } from '../lib/avatar.js';
+import { gradesDoAvatar, useSpritesAvatar } from '../data/spritesAvatar.js';
 import './avatar.css';
 
 // Retrato 32x32 desenhado em SVG (um <path> por cor), escalado sem suavização
+// (cabelos, roupas e acessórios vêm dos PNGs editáveis de assets/avatar/, ver data/spritesAvatar.js)
 export function Avatar({ avatar, tamanho = 128, className = '' }) {
+  const versao = useSpritesAvatar();
   const caminhos = useMemo(() => {
     const porCor = {};
-    montarAvatar(avatar).forEach((linha, y) =>
+    montarAvatar(avatar, gradesDoAvatar()).forEach((linha, y) =>
       linha.forEach((cor, x) => {
         if (cor) (porCor[cor] ??= []).push(`M${x} ${y}h1v1h-1z`);
       }),
     );
     return Object.entries(porCor);
-  }, [avatar]);
+  }, [avatar, versao]);
 
   return (
     <svg
@@ -39,14 +42,18 @@ const CAMPOS = [
   ['olhos', 'Olhos'],
   ['nariz', 'Nariz'],
   ['boca', 'Boca'],
-  ['roupa', 'Roupa'],
+  ['modeloRoupa', 'Roupa'],
+  ['roupa', 'Cor da roupa'],
+  ['acessorio', 'Acessório'],
 ];
 
-// Seletores ‹ › para cada parte do avatar
-export function EditorAvatar({ avatar, onChange }) {
+// Seletores ‹ › para cada parte do avatar; só aparecem as partes que o jogador tem (as da aba
+// Avatar da lojinha precisam ser compradas antes)
+export function EditorAvatar({ avatar, onChange, possui }) {
+  const opcoes = opcoesDoJogador(possui);
   const aleatorio = () => {
     const novo = {};
-    for (const [campo, lista] of Object.entries(OPCOES_AVATAR)) novo[campo] = lista[Math.floor(Math.random() * lista.length)];
+    for (const [campo, lista] of Object.entries(opcoes)) novo[campo] = lista[Math.floor(Math.random() * lista.length)];
     onChange(novo);
   };
   return (
@@ -55,14 +62,22 @@ export function EditorAvatar({ avatar, onChange }) {
         <Avatar avatar={avatar} tamanho={192} />
       </div>
       <div className="seletores">
-        {CAMPOS.map(([campo, rotulo]) => (
-          <div className="seletor" key={campo}>
-            <span className="rotulo">{rotulo}</span>
-            <button type="button" className="seta" aria-label={`${rotulo} anterior`} onClick={() => onChange(alternar(avatar, campo, -1))}>‹</button>
-            <span className="valor">{nomeOpcao(campo, avatar[campo])}</span>
-            <button type="button" className="seta" aria-label={`${rotulo} seguinte`} onClick={() => onChange(alternar(avatar, campo, 1))}>›</button>
-          </div>
-        ))}
+        {CAMPOS.map(([campo, rotulo]) => {
+          // só uma opção (roupa e acessório sem nada comprado): setas desligadas e o aviso da lojinha
+          const unica = opcoes[campo].length <= 1;
+          const dica = unica ? 'Mais opções na lojinha do computador (aba Avatar)' : undefined;
+          return (
+            <div className={`seletor ${unica ? 'unica' : ''}`} key={campo}>
+              <span className="rotulo">{rotulo}</span>
+              <button type="button" className="seta" disabled={unica} title={dica} aria-label={`${rotulo} anterior`} onClick={() => onChange(alternar(avatar, campo, -1, opcoes))}>‹</button>
+              <span className="valor" title={dica}>
+                {nomeOpcao(campo, avatar[campo] ?? opcoes[campo][0])}
+                {unica && <small className="na-lojinha">mais na lojinha</small>}
+              </span>
+              <button type="button" className="seta" disabled={unica} title={dica} aria-label={`${rotulo} seguinte`} onClick={() => onChange(alternar(avatar, campo, 1, opcoes))}>›</button>
+            </div>
+          );
+        })}
         <Botao type="button" tamanho="pequeno" variante="claro" onClick={aleatorio}>Sortear</Botao>
       </div>
     </div>

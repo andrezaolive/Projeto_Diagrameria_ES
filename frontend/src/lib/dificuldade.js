@@ -52,7 +52,10 @@ export function pontuacao(modelo) {
 }
 
 export const nivelDaPontuacao = (pts) => NIVEIS.find((n) => pts <= n.max);
-export const nivelDoModelo = (modelo) => nivelDaPontuacao(pontuacao(modelo) / (modelo.partes?.length ?? 1));
+// Pedido complexo (data/complexos.js) declara o nível pelos conceitos (`complexo`): pela pontuação
+// ele seria sempre difícil, por causa do tamanho
+export const nivelDoModelo = (modelo) =>
+  modelo.complexo ? NIVEIS.find((n) => n.id === modelo.complexo) : nivelDaPontuacao(pontuacao(modelo) / (modelo.partes?.length ?? 1));
 
 // Campanha: quantos pedidos de cada nível chegam em cada dia. As faixas usam a DATA do calendário
 // (mês de 31 dias começando na segunda; sábados e domingos são folga), convertida em dia de campanha.
@@ -77,6 +80,28 @@ export function composicaoDoDia(dia) {
   const data = dataDoDia(dia);
   return (COMPOSICAO_POR_DATA.find(([[de, ate]]) => data >= de && data <= ate) ?? COMPOSICAO_POR_DATA.at(-1))[1];
 }
+// Dia de campanha (1..23) de uma data útil do calendário; null no fim de semana
+export function diaDaData(data) {
+  for (let d = 1; d <= DIAS_UTEIS; d++) if (dataDoDia(d) === data) return d;
+  return null;
+}
+const DIAS_UTEIS = 23;
+export const ehFimDeSemana = (data) => data >= 1 && data <= 31 && (data - 1) % 7 >= 5;
+// Fim de semana: o dia útil anterior (a sexta). O fim de semana abre quando a sexta é concluída e
+// usa a sexta para a paciência e o pagamento dos clientes.
+export const sextaAntes = (data) => diaDaData(data - ((data - 1) % 7) + 4);
+
+// Fins de semana da campanha: abertos para mexer no escritório, com pedidos complexos (só eles).
+// Não são obrigatórios: não travam a semana seguinte.
+const COMPOSICAO_FIM_DE_SEMANA = {
+  6: C(1), 7: C(1), // 1 fácil complexo
+  13: C(0, 1), 14: C(0, 1), // 1 médio complexo
+  20: C(1, 1), 21: C(1, 1), // 1 fácil e 1 médio complexos
+  27: C(0, 1, 1), // 1 médio e 1 difícil complexos
+  28: C(0, 0, 2), // 2 difíceis complexos
+};
+export const composicaoDoFimDeSemana = (data) => COMPOSICAO_FIM_DE_SEMANA[data] ?? C(0);
+
 // Níveis que aparecem no dia (os que têm pelo menos um pedido na composição)
 export const niveisDoDia = (dia) => Object.entries(composicaoDoDia(dia)).filter(([, q]) => q > 0).map(([id]) => id);
 

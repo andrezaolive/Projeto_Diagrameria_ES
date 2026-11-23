@@ -49,8 +49,23 @@
 }
 .menu .logo { font-size: 64px; letter-spacing: 4px; }
 .menu .subtitulo { margin: 18px 0 0; font-size: 28px; color: var(--c-lilac); }
-.menu .mascote { width: 128px; height: 160px; margin: 28px 0 24px; }
-.menu .acoes { display: flex; gap: 20px; margin-top: 28px; }
+.menu .mascote { width: 250px; height: 250px; margin: 12px 0 8px; }
+/* linha do Jogar: estatísticas (gráfico) à esquerda, conquistas (medalha) à direita; créditos embaixo */
+.menu-jogar { display: flex; align-items: center; gap: 28px; }
+.menu .px-btn.botao-jogar { font-size: 44px; padding: 30px 96px 24px; }
+.menu .px-btn.botao-creditos { margin-top: 18px; font-size: 16px; padding: 12px 26px 9px; }
+/* botões quadrados com ícone em pixel art (menu: gráfico, medalha, engrenagem) */
+.menu-icone {
+  width: 104px; height: 104px; display: grid; place-items: center; padding: 0; cursor: pointer;
+  background: var(--c-lilac); border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-mist), inset -4px -4px 0 var(--c-lavender), 6px 6px 0 var(--c-ink);
+  zoom: var(--ui-btn, 1);
+}
+.menu-icone-moldura { width: 88px; height: 88px; display: grid; place-items: center; }
+.menu-icone:hover { background: var(--c-mist); transform: translateY(4px); box-shadow: inset var(--px) var(--px) 0 var(--c-cream), inset -4px -4px 0 var(--c-lavender), 6px 2px 0 var(--c-ink); }
+.menu-icone:focus-visible { outline: 3px dashed var(--c-butter); outline-offset: 4px; }
+/* engrenagem embaixo do perfil: 100px (altura do perfil + folga) na escala da interface */
+.menu-config { position: absolute; left: calc(16px / var(--ui-btn, 1)); top: calc(16px / var(--ui-btn, 1) + 100px); z-index: 2; }
 .menu .versao { position: absolute; right: 16px; bottom: 10px; color: var(--c-violet); font-size: 20px; }
 
 .config { padding: 24px 36px; display: flex; flex-direction: column; gap: 22px; height: 100%; }
@@ -121,7 +136,11 @@
   font-size: 14px;
   cursor: pointer;
 }
-.dia:hover:not(:disabled) { background: var(--c-butter); }
+button.dia:hover:not(:disabled) { background: var(--c-butter); }
+.calendario-folha.so-ver .dia { cursor: default; }
+/* calendário de mesa do escritório (janela CALENDARIO.EXE em Jogo.jsx): só para ver */
+.calendario-mesa { display: flex; justify-content: center; padding: 4px 0 18px; }
+.calendario-mesa .calendario-folha { margin-top: 18px; }
 .dia:disabled { cursor: not-allowed; }
 .dia.folga { background: var(--c-lilac); color: var(--c-violet); box-shadow: none; }
 .dia.bloqueado { background: var(--c-lavender); color: var(--c-grape); box-shadow: none; }
@@ -141,7 +160,9 @@
   transform: rotate(-8deg);
   color: var(--c-ink);
 }
-.dia .repetir { position: absolute; right: 6px; top: 34px; font-family: var(--f-texto); font-size: 17px; color: var(--c-grape); }
+.dia.fim-de-semana { background: var(--c-mist); }
+.dia.fim-de-semana .info { color: var(--c-grape); font-size: 18px; }
+.dia .medalha-dia { position: absolute; right: 6px; bottom: 4px; }
 .dia .folga-txt { position: absolute; left: 8px; bottom: 6px; font-family: var(--f-texto); font-size: 18px; }
 .calendario .rodape { margin-top: 24px; display: flex; gap: 20px; align-items: center; }
 
@@ -160,13 +181,15 @@
 /* aba de perfil no canto do menu */
 .menu-perfil {
   position: absolute;
-  left: 16px;
-  top: 16px;
+  /* segue o tamanho da interface (zoom); a posição é dividida pelo zoom para ficar sempre a 16px do canto */
+  zoom: var(--ui-btn, 1);
+  left: calc(16px / var(--ui-btn, 1));
+  top: calc(16px / var(--ui-btn, 1));
   z-index: 2;
   display: flex;
   align-items: center;
   gap: 10px;
-  max-width: 236px;
+  max-width: calc(236px / var(--ui-btn, 1)); /* na tela, nunca passa de ~236px (não cobre o título) */
   padding: 6px 16px 6px 6px;
   text-align: left;
   background: var(--c-lilac);

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { dataDoDia } from '../lib/dificuldade.js';
 import './grafico.css';
 
 // Gráficos pequenos da aba de estatísticas (ver lib/estatisticas.js).
@@ -151,9 +152,9 @@ function Dias({ dias }) {
         const f = media == null ? null : faixaDia(media);
         return (
           <g key={dia} className={`cel ${f ? f.classe : 'pendente'}`}>
-            <title>{media == null ? `Dia ${dia}: não jogado` : `Dia ${dia}: média ${media}%`}</title>
+            <title>{media == null ? `Dia ${dataDoDia(dia)}: não jogado` : `Dia ${dataDoDia(dia)}: média ${media}%`}</title>
             <rect x={x} y={y} width={lado} height={lado} />
-            <text x={x + 6} y={y + 18}>{dia}</text>
+            <text x={x + 6} y={y + 18}>{dataDoDia(dia)}</text>
             {media != null && <text x={x + lado - 5} y={y + lado - 7} textAnchor="end" className="media">{media}</text>}
           </g>
         );

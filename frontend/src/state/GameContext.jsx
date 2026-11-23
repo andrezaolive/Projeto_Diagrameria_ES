@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useReducer } from 'react';
+import { createContext, useCallback, useContext, useEffect, useReducer } from 'react';
+import { registrarAcao } from '../components/ErroDoJogo.jsx';
 import { estadoInicial, migrar, reducer } from './reducer.js';
 import { setVolumeEfeitos } from '../lib/sfx.js';
 import { setVolumeMusica } from '../lib/musica.js';
@@ -18,7 +19,12 @@ function carregar() {
 }
 
 export function GameProvider({ children }) {
-  const [state, dispatch] = useReducer(reducer, undefined, carregar);
+  const [state, despachar] = useReducer(reducer, undefined, carregar);
+  // guarda as últimas ações (ErroDoJogo mostra junto com o erro, se o jogo travar)
+  const dispatch = useCallback((action) => {
+    registrarAcao(action);
+    despachar(action);
+  }, []);
 
   // Salva com atraso para não gravar a cada movimento de arraste
   useEffect(() => {

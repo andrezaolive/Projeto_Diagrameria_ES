@@ -17,13 +17,13 @@ import { EXCESSO_MENU_DB, LOOP_MENU } from '../lib/musica.js';
 // `cor`: rótulo do disco no ícone. `preco` 0 = já vem com o jogo.
 export const FAIXAS_JOGO = [
   { id: 'musica-game-1', nome: 'Game 1', url: game1, loop: 2454261 / 44100, preco: 0, cor: 'var(--c-mint)' },
-  { id: 'musica-game-2', nome: 'Game 2', url: game2, loop: 2490353 / 44100, preco: 150, cor: 'var(--c-blush)' },
-  { id: 'musica-game-3', nome: 'Game 3', url: game3, loop: 1992282 / 44100, preco: 200, cor: 'var(--c-sky)' },
-  { id: 'musica-game-4', nome: 'Game 4', url: game4, loop: 2228211 / 44100, preco: 180, cor: 'var(--c-peach)' },
-  { id: 'musica-game-5', nome: 'Game 5', url: game5, loop: 2199273 / 44100, preco: 190, cor: 'var(--c-lilac)' },
-  { id: 'musica-game-6', nome: 'Game 6', url: game6, loop: 1739836 / 44100, preco: 200, cor: 'var(--c-rose)' },
+  { id: 'musica-game-2', nome: 'Game 2', url: game2, loop: 2490353 / 44100, preco: 380, cor: 'var(--c-blush)' },
+  { id: 'musica-game-3', nome: 'Game 3', url: game3, loop: 1992282 / 44100, preco: 500, cor: 'var(--c-sky)' },
+  { id: 'musica-game-4', nome: 'Game 4', url: game4, loop: 2228211 / 44100, preco: 450, cor: 'var(--c-peach)' },
+  { id: 'musica-game-5', nome: 'Game 5', url: game5, loop: 2199273 / 44100, preco: 480, cor: 'var(--c-lilac)' },
+  { id: 'musica-game-6', nome: 'Game 6', url: game6, loop: 1739836 / 44100, preco: 500, cor: 'var(--c-rose)' },
   // a do menu tem emenda própria (cauda por cima do início), igual à do menu
-  { id: 'musica-menu', nome: 'Menu', url: menu, loop: LOOP_MENU, excessoDb: EXCESSO_MENU_DB, preco: 100, cor: 'var(--c-butter)' },
+  { id: 'musica-menu', nome: 'Menu', url: menu, loop: LOOP_MENU, excessoDb: EXCESSO_MENU_DB, preco: 250, cor: 'var(--c-butter)' },
 ];
 
 export const ALEATORIA = 'aleatoria';

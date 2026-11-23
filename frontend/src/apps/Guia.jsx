@@ -1,22 +1,32 @@
 import { useState } from 'react';
+import TextoPedido from '../components/TextoPedido.jsx';
+import { Botao } from '../components/ui.jsx';
 import { DiagramaEstatico, IconePaleta } from '../editor/Formas.jsx';
 import { SECOES_GUIA } from '../data/guia.js';
 import './apps.css';
 
 // App "Guia" da área de trabalho: como funciona cada diagrama, com as peças, um pedido de exemplo,
 // o porquê de cada escolha e o diagrama pronto (desenhado igual aos gabaritos do resultado).
-export default function Guia() {
+// "Tutorial" (`onTutorial`, vindo do Jogo pelo Computador) roda de novo o tutorial da primeira vez.
+export default function Guia({ onTutorial }) {
   const [aba, setAba] = useState(SECOES_GUIA[0].id);
   const s = SECOES_GUIA.find((x) => x.id === aba);
   return (
     <div className="guia">
-      <div className="guia-abas" role="tablist">
-        {SECOES_GUIA.map((x) => (
-          <button key={x.id} role="tab" aria-selected={aba === x.id} className={`guia-aba ${aba === x.id ? 'ativa' : ''}`} onClick={() => setAba(x.id)}>
-            <IconePaleta tipo={x.icone} />
-            {x.nome}
-          </button>
-        ))}
+      <div className="guia-abas">
+        <div className="guia-lista" role="tablist">
+          {SECOES_GUIA.map((x) => (
+            <button key={x.id} role="tab" aria-selected={aba === x.id} className={`guia-aba ${aba === x.id ? 'ativa' : ''}`} onClick={() => setAba(x.id)}>
+              <IconePaleta tipo={x.icone} />
+              {x.nome}
+            </button>
+          ))}
+        </div>
+        {onTutorial && (
+          <Botao tamanho="pequeno" variante="menta" onClick={onTutorial} title="Mostra de novo o passo a passo do computador (o relógio do jogo para enquanto isso)">
+            Tutorial
+          </Botao>
+        )}
       </div>
 
       <div className="guia-corpo rolagem" key={s.id}>
@@ -40,7 +50,7 @@ export default function Guia() {
         <div className="guia-exemplo">
           <blockquote className="guia-email">
             <span className="guia-de">De: {s.pedido.cliente}</span>
-            {s.pedido.corpo.map((l) => <p key={l}>{l}</p>)}
+            {s.pedido.corpo.map((l) => <p key={l}><TextoPedido texto={l} /></p>)}
           </blockquote>
           <figure className="guia-diagrama">
             <DiagramaEstatico diagrama={s.diagrama} prefixo={`guia-${s.id}`} />

@@ -8,8 +8,8 @@ const rodar = (s, ...acoes) => acoes.reduce(reducer, s);
 const segundos = (s, n, tipo = 'CAFE_TICK') => rodar(s, ...Array.from({ length: n }, () => ({ type: tipo })));
 
 // cafeteira comprada e na mesa, com a caneca encaixada nela
-function comCafeteira(dinheiro = 500) {
-  let s = rodar({ ...estadoInicial(), dinheiro }, { type: 'COMPRAR', id: 'obj-cafeteira', preco: 120 }, { type: 'ALTERNAR_MOVEL', id: 'obj-cafeteira' });
+function comCafeteira(dinheiro = 2000) {
+  let s = rodar({ ...estadoInicial(), dinheiro }, { type: 'COMPRAR', id: 'obj-cafeteira', preco: 300 }, { type: 'ALTERNAR_MOVEL', id: 'obj-cafeteira' });
   const maquina = resolverCena(['cafeteira'], s.escritorio.posicoes)[0];
   const encaixe = pousar('caneca', false, maquina.x + 3, maquina.y + 10, [maquina]);
   return rodar(s, { type: 'MOVER_OBJETO', objeto: 'caneca', posicao: encaixe.entrada });
@@ -31,7 +31,9 @@ describe('cafeteira', () => {
     const antes = s.dinheiro;
     s = rodar(s, { type: 'COMPRAR_CAPSULA', tipo: 'forte' }, { type: 'COMPRAR_CAPSULA', tipo: 'forte' }, { type: 'COMPRAR_CAPSULA', tipo: 'normal' });
     expect(s.cafe.capsulas).toEqual({ descafeinado: 0, normal: 1, forte: 2 });
-    expect(s.dinheiro).toBe(antes - 20 - 20 - 10);
+    expect(s.dinheiro).toBe(antes - 200 - 200 - 125);
+    expect(CAPSULAS.map((c) => c.preco)).toEqual([75, 125, 200]);
+    expect(EFEITO_SEGUNDOS).toBe(60); // 1 minuto
     const pobre = { ...s, dinheiro: 3 };
     expect(rodar(pobre, { type: 'COMPRAR_CAPSULA', tipo: 'normal' })).toBe(pobre);
   });
@@ -79,7 +81,7 @@ describe('cafeteira', () => {
     expect(ritmoDoJogo(s.cafe)).toBe(1);
   });
 
-  it('o efeito não acumula: outro café recomeça dos 40 s (e troca o tipo, se for outro)', () => {
+  it('o efeito não acumula: outro café recomeça do 1 minuto (e troca o tipo, se for outro)', () => {
     const preparar = (st, tipo) => segundos(rodar(st, { type: 'COMPRAR_CAPSULA', tipo }, { type: 'FAZER_CAFE', tipo, sorteio: 0 }), PREPARO.min);
     let s = rodar(preparar(comCafeteira(), 'normal'), { type: 'BEBER_CAFE' });
     s = preparar(s, 'normal'); // 5 s de preparo do segundo café

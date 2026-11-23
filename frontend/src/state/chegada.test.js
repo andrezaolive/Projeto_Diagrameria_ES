@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { diaEncerrado, estadoInicial, reducer } from './reducer.js';
+import { ESPERA_INFINITO, diaEncerrado, estadoInicial, reducer, temRelogio } from './reducer.js';
 import { CHEGADA, intervaloChegada, pedidosNoDia } from '../data/pedidos.js';
 
 const rodar = (s, ...acoes) => acoes.reduce(reducer, s);
@@ -30,20 +30,28 @@ describe('chegada dos pedidos do dia (campanha)', () => {
     expect(s.sessao.pedidos[1].paciencia).toBe(s.sessao.pedidos[1].pacienciaTotal); // paciência conta da chegada
   });
 
-  it('entregar o anterior antes da hora traz o próximo na mesma hora', () => {
+  it('entregar o anterior antes da hora traz o próximo 10 a 20 s depois (não na hora)', () => {
     let s = iniciar(9, 1); // 3 pedidos, 90 s de intervalo
     expect(pedidosNoDia(9)).toBe(3);
     const a = s.sessao.pedidos[0];
     s = rodar(s, { type: 'ACEITAR', id: a.id }, { type: 'ENTREGAR', id: a.id, nota: 80, valor: 1, sorteio: 0 });
+    expect(s.sessao.pedidos).toHaveLength(1);
+    expect(s.sessao.proximoEm).toBe(s.sessao.segundos + ESPERA_INFINITO.min); // adiantado: 10 s
+    expect(temRelogio(s.sessao)).toBe(true); // o relógio continua para ele chegar
+    expect(diaEncerrado(s.sessao)).toBe(false);
+    s = ticks(s, ESPERA_INFINITO.min - 1, 0);
+    expect(s.sessao.pedidos).toHaveLength(1);
+    s = ticks(s, 1, 0);
     expect(s.sessao.pedidos).toHaveLength(2);
     expect(s.sessao.proximoEm).toBe(s.sessao.segundos + 45); // o seguinte, a partir de agora
-    expect(diaEncerrado(s.sessao)).toBe(false);
   });
 
   it('o dia só acaba depois que todos chegaram e terminaram', () => {
     let s = iniciar(1); // 2 pedidos
     const a = s.sessao.pedidos[0];
-    s = rodar(s, { type: 'RECUSAR', id: a.id }); // recusar também libera o próximo
+    s = rodar(s, { type: 'RECUSAR', id: a.id }); // recusar também adianta o próximo
+    expect(diaEncerrado(s.sessao)).toBe(false);
+    s = ticks(s, ESPERA_INFINITO.max);
     expect(s.sessao.pedidos).toHaveLength(2);
     expect(diaEncerrado(s.sessao)).toBe(false);
     s = rodar(s, { type: 'RECUSAR', id: s.sessao.pedidos[1].id });

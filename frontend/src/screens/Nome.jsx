@@ -25,7 +25,7 @@ export default function Nome({ onConcluir, onCancelar }) {
       <form className="tela-nome" onSubmit={confirmar}>
         <h2 className="titulo-px">{primeiraVez ? 'BEM-VINDO(A)!' : 'SEU PERFIL'}</h2>
         {primeiraVez && <p className="dica">Antes de abrir a agência, diga como devemos te chamar.</p>}
-        <EditorAvatar avatar={avatar} onChange={setAvatar} />
+        <EditorAvatar avatar={avatar} onChange={setAvatar} possui={state.loja.possui} />
         <div className="linha-nome">
           <label htmlFor="campo-nome">Nome</label>
           <input

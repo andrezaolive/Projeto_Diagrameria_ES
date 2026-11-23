@@ -60,7 +60,7 @@ button { font: inherit; color: inherit; }
   background: var(--c-ink);
 }
 .palco[data-ui='grande'] { --ui-btn: 1.18; }
-.palco[data-ui='reduzido'] { --ui-btn: 0.85; }
+.palco[data-ui='reduzido'] { --ui-btn: 0.72; }
 .palco {
   position: absolute;
   left: 50%;
@@ -209,10 +209,17 @@ button { font: inherit; color: inherit; }
 }
 
 /* ---------------------------------------------------------------- modal */
+/* fundo escurecido das janelas modais: só ele surge aos poucos (::before). Antes a animação de opacidade
+   valia para a janela também, e em placa de vídeo fraca ela ficava transparente por cima das outras */
 .modal-fundo {
   position: absolute;
   inset: 0;
   z-index: 900;
+}
+.modal-fundo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: rgba(30, 26, 46, 0.6);
   background-image: radial-gradient(rgba(30, 26, 46, 0.4) 1px, transparent 1px);
   background-size: 4px 4px;
@@ -338,3 +345,14 @@ button { font: inherit; color: inherit; }
 .todos-cabeca,
 .resumo-dia .cliente { display: inline-flex; align-items: center; gap: 8px; }
 .aba-pedido .nome { gap: 4px; }
+
+/* jogo travou (components/ErroDoJogo.jsx): mostra o erro no lugar da tela vazia */
+.erro-do-jogo { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 24px; background: var(--c-night); font-family: var(--f-texto, 'VT323', monospace); }
+.erro-caixa { width: min(900px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 20px 24px; color: var(--c-ink); background: var(--c-lilac); border: 4px solid var(--c-ink); box-shadow: 8px 8px 0 var(--sombra-texto); }
+.erro-caixa strong { font-family: var(--f-titulo); font-size: 18px; color: var(--c-grape); }
+.erro-caixa p { margin: 0; font-size: 22px; }
+.erro-caixa pre { margin: 0; max-height: 46vh; overflow: auto; padding: 10px; font-size: 16px; white-space: pre-wrap; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.erro-botoes { display: flex; justify-content: flex-end; gap: 12px; }
+
+/* nomes dos pedidos em negrito (opção "Nomes" das Configurações, components/TextoPedido.jsx) */
+.nome-pedido { font-weight: 700; color: var(--c-ink); }

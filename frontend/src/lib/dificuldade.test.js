@@ -14,7 +14,9 @@ describe('dificuldade dos pedidos', () => {
   it('mais coisa para inserir = mais pontos', () => {
     expect(pontuacao(modeloPorId('comanda'))).toBeGreaterThan(pontuacao(modeloPorId('casa')));
     expect(pontuacao(modeloPorId('rastreio'))).toBeGreaterThan(pontuacao(modeloPorId('catraca')));
-    expect(nivelDoModelo(modeloPorId('idiomas')).id).toBe('facil');
+    expect(nivelDoModelo(modeloPorId('atlas')).id).toBe('facil');
+    // com atributos e métodos o mesmo diagrama fica mais difícil
+    expect(nivelDoModelo(modeloPorId('idiomas')).id).toBe('dificil');
     expect(nivelDoModelo(modeloPorId('frota')).id).toBe('dificil');
   });
 

@@ -33,6 +33,7 @@
 .email-leitura footer { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border-top: var(--px) solid var(--c-ink); }
 .email-leitura footer .px-btn { flex: 1 1 auto; max-width: 100%; white-space: nowrap; padding-left: 12px; padding-right: 12px; }
 .email-leitura .aviso { font-size: 20px; color: var(--c-plum); }
+.email-leitura .aviso-limite { flex: 1 1 100%; padding: 4px 10px 2px; font-size: 19px; line-height: 1.1; color: var(--c-ink); background: var(--c-butter); border: 3px solid var(--c-ink); }
 
 /* ---------------------------------------------------------------- dicas */
 .dicas { display: flex; flex-direction: column; height: 100%; padding: 12px 16px; gap: 10px; }
@@ -46,7 +47,8 @@
   border: var(--px) solid var(--c-ink);
   box-shadow: 6px 6px 0 var(--c-grape);
 }
-.dica-imagem > svg { position: absolute; inset: 0; width: 100%; height: 100%; padding: 8px; }
+.dica-imagem > .zoom-area { position: absolute; inset: 0; }
+.dica-imagem .zoom-conteudo > svg { position: absolute; inset: 0; width: 100%; height: 100%; padding: 8px; }
 .dica-tampas { position: absolute; inset: 0; display: grid; }
 .tampa {
   display: flex;
@@ -74,8 +76,13 @@
 
 /* ---------------------------------------------------------------- loja */
 .loja { display: flex; flex-direction: column; height: 100%; }
-.loja-topo { display: flex; gap: 10px; align-items: center; padding: 12px 16px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
+.loja-topo { display: flex; gap: 6px; align-items: center; padding: 12px 12px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
 .loja-grade { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); align-content: start; gap: 18px; padding: 18px; }
+/* 7 abas + Arrumar + dinheiro: botões um pouco mais estreitos para caber numa linha */
+.loja .loja-topo .px-btn.pequeno { font-size: 10px; padding-inline: 7px; }
+.loja-topo > :last-child { flex: none; white-space: nowrap; }
+.loja-subabas { display: flex; gap: 8px; padding: 10px 16px 0; }
+.loja-item .avatar-loja { border: 3px solid var(--c-ink); }
 .loja-item {
   display: flex;
   flex-direction: column;
@@ -95,7 +102,8 @@
 .resultado { display: grid; grid-template-columns: 1fr 260px 1fr; gap: 16px; height: 100%; padding: 16px; }
 .resultado .lado { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .resultado .lado h4 { margin: 0; font-family: var(--f-titulo); font-size: 12px; text-align: center; }
-.resultado .lado svg { flex: 1; width: 100%; min-height: 0; background: var(--c-cream); border: var(--px) solid var(--c-ink); }
+.resultado .lado .zoom-area { flex: 1; width: 100%; min-height: 0; background: var(--c-cream); border: var(--px) solid var(--c-ink); }
+.resultado .lado .zoom-conteudo > svg { display: block; width: 100%; height: 100%; }
 .resultado .meio { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; font-size: 22px; }
 .resultado .nota { font-family: var(--f-titulo); font-size: 44px; color: var(--c-grape); text-shadow: 4px 4px 0 var(--c-lavender); }
 .resultado .barra { width: 200px; height: 18px; background: var(--c-mist); border: 3px solid var(--c-ink); }
@@ -113,6 +121,14 @@
 .miniatura.objeto-loja img.sprite { position: static; width: auto; height: auto; }
 .resultado { grid-template-columns: 1fr 300px 1fr; }
 .resultado .meio { gap: 8px; }
+/* a linha do grid nunca passa da janela (senão os lados esticam junto com o meio) */
+.resultado { grid-template-rows: minmax(0, 1fr); }
+.resultado .meio { min-height: 0; overflow-y: auto; justify-content: safe center; }
+.resultado .meio.compacto { gap: 5px; font-size: 19px; }
+.resultado .meio.compacto .nota { font-size: 34px; }
+.resultado .meio.compacto .barra { height: 14px; }
+.resultado .meio.compacto .reacao .fala { font-size: 18px; }
+.resultado .meio.compacto .pago { padding: 6px 10px 4px; }
 .resultado .reacao { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .resultado .reacao img { animation: reacao-entra 0.5s steps(4) both; }
 .resultado .reacao .fala {
@@ -215,6 +231,9 @@
 .painel-dev .atual { margin: 0 0 6px; font-size: 20px; color: var(--c-grape); }
 .painel-dev .linha { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
 .painel-dev .px-campo { width: 140px; }
+.painel-dev .campo-nota span { font-size: 18px; }
+.painel-dev .campo-nota .px-campo { width: 90px; }
+.painel-dev .seletor-conquista { width: auto; flex: 1; min-width: 0; }
 .debug-id { margin-right: 4px; font-family: var(--f-texto); color: var(--c-grape); }
 
 /* ---------------------------------------------------------- pedido urgente (tons de vermelho) */
@@ -298,7 +317,8 @@
 
 /* ---------------------------------------------------------- guia dos diagramas */
 .guia { height: 100%; display: flex; flex-direction: column; }
-.guia-abas { display: flex; gap: 8px; padding: 10px 16px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
+.guia-abas { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 16px; background: var(--c-mist); border-bottom: var(--px) solid var(--c-ink); }
+.guia-lista { display: flex; gap: 8px; }
 .guia-aba {
   display: flex; align-items: center; gap: 8px; padding: 6px 14px 4px;
   font-family: var(--f-titulo); font-size: 12px; color: var(--c-ink);
@@ -328,8 +348,8 @@
 
 /* ---------------------------------------------------------- café: aba da loja e janela da cafeteira */
 .capsula-info { font-size: 18px; color: var(--c-grape); text-align: center; }
-.cafeteira { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 16px; }
-.cafeteira-botoes { display: flex; gap: 16px; }
+.cafeteira { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; text-align: center; }
+.cafeteira-botoes { display: flex; justify-content: center; gap: 16px; }
 .capsula-btn {
   display: flex;
   flex-direction: column;
@@ -367,7 +387,6 @@
 .cafeteira-status.preparando { background: var(--c-peach); }
 .cafeteira-status.pronto { background: var(--c-mint); }
 .cafeteira-efeito { margin: 0; font-size: 20px; color: var(--c-plum); }
-.cafeteira .aviso-loja { align-self: stretch; border: 3px solid var(--c-ink); }
 
 /* ---------------------------------------------------------- pedido JUMBO (dois diagramas de uma vez) */
 .tag-jumbo {
@@ -383,7 +402,12 @@
   vertical-align: 2px;
 }
 .editor-requisitos .relogio-pedido .tag-jumbo { margin: 0 0 0 8px; }
-.aviso-jumbo { margin: 4px 0; padding: 4px 8px; font-size: 18px; line-height: 1.1; color: var(--c-ink); background: var(--c-lilac); border: 3px solid var(--c-grape); }
+.editor-requisitos .relogio-pedido { flex-wrap: wrap; row-gap: 4px; }
+/* pedido complexo (sistema inteiro, só nos fins de semana e no infinito) */
+.tag-jumbo.tag-complexo, .selo.selo-complexo { background: var(--c-plum); color: var(--c-butter); }
+/* dicas com 16 pedaços (pedido complexo) */
+.dica-tampas.miuda .tampa img { width: 32px; height: 32px; }
+.dica-tampas.miuda .preco-tampa { font-size: 9px; padding: 3px 4px 2px; border-width: 2px; }
 .secao-paleta { position: relative; }
 .secao-montada { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; background: var(--c-mint); border: 2px solid var(--c-ink); }
 /* tela de resultado: escolher qual diagrama do JUMBO ver */
@@ -397,7 +421,9 @@
 .colecao-topo .espaco { flex: 1; }
 .colecao-placar { display: inline-flex; align-items: center; gap: 4px; font-size: 22px; }
 .colecao-corpo { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 340px; }
-.colecao-lista { list-style: none; margin: 0; padding: 12px 14px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 22px 12px; align-content: start; overflow-y: auto; }
+.colecao-lista { list-style: none; margin: 0; padding: 12px 14px 24px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px 12px; align-content: start; overflow-y: auto; overflow-x: hidden; }
+/* colunas de mesma largura que encolhem com o texto (com 1fr puro, o texto comprido alargava a grade e aparecia rolagem lateral) */
+.colecao-lista > li { min-width: 0; }
 .colecao-item { width: 100%; display: flex; align-items: center; gap: 14px; padding: 8px 10px; text-align: left; background: var(--c-lavender); border: var(--px) solid var(--c-ink); cursor: pointer; }
 button.colecao-item:hover { background: var(--c-butter); }
 .colecao-item.sel { background: var(--c-orchid); }
@@ -421,3 +447,23 @@ button.colecao-item:hover { background: var(--c-butter); }
 .colecao-resumo { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 10px; font-size: 20px; background: var(--c-mist); border: 3px solid var(--c-ink); }
 .colecao-resumo p { margin: 8px 0; }
 .colecao-vazio { margin: auto 0; font-size: 20px; color: var(--c-grape); text-align: center; line-height: 1.4; }
+
+/* aba Arquivo do e-mail e pedidos de retorno (modo infinito, lib/retorno.js) */
+.email.com-abas { grid-template-rows: auto minmax(0, 1fr); }
+.email-abas-topo { grid-column: 1 / -1; list-style: none; margin: 0; padding: 0; }
+.email-abas { display: flex; gap: 8px; padding: 8px 10px; background: var(--c-lilac); border-bottom: var(--px) solid var(--c-ink); }
+.arquivo-item .quando { font-size: 17px; color: var(--c-grape); }
+.arquivo-leitura .corpo p { margin: 6px 0; }
+.arquivo-leitura .linha-de { display: flex; gap: 8px; align-items: center; font-size: 22px; }
+.arquivo-buscando { margin: 0; padding: 8px 16px 6px; font-size: 20px; background: var(--c-butter); border-bottom: var(--px) solid var(--c-ink); }
+.tag-jumbo.tag-retorno, .selo.selo-retorno { background: var(--c-sky); color: var(--c-ink); }
+
+/* zoom nos diagramas prontos (components/ZoomDiagrama.jsx): dicas e resultado */
+.zoom-area { position: relative; overflow: hidden; touch-action: none; }
+.zoom-area.ampliado { cursor: grab; }
+.zoom-area.arrastando { cursor: grabbing; }
+.zoom-conteudo { position: absolute; inset: 0; transform-origin: 0 0; }
+.zoom-controles { position: absolute; right: 6px; bottom: 6px; z-index: 3; display: flex; gap: 4px; }
+.zoom-controles button { width: 30px; height: 30px; padding: 0; font-family: var(--f-titulo); font-size: 14px; line-height: 1; color: var(--c-ink); background: var(--c-lilac); border: 3px solid var(--c-ink); box-shadow: 2px 2px 0 var(--sombra-texto); cursor: pointer; }
+.zoom-controles button:hover:not(:disabled) { background: var(--c-mist); }
+.zoom-controles button:disabled { opacity: 0.45; cursor: default; }

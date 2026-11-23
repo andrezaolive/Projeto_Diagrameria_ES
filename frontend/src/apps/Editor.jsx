@@ -1,20 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import LogoEmpresa from '../components/LogoEmpresa.jsx';
+import TextoPedido from '../components/TextoPedido.jsx';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
-import { Botao } from '../components/ui.jsx';
+import { Botao, formatarReais } from '../components/ui.jsx';
+import roboClode from '../assets/ui/clode-robo-16.png';
 import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES } from '../editor/Formas.jsx';
 import { MULTIPLICIDADES, TEM_MULTIPLICIDADE } from '../lib/multiplicidade.js';
 import { REDIMENSIONAVEIS, TAMANHOS, TAMANHO_MINIMO, centro, contido, foraDoLugar, posicaoAoSoltar, redimensionar, retangulo, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
-import { avaliar, avaliarPartes, pagamento } from '../lib/avaliacao.js';
-import { diagramaVazio } from '../lib/feedback.js';
-import { ehJumbo, modeloPorId } from '../data/pedidos.js';
+import { avaliar, avaliarPartes, pagamentoDaEntrega } from '../lib/avaliacao.js';
+import { diagramaVazio, gerarFeedback } from '../lib/feedback.js';
+import { ehComplexo, ehJumbo, modeloPorId } from '../data/pedidos.js';
 import { useGame } from '../state/GameContext.jsx';
-import { chaveDaParte, chaveDiagrama, diagramaDe, pedidosAceitos } from '../state/reducer.js';
+import { chaveDaParte, chaveDiagrama, diagramaDe, pedidosAceitos, precoDoClode } from '../state/reducer.js';
 import { formatarTempo } from '../screens/Computador.jsx';
 import { sfx } from '../lib/sfx.js';
-import { LINHA_MEMBRO, TOPO_CLASSE, medidasClasse } from '../lib/membros.js';
+import { LINHA_MEMBRO, SIMBOLO, TOPO_CLASSE, VIS_PADRAO, VISIBILIDADES, alinharVisibilidades, medidasClasse, proximaVisibilidade, separarMembro } from '../lib/membros.js';
+import { passoDoTreino, treinoPorId } from '../data/treino.js';
+import { MascoteFalando } from '../screens/Tutorial.jsx';
 import './editor.css';
 
+const HIST_JUNTAR = 600; // ms: mudanças mais próximas que isso viram um passo só no desfazer
+const HIST_MAX = 100;
 const novoId = () => `n${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
 export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
@@ -68,7 +74,60 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   viewRef.current = view;
   diagRef.current = diagrama;
 
-  const salvar = (d) => dispatch({ type: 'SET_DIAGRAMA', chave, diagrama: d });
+  // Histórico para desfazer/refazer (Ctrl+Z / Ctrl+Y), um por diagrama (`chave`: cada pedido e cada
+  // aba do JUMBO). Mudanças seguidas com menos de HIST_JUNTAR ms entre elas (arrastar, digitar o nome)
+  // viram um passo só: só a primeira guarda o diagrama de antes.
+  const historico = useRef({});
+  const hist = () => (historico.current[chave] ??= { passado: [], futuro: [], ultimo: 0 });
+  const lembrar = (agrupar = true) => {
+    const h = hist();
+    const agora = performance.now();
+    if ((!agrupar || agora - h.ultimo > HIST_JUNTAR) && h.passado.at(-1) !== diagRef.current) {
+      h.passado.push(diagRef.current);
+      if (h.passado.length > HIST_MAX) h.passado.shift();
+    }
+    h.ultimo = agrupar ? agora : 0;
+    h.futuro = [];
+  };
+  const salvar = (d) => {
+    lembrar();
+    dispatch({ type: 'SET_DIAGRAMA', chave, diagrama: d });
+  };
+  const voltarPara = (de, para) => {
+    const h = hist();
+    if (!h[de].length) return sfx.erro();
+    h[para].push(diagRef.current);
+    h.ultimo = 0;
+    dispatch({ type: 'SET_DIAGRAMA', chave, diagrama: h[de].pop() });
+    setSel(null);
+    setOrigem(null);
+    sfx.voltar();
+  };
+  const desfazer = () => voltarPara('passado', 'futuro');
+  const refazer = () => voltarPara('futuro', 'passado');
+
+  // Clode (lib/clode.js): põe um elemento que falta ou corrige uma coisa, comparando com o gabarito do
+  // diagrama desta aba; sem nada a fazer, só avisa (e não cobra). O reducer calcula a ação (USAR_CLODE),
+  // então cliques seguidos funcionam um depois do outro; a fala vem de `sessao.falaClode` e fica uns 4 s.
+  const falaDoReducer = sessao?.falaClode;
+  const [falaClode, setFalaClode] = useState(null);
+  const ultimaFala = useRef(falaDoReducer?.n);
+  useEffect(() => {
+    if (!falaDoReducer || falaDoReducer.n === ultimaFala.current) return;
+    ultimaFala.current = falaDoReducer.n;
+    if (falaDoReducer.nada) sfx.erro();
+    else sfx.moeda();
+    setFalaClode(falaDoReducer);
+    const t = setTimeout(() => setFalaClode(null), 4500);
+    return () => clearTimeout(t);
+  }, [falaDoReducer]);
+  useEffect(() => setFalaClode(null), [pedido?.id, secao]);
+  const precoClode = pedido ? precoDoClode(pedido, sessao) : 0;
+  const usarClode = () => {
+    lembrar(false); // o que o Clode fez também se desfaz (o dinheiro não volta)
+    dispatch({ type: 'USAR_CLODE', id: pedido.id, chave, secao, n: Date.now() + Math.random() });
+    setSel(null);
+  };
 
   // Coordenadas do ponteiro dentro da área (desfaz a escala do palco)
   const local = (e) => {
@@ -94,6 +153,17 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
     setSel({ tipo: 'node', id: node.id });
     sfx.soltar();
     setTimeout(() => rotuloRef.current?.select(), 0);
+  };
+
+  // Ctrl+D: cópia do elemento selecionado, um pouco para baixo e para a direita (vira a seleção)
+  const duplicar = () => {
+    const d = diagRef.current;
+    const n = sel?.tipo === 'node' && d.nodes.find((x) => x.id === sel.id);
+    if (!n) return sfx.erro();
+    const copia = { ...n, id: novoId(), x: snap(n.x + 40), y: snap(n.y + 40) };
+    salvar({ ...d, nodes: [...d.nodes, copia] });
+    setSel({ tipo: 'node', id: copia.id });
+    sfx.soltar();
   };
 
   const ligar = (de, para) => {
@@ -314,6 +384,13 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
         return;
       }
       const digitando = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA';
+      // Ctrl+Z desfaz, Ctrl+Y (ou Ctrl+Shift+Z) refaz, Ctrl+D duplica o elemento selecionado
+      if (e.ctrlKey || e.metaKey) {
+        const k = e.key.toLowerCase();
+        if (k === 'z' && !e.shiftKey) return void (e.preventDefault(), desfazer());
+        if (k === 'y' || (k === 'z' && e.shiftKey)) return void (e.preventDefault(), refazer());
+        if (k === 'd') return void (e.preventDefault(), duplicar()); // (sem abrir o "favoritar" do navegador)
+      }
       if (e.key === 'Escape' && (ferramenta || origem || sel)) {
         e.preventDefault(); // impede que o ESC abra a pausa
         setFerramenta(null);
@@ -337,21 +414,27 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   const vazio = jumbo ? partesJumbo.every((p) => diagramaVazio(p.diagrama)) : diagramaVazio(diagrama);
   const entregar = () => {
     if (vazio) return;
-    const atrasado = pedido.tempoRestante === 0;
+    // tipos de erro do feedback, para as estatísticas ("erro mais comum")
+    const contarErros = (pares) => {
+      const out = {};
+      for (const [d, esp] of pares) for (const p of gerarFeedback(d, esp).problemas) out[p.tipo] = (out[p.tipo] ?? 0) + 1;
+      return out;
+    };
     if (jumbo) {
       const r = avaliarPartes(partesJumbo);
-      const valor = pagamento(pedido.recompensa, r.nota, atrasado);
+      const pago = pagamentoDaEntrega(pedido, r.nota);
       sfx.nota(r.nota);
-      onEntregue({ ...r, valor, atrasado, pedido });
-      dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, valor, partes: partesJumbo.map(({ secao: s, diagrama: d }) => ({ secao: s, diagrama: d })), atrasado, sorteio: Math.random() });
+      onEntregue({ ...r, ...pago, pedido });
+      const erros = contarErros(partesJumbo.map((p) => [p.diagrama, p.esperado]));
+      dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, ...pago, erros, notasPartes: r.partes.map((p) => p.nota), partes: partesJumbo.map(({ secao: s, diagrama: d }) => ({ secao: s, diagrama: d })), sorteio: Math.random() });
       setSel(null);
       return;
     }
     const r = avaliar(diagrama, modelo.esperado);
-    const valor = pagamento(pedido.recompensa, r.nota, atrasado);
+    const pago = pagamentoDaEntrega(pedido, r.nota);
     sfx.nota(r.nota); // Excellent / Great / Ok / Bad / Worst
-    onEntregue({ ...r, valor, atrasado, pedido, diagrama, esperado: modelo.esperado });
-    dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, valor, diagrama, atrasado, sorteio: Math.random() });
+    onEntregue({ ...r, ...pago, pedido, diagrama, esperado: modelo.esperado });
+    dispatch({ type: 'ENTREGAR', id: pedido.id, nota: r.nota, ...pago, erros: contarErros([[diagrama, modelo.esperado]]), diagrama, sorteio: Math.random() });
     setSel(null);
   };
 
@@ -379,15 +462,23 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   // caso de uso fora do sistema / ator dentro dele (só confere quando há um sistema desenhado)
   const alertas = Object.fromEntries(foraDoLugar(diagrama.nodes).map((x) => [x.id, x.problema]));
 
+  // pedido de treino do tutorial (data/treino.js): o cartão diz o passo atual e o que ele pede
+  // (elemento/relação da paleta, aba, campo do rótulo ou o Entregar) ganha o destaque `treino-alvo`
+  const treino = pedido?.treino ? treinoPorId(pedido.modelo) : null;
+  const passoTreino = treino ? passoDoTreino(treino, diagrama, secao) : null;
+  const alvoTreino = passoTreino?.alvo ?? {};
+  const marca = (sim) => (sim ? 'treino-alvo' : '');
+  const falaTreino = useMemo(() => [passoTreino?.texto ?? ''], [passoTreino?.texto]);
+
   const nomeFerramenta = ferramenta && [...ELEMENTOS, ...RELACOES].find((x) => x.tipo === ferramenta.tipo).nome;
   const ajuda = escrevendo
-    ? 'Escrevendo na classe: Enter cria uma nova linha · clique fora ou Esc para terminar · linhas vazias somem'
+    ? 'Escrevendo na classe: escolha - privado, + público ou # protegido nos botões ao lado · Enter cria nova linha · Esc termina'
     : !ferramenta && selNode?.tipo === 'classe'
-    ? 'Classe: clique no nome, no meio (atributos: - saldo: float) ou embaixo (métodos: + sacar(valor: float): bool) para escrever'
+    ? 'Classe: clique no nome, no meio (atributos: saldo: float) ou embaixo (métodos: sacar(valor: float): bool) para escrever'
     : !ferramenta && selNode?.tipo === 'sistema'
     ? 'Sistema: puxe as setinhas no meio dos lados para redimensionar · casos de uso ficam dentro, atores fora · arrastar move tudo junto'
     : !ferramenta
-    ? 'Arraste um item da paleta para a área · arraste o fundo para mover · roda do mouse = zoom · Del apaga'
+    ? 'Arraste da paleta · fundo move · roda = zoom · Del apaga · Ctrl+Z desfaz · Ctrl+Y refaz · Ctrl+D duplica'
     : ferramenta.categoria === 'elemento'
       ? `Clique numa área vazia para colocar: ${nomeFerramenta} (Shift mantém a ferramenta · Esc cancela)`
       : origem
@@ -418,27 +509,42 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
         )}
         {pedido ? (
           <>
+            {treino ? (
+              <div className="etiqueta relogio-pedido treino">TREINO: sem prazo</div>
+            ) : (
             <div className={`etiqueta relogio-pedido ${pedido.tempoRestante <= 30 || pedido.urgente ? 'urgente' : ''}`}>
               <img src={iRelogio} alt="" className="pixel" /> {formatarTempo(pedido.tempoRestante)}
               {pedido.urgente && <b className="tag-urgente">URGENTE</b>}
               {jumbo && <b className="tag-jumbo">JUMBO</b>}
+              {ehComplexo(modelo) && <b className="tag-jumbo tag-complexo">COMPLEXO</b>}
             </div>
+            )}
             <h4 className="cliente-pedido"><LogoEmpresa nome={pedido.cliente} tamanho={32} />{pedido.cliente}</h4>
             <div className="assunto">{pedido.assunto}</div>
             <div className="lista rolagem">
-              {modelo.corpo.map((l, i) => <p key={i}>{l}</p>)}
+              {modelo.corpo.map((l, i) => <p key={i}><TextoPedido texto={l} /></p>)}
             </div>
-            {jumbo && (
-              <p className="aviso-jumbo">
-                Pedido JUMBO: monte cada diagrama na sua aba da paleta ({modelo.partes.map((p) => SECOES.find((x) => x.id === p.secao).nome).join(' + ')}). Cada aba guarda o seu.
-              </p>
+            {pedido.tempoRestante === 0 && !treino && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
+            {/* treino: o passo a passo fica aqui, embaixo do e-mail (fora da área de montagem) */}
+            {passoTreino && (
+              <div className="treino-cartao" role="status" aria-live="polite">
+                <div className="treino-topo">
+                  <MascoteFalando key={passoTreino.texto} texto={falaTreino} />
+                  <b>
+                    TREINO
+                    <small>passo {passoTreino.n} de {passoTreino.total}</small>
+                  </b>
+                </div>
+                <p key={passoTreino.texto}>{passoTreino.texto}</p>
+                <Botao tamanho="pequeno" variante="claro" som="voltar" onClick={() => dispatch({ type: 'PULAR_TREINO' })} title="Os pedidos de verdade chegam na hora">
+                  Pular treino
+                </Botao>
+              </div>
             )}
-            {pedido.tempoRestante === 0 && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
-            <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>
-            <Botao variante="rosa" som="" onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
+            {!treino && <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>}
+            <Botao variante="rosa" som="" className={marca(alvoTreino.entregar)} onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
               Entregar
             </Botao>
-            {vazio && <p className="aviso-vazio">{jumbo ? 'Monte os diagramas nas abas da paleta para poder entregar.' : 'Monte o diagrama na área ao lado para poder entregar.'}</p>}
           </>
         ) : (
           <>
@@ -453,12 +559,12 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
       <div className="editor-centro">
         <div className="editor-barra">
           {transicao ? (
-            <label className="rotulo">
+            <label className={`rotulo ${marca(alvoTreino.rotulo)}`}>
               Evento
               <input
                 ref={eventoRef}
                 value={transicao.rotulo ?? ''}
-                placeholder="ex.: pagar, [sim] (vazio no início/fim)"
+                placeholder="ex.: pagar, sim (vazio no início/fim)"
                 maxLength={28}
                 onChange={(e) => mudarEvento(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
@@ -477,7 +583,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
               ))}
             </div>
           ) : (
-          <label className="rotulo">
+          <label className={`rotulo ${marca(alvoTreino.rotulo)}`}>
             Rótulo
             <input
               ref={rotuloRef}
@@ -521,6 +627,9 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
           onPointerUp={onUp}
           onPointerLeave={() => !arraste.current && setFantasma(null)}
           onDoubleClick={(e) => {
+            // o 1º clique já abriu a escrita na classe e o 2º caiu no campo: o navegador manda o duplo
+            // clique para a área; não pode tirar o foco do campo (ia para o "Rótulo" da barra)
+            if (escrevendo || e.target.closest('.escrita-classe, .vis-botao')) return;
             const id = e.target.closest('[data-node]')?.dataset.node;
             if (id && escreverNaClasse(id, mundo(e).y)) return;
             if (sel?.tipo === 'node') rotuloRef.current?.select();
@@ -564,6 +673,12 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             />
           )}
         </div>
+        {/* fala do Clode: no canto da área de montagem, apontando para o botão dele */}
+        {falaClode && (
+          <p key={falaClode.n} className={`clode-fala ${falaClode.nada ? 'nada' : ''}`} role="status">
+            <b>Clode:</b> {falaClode.texto}
+          </p>
+        )}
         <div className="editor-ajuda">{ajuda}</div>
       </div>
 
@@ -576,7 +691,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
               key={s.id}
               role="tab"
               aria-selected={secao === s.id}
-              className={`secao-paleta ${secao === s.id ? 'ativa' : ''}`}
+              className={`secao-paleta ${secao === s.id ? 'ativa' : ''} ${marca(alvoTreino.secao === s.id)}`}
               onClick={() => trocarSecao(s.id)}
               title={`Diagrama de ${s.nome.toLowerCase()}`}
             >
@@ -586,11 +701,13 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             </button>
           ))}
         </div>
+        {/* só a lista rola; o Clode fica sempre no pé da paleta */}
+        <div className="paleta-itens">
         <h5>Elementos</h5>
         {secaoAtual.elementos.map((t) => ELEMENTOS.find((el) => el.tipo === t)).map((el) => (
           <button
             key={el.tipo}
-            className={`item-paleta ${ferramenta?.tipo === el.tipo ? 'ativo' : ''}`}
+            className={`item-paleta ${ferramenta?.tipo === el.tipo ? 'ativo' : ''} ${marca(alvoTreino.paleta === el.tipo)}`}
             onPointerDown={(e) => pegarDaPaleta(e, 'elemento', el.tipo)}
             title={`Arraste ou clique: ${el.nome}`}
           >
@@ -602,7 +719,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
         {secaoAtual.relacoes.map((t) => RELACOES.find((r) => r.tipo === t)).map((r) => (
           <button
             key={r.tipo}
-            className={`item-paleta ${ferramenta?.tipo === r.tipo ? 'ativo' : ''}`}
+            className={`item-paleta ${ferramenta?.tipo === r.tipo ? 'ativo' : ''} ${marca(alvoTreino.paleta === r.tipo)}`}
             onPointerDown={(e) => pegarDaPaleta(e, 'relacao', r.tipo)}
             title={`Clique e depois ligue dois elementos: ${r.nome}`}
           >
@@ -610,6 +727,28 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             {r.nome}
           </button>
         ))}
+        </div>
+        {/* Clode: o robozinho que compra um elemento pronto ou corrige uma coisa (pago) */}
+        {pedido && (
+          <div className="clode">
+            <div className="clode-linha">
+              <button
+                className="clode-botao"
+                onClick={usarClode}
+                disabled={state.dinheiro < precoClode}
+                aria-label={`Clode: usar por ${formatarReais(precoClode)}`}
+                title={state.dinheiro < precoClode ? 'Dinheiro insuficiente para o Clode' : 'Compre um elemento pronto ou corrija algo no seu diagrama'}
+              >
+                <img src={roboClode} alt="" className="pixel" width={48} height={48} draggable={false} />
+              </button>
+              <span className="clode-texto">
+                <strong>Clode</strong>
+                <small>Compre um elemento pronto ou corrija algo no seu diagrama.</small>
+              </span>
+            </div>
+            <span className="clode-preco">preço: {formatarReais(precoClode)}</span>
+          </div>
+        )}
       </aside>
     </div>
   );
@@ -620,11 +759,24 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
 // enquanto o jogador escreve; ao terminar, linhas vazias são descartadas.
 function EscritaNaClasse({ classe, campo, view, onMudar, onFim }) {
   const multilinha = campo !== 'rotulo';
-  const [texto, setTexto] = useState(multilinha ? (classe[campo] ?? []).join('\n') : classe.rotulo ?? '');
+  const padrao = VIS_PADRAO[campo] ?? '-';
+  // membros: o texto fica sem o símbolo; a visibilidade de cada linha é escolhida nos botões
+  const inicio = multilinha ? (classe[campo] ?? []).map(separarMembro) : []; // (no nome, `classe.rotulo` é texto, não lista)
+  const [texto, setTexto] = useState(multilinha ? inicio.map((m) => m.corpo).join('\n') : classe.rotulo ?? '');
+  const [vis, setVis] = useState(inicio.map((m) => m.vis || padrao));
+  const campoRef = useRef(null);
+  // posição do cursor a restaurar depois que um símbolo digitado sai do texto (antes da próxima tecla)
+  const cursorPendente = useRef(null);
+  useLayoutEffect(() => {
+    if (cursorPendente.current == null || !campoRef.current) return;
+    campoRef.current.setSelectionRange(cursorPendente.current, cursorPendente.current);
+    cursorPendente.current = null;
+  });
   const { w, divisoria } = medidasClasse(classe);
   const z = view.zoom;
   const topo = campo === 'rotulo' ? 0 : campo === 'atributos' ? TOPO_CLASSE : divisoria;
-  const linhas = multilinha ? Math.max(1, texto.split('\n').length) : 1;
+  const corpos = texto.split('\n');
+  const linhas = multilinha ? Math.max(1, corpos.length) : 1;
   const estilo = {
     left: view.x + classe.x * z,
     top: view.y + (classe.y + topo) * z,
@@ -634,17 +786,52 @@ function EscritaNaClasse({ classe, campo, view, onMudar, onFim }) {
     lineHeight: `${LINHA_MEMBRO * z}px`,
     padding: multilinha ? `${4 * z}px ${8 * z}px` : `0 ${8 * z}px`,
   };
+  const juntar = (cs, vs, limpar = false) => {
+    const out = cs.map((c, i) => (c.trim() ? `${vs[i] || padrao} ${limpar ? c.trim() : c.trimEnd()}` : limpar ? '' : c.trimEnd()));
+    return limpar ? out.filter(Boolean) : out;
+  };
   const mudar = (v) => {
-    setTexto(v);
+    if (!multilinha) {
+      setTexto(v);
+      onMudar({ rotulo: v });
+      return;
+    }
+    // quem digitar o símbolo no começo da linha também escolhe a visibilidade (ele sai do texto)
+    let novos = v.split('\n');
+    let novasVis = alinharVisibilidades(corpos, vis, novos, padrao);
+    let removidos = 0;
+    const el = campoRef.current;
+    const cursor = el?.selectionStart ?? v.length;
+    let pos = 0;
+    novos = novos.map((linha, i) => {
+      const m = linha.match(SIMBOLO);
+      if (m && linha.slice(m[0].length).length) {
+        novasVis[i] = m[1];
+        if (pos + m[0].length <= cursor) removidos += m[0].length;
+        linha = linha.slice(m[0].length);
+      }
+      pos += linha.length + 1 + (m ? m[0].length : 0);
+      return linha;
+    });
+    const valor = novos.join('\n');
+    setTexto(valor);
+    setVis(novasVis);
     // enquanto escreve, as linhas vazias ficam (a caixa já cresce com o Enter)
-    onMudar(multilinha ? { [campo]: v.split('\n').map((l) => l.trimEnd()) } : { rotulo: v });
+    onMudar({ [campo]: juntar(novos, novasVis) });
+    if (removidos) cursorPendente.current = cursor - removidos;
+  };
+  const escolher = (i, simbolo) => {
+    const novasVis = corpos.map((_, k) => (k === i ? simbolo : vis[k] || padrao));
+    setVis(novasVis);
+    onMudar({ [campo]: juntar(corpos, novasVis) });
   };
   const terminar = () => {
-    if (multilinha) onMudar({ [campo]: texto.split('\n').map((l) => l.trim()).filter(Boolean) });
+    if (multilinha) onMudar({ [campo]: juntar(corpos, vis, true) });
     else onMudar({ rotulo: texto.trim() || classe.rotulo });
     onFim();
   };
   const props = {
+    ref: campoRef,
     className: `escrita-classe ${multilinha ? '' : 'nome'}`,
     style: estilo,
     value: texto,
@@ -660,7 +847,42 @@ function EscritaNaClasse({ classe, campo, view, onMudar, onFim }) {
         e.currentTarget.blur();
       }
     },
-    placeholder: campo === 'atributos' ? '- nome: tipo' : campo === 'metodos' ? '+ nome(param: tipo): retorno' : 'Nome da classe',
+    placeholder: campo === 'atributos' ? 'nome: tipo' : campo === 'metodos' ? 'nome(param: tipo): retorno' : 'Nome da classe',
   };
-  return multilinha ? <textarea {...props} /> : <input {...props} maxLength={28} />;
+  if (!multilinha) return <input {...props} maxLength={28} />;
+
+  // botão de visibilidade: um quadradinho no começo de cada linha, dentro da caixa (como em
+  // referencia_botao_classe.png); cada clique passa para a próxima (- → + → #)
+  const quadrado = Math.max(12, (LINHA_MEMBRO - 4) * z);
+  return (
+    <>
+      <textarea {...props} style={{ ...estilo, paddingLeft: 8 * z + quadrado + 6 * z }} />
+      {Array.from({ length: linhas }, (_, i) => {
+        const atual = vis[i] || padrao;
+        const info = VISIBILIDADES.find((v) => v.simbolo === atual) ?? VISIBILIDADES[0];
+        return (
+          <button
+            key={i}
+            type="button"
+            className="vis-botao"
+            style={{
+              left: estilo.left + 8 * z,
+              top: estilo.top + 4 * z + i * LINHA_MEMBRO * z + (LINHA_MEMBRO * z - quadrado) / 2,
+              width: quadrado,
+              height: quadrado,
+              fontSize: Math.max(12, 18 * z),
+            }}
+            title={`${info.simbolo} ${info.nome} (clique para trocar)`}
+            aria-label={`Visibilidade: ${info.nome}. Clique para trocar`}
+            // não tira o foco da escrita (senão ela termina) nem arrasta a área
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => escolher(i, proximaVisibilidade(atual))}
+          >
+            {atual}
+          </button>
+        );
+      })}
+    </>
+  );
 }

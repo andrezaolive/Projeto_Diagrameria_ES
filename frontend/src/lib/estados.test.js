@@ -70,7 +70,7 @@ describe('diagramas de estados', () => {
     expect(secaoDoDiagrama({ nodes: [], edges: [] })).toBeNull();
   });
 
-  it('decisão: 8 pedidos usam o losango, com uma entrada com evento e saídas [sim]/[não]', () => {
+  it('decisão: 8 pedidos usam o losango, com uma entrada com evento e saídas sim/não', () => {
     for (const id of COM_DECISAO) {
       const { nodes, edges } = modeloPorId(id).esperado;
       const decisoes = nodes.filter((x) => x.tipo === 'decisao');
@@ -78,7 +78,7 @@ describe('diagramas de estados', () => {
       for (const d of decisoes) {
         const entram = edges.filter((e) => e.para === d.id), saem = edges.filter((e) => e.de === d.id);
         expect(entram.every((e) => e.rotulo && !e.rotulo.startsWith('[')), id).toBe(true);
-        expect(saem.map((e) => e.rotulo).sort(), id).toEqual(['[não]', '[sim]']);
+        expect(saem.map((e) => e.rotulo).sort(), id).toEqual(['não', 'sim']);
       }
       expect(secaoDoDiagrama(modeloPorId(id).esperado), id).toBe('estados');
     }

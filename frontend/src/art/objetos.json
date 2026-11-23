@@ -210,8 +210,8 @@
     "rotulo": "Post-it azul"
   },
   "caneca": {
-    "x": 240,
-    "y": 126,
+    "x": 77,
+    "y": 116,
     "w": 16,
     "h": 14,
     "zona": "mesa",
@@ -220,40 +220,40 @@
     "rotulo": "Caneca"
   },
   "caneca-cheia-descafeinado": {
-    "x": 240,
-    "y": 126,
+    "x": 77,
+    "y": 116,
     "w": 16,
     "h": 14,
     "zona": "mesa",
     "variante": true
   },
   "caneca-cheia-normal": {
-    "x": 240,
-    "y": 126,
+    "x": 77,
+    "y": 116,
     "w": 16,
     "h": 14,
     "zona": "mesa",
     "variante": true
   },
   "caneca-cheia-forte": {
-    "x": 240,
-    "y": 126,
+    "x": 77,
+    "y": 116,
     "w": 16,
     "h": 14,
     "zona": "mesa",
     "variante": true
   },
   "vapor": {
-    "x": 245,
-    "y": 114,
+    "x": 82,
+    "y": 104,
     "w": 5,
     "h": 11,
     "zona": "mesa",
     "variante": true
   },
   "cafeteira": {
-    "x": 211,
-    "y": 120,
+    "x": 252,
+    "y": 101,
     "w": 24,
     "h": 30,
     "zona": "mesa",
@@ -270,6 +270,14 @@
     "h": 28,
     "zona": "mesa",
     "rotulo": "Papéis"
+  },
+  "calendario-mesa": {
+    "x": 35,
+    "y": 108,
+    "w": 22,
+    "h": 23,
+    "zona": "mesa",
+    "rotulo": "Calendário"
   },
   "planta": {
     "x": 267,
@@ -584,6 +592,714 @@
     "w": 29,
     "h": 29,
     "zona": "parede"
+  },
+  "boneco-mascote": {
+    "x": 196,
+    "y": 80,
+    "w": 18,
+    "h": 22,
+    "zona": "mesa",
+    "elevavel": true,
+    "sala": "sala",
+    "apoio": "p1",
+    "rotulo": "Boneco do mascote"
+  },
+  "globo": {
+    "x": 270,
+    "y": 82,
+    "w": 15,
+    "h": 20,
+    "zona": "mesa",
+    "elevavel": true,
+    "sala": "sala",
+    "apoio": "p1",
+    "rotulo": "Globo"
+  },
+  "discos": {
+    "x": 200,
+    "y": 122,
+    "w": 26,
+    "h": 16,
+    "zona": "mesa",
+    "elevavel": true,
+    "empilhavel": true,
+    "sala": "sala",
+    "apoio": "p2",
+    "rotulo": "Discos de vinil"
+  },
+  "planta-sala": {
+    "x": 158,
+    "y": 135,
+    "w": 21,
+    "h": 35,
+    "zona": "mesa",
+    "elevavel": true,
+    "sala": "sala",
+    "apoio": "p-baixo",
+    "rotulo": "Planta grande"
+  },
+  "porta-retrato": {
+    "x": 200,
+    "y": 42,
+    "w": 22,
+    "h": 24,
+    "zona": "mesa",
+    "elevavel": true,
+    "sala": "sala",
+    "apoio": "armario-baixo",
+    "rotulo": "Porta-retrato",
+    "foto": {
+      "x": 3,
+      "y": 3,
+      "w": 16,
+      "h": 16
+    }
+  },
+  "vaso-flor": {
+    "x": 280,
+    "y": 16,
+    "w": 8,
+    "h": 21,
+    "zona": "mesa",
+    "elevavel": true,
+    "sala": "sala",
+    "apoio": "armario-cima",
+    "rotulo": "Vasinho com flor"
+  },
+  "album-conquistas": {
+    "x": 286,
+    "y": 118,
+    "w": 16,
+    "h": 20,
+    "zona": "mesa",
+    "elevavel": true,
+    "sala": "sala",
+    "apoio": "p2",
+    "rotulo": "Livro de conquistas"
+  },
+  "conquista-primeiro-pedido": {
+    "x": 20,
+    "y": 17,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "primeiro-pedido",
+    "rotulo": "Primeiro Pedido"
+  },
+  "conquista-primeiro-expediente": {
+    "x": 40,
+    "y": 17,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "primeiro-expediente",
+    "rotulo": "Primeiro Expediente"
+  },
+  "conquista-carimbo": {
+    "x": 60,
+    "y": 17,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "carimbo",
+    "rotulo": "Carimbo de Qualidade"
+  },
+  "conquista-fregues-fiel": {
+    "x": 80,
+    "y": 17,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "fregues-fiel",
+    "rotulo": "Freguês Fiel"
+  },
+  "conquista-cafezinho": {
+    "x": 100,
+    "y": 17,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "cafezinho",
+    "rotulo": "Hora do Cafezinho"
+  },
+  "conquista-medalha-no-peito": {
+    "x": 120,
+    "y": 17,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "medalha-no-peito",
+    "rotulo": "Medalha no Peito"
+  },
+  "conquista-volta-por-cima": {
+    "x": 20,
+    "y": 39,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "volta-por-cima",
+    "rotulo": "Volta por Cima"
+  },
+  "conquista-sequencia-perfeita": {
+    "x": 40,
+    "y": 39,
+    "w": 15,
+    "h": 24,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "sequencia-perfeita",
+    "rotulo": "Sequência Perfeita"
+  },
+  "conquista-sem-rabisco": {
+    "x": 60,
+    "y": 39,
+    "w": 15,
+    "h": 24,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "sem-rabisco",
+    "rotulo": "Sem Rabisco"
+  },
+  "conquista-na-raca": {
+    "x": 80,
+    "y": 39,
+    "w": 15,
+    "h": 24,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "na-raca",
+    "rotulo": "Na Raça"
+  },
+  "conquista-semana-dourada": {
+    "x": 8,
+    "y": 156,
+    "w": 15,
+    "h": 14,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "semana-dourada",
+    "rotulo": "Semana Dourada",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-arquiteto-senior": {
+    "x": 40,
+    "y": 151,
+    "w": 15,
+    "h": 19,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "arquiteto-senior",
+    "rotulo": "Arquiteto Sênior",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-calendario-reluzente": {
+    "x": 70,
+    "y": 141,
+    "w": 24,
+    "h": 29,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "calendario-reluzente",
+    "rotulo": "Calendário Reluzente",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-pontualidade": {
+    "x": 99,
+    "y": 39,
+    "w": 17,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "pontualidade",
+    "rotulo": "Pontualidade Britânica"
+  },
+  "conquista-relampago": {
+    "x": 120,
+    "y": 39,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "relampago",
+    "rotulo": "Relâmpago"
+  },
+  "conquista-malabarista": {
+    "x": 20,
+    "y": 61,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "malabarista",
+    "rotulo": "Malabarista"
+  },
+  "conquista-bombeiro": {
+    "x": 40,
+    "y": 61,
+    "w": 15,
+    "h": 24,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "bombeiro",
+    "rotulo": "Bombeiro"
+  },
+  "conquista-primeira-classe": {
+    "x": 60,
+    "y": 61,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "primeira-classe",
+    "rotulo": "Primeira Classe"
+  },
+  "conquista-ator-principal": {
+    "x": 80,
+    "y": 61,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "ator-principal",
+    "rotulo": "Ator Principal"
+  },
+  "conquista-mudanca-de-estado": {
+    "x": 100,
+    "y": 61,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "mudanca-de-estado",
+    "rotulo": "Mudança de Estado"
+  },
+  "conquista-especialista-classes": {
+    "x": 120,
+    "y": 61,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "especialista-classes",
+    "rotulo": "Especialista em Classes"
+  },
+  "conquista-especialista-casos": {
+    "x": 20,
+    "y": 83,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "especialista-casos",
+    "rotulo": "Especialista em Casos de Uso"
+  },
+  "conquista-especialista-estados": {
+    "x": 39,
+    "y": 83,
+    "w": 19,
+    "h": 21,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "especialista-estados",
+    "rotulo": "Especialista em Estados"
+  },
+  "conquista-encapsulamento": {
+    "x": 60,
+    "y": 83,
+    "w": 17,
+    "h": 19,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "encapsulamento",
+    "rotulo": "Encapsulamento"
+  },
+  "conquista-poliglota-uml": {
+    "x": 96,
+    "y": 154,
+    "w": 23,
+    "h": 16,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "poliglota-uml",
+    "rotulo": "Poliglota UML",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-hora-extra": {
+    "x": 80,
+    "y": 83,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "hora-extra",
+    "rotulo": "Hora Extra"
+  },
+  "conquista-quebra-cabeca": {
+    "x": 100,
+    "y": 83,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "quebra-cabeca",
+    "rotulo": "Quebra-Cabeça"
+  },
+  "conquista-sem-folga": {
+    "x": 130,
+    "y": 146,
+    "w": 19,
+    "h": 24,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "sem-folga",
+    "rotulo": "Sem Folga",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-grande-final": {
+    "x": 160,
+    "y": 146,
+    "w": 19,
+    "h": 24,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "grande-final",
+    "rotulo": "O Grande Final",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-primeiro-salario": {
+    "x": 120,
+    "y": 83,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "primeiro-salario",
+    "rotulo": "Primeiro Salário"
+  },
+  "conquista-aluguel-em-dia": {
+    "x": 20,
+    "y": 105,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "aluguel-em-dia",
+    "rotulo": "Aluguel em Dia"
+  },
+  "conquista-pao-duro": {
+    "x": 40,
+    "y": 105,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "pao-duro",
+    "rotulo": "Pão-duro"
+  },
+  "conquista-pe-de-meia": {
+    "x": 60,
+    "y": 105,
+    "w": 16,
+    "h": 24,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "pe-de-meia",
+    "rotulo": "Pé-de-Meia"
+  },
+  "conquista-cliente-vip": {
+    "x": 190,
+    "y": 141,
+    "w": 23,
+    "h": 29,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "cliente-vip",
+    "rotulo": "Cliente VIP da Lojinha",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-movido-a-cafeina": {
+    "x": 80,
+    "y": 105,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "movido-a-cafeina",
+    "rotulo": "Movido a Cafeína"
+  },
+  "conquista-barista": {
+    "x": 100,
+    "y": 105,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "barista",
+    "rotulo": "Barista"
+  },
+  "conquista-viciado": {
+    "x": 220,
+    "y": 156,
+    "w": 11,
+    "h": 14,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "viciado",
+    "rotulo": "Viciado em Café",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-decorador": {
+    "x": 120,
+    "y": 105,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "decorador",
+    "rotulo": "Decorador de Interiores"
+  },
+  "conquista-abra-a-porta": {
+    "x": 20,
+    "y": 17,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "abra-a-porta",
+    "rotulo": "Abra a Porta"
+  },
+  "conquista-foto-de-familia": {
+    "x": 40,
+    "y": 17,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "foto-de-familia",
+    "rotulo": "Foto de Família"
+  },
+  "conquista-dj": {
+    "x": 60,
+    "y": 17,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "dj",
+    "rotulo": "DJ do Escritório"
+  },
+  "conquista-museu": {
+    "x": 80,
+    "y": 17,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "museu",
+    "rotulo": "Museu Particular"
+  },
+  "conquista-colecionador": {
+    "x": 99,
+    "y": 17,
+    "w": 19,
+    "h": 21,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "colecionador",
+    "rotulo": "Colecionador"
+  },
+  "conquista-playlist": {
+    "x": 120,
+    "y": 17,
+    "w": 15,
+    "h": 24,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "playlist",
+    "rotulo": "Playlist Completa"
+  },
+  "conquista-album-completo": {
+    "x": 10,
+    "y": 141,
+    "w": 23,
+    "h": 29,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "album-completo",
+    "rotulo": "Álbum Completo",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-sem-fim": {
+    "x": 20,
+    "y": 39,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "sem-fim",
+    "rotulo": "Sem Fim"
+  },
+  "conquista-maratonista": {
+    "x": 40,
+    "y": 152,
+    "w": 11,
+    "h": 18,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "maratonista",
+    "rotulo": "Maratonista",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-inabalavel": {
+    "x": 70,
+    "y": 151,
+    "w": 15,
+    "h": 19,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "inabalavel",
+    "rotulo": "Inabalável",
+    "elevavel": true,
+    "apoio": "p-baixo"
+  },
+  "conquista-errar-e-humano": {
+    "x": 40,
+    "y": 39,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "errar-e-humano",
+    "rotulo": "Errar é Humano"
+  },
+  "conquista-antes-tarde": {
+    "x": 59,
+    "y": 39,
+    "w": 17,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "antes-tarde",
+    "rotulo": "Antes Tarde do que Nunca"
+  },
+  "conquista-no-vermelho": {
+    "x": 80,
+    "y": 39,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "no-vermelho",
+    "rotulo": "No Vermelho"
+  },
+  "conquista-comprei-o-gabarito": {
+    "x": 100,
+    "y": 39,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "comprei-o-gabarito",
+    "rotulo": "Comprei o Gabarito"
+  },
+  "conquista-alergia-a-prazo": {
+    "x": 120,
+    "y": 39,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "alergia-a-prazo",
+    "rotulo": "Alergia a Prazo"
+  },
+  "conquista-tentar-de-novo": {
+    "x": 20,
+    "y": 61,
+    "w": 15,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "tentar-de-novo",
+    "rotulo": "Tentar de Novo"
+  },
+  "conquista-organizador": {
+    "x": 40,
+    "y": 60,
+    "w": 15,
+    "h": 18,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "organizador",
+    "rotulo": "Organizador Compulsivo"
+  },
+  "conquista-por-um-fio": {
+    "x": 60,
+    "y": 61,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "por-um-fio",
+    "rotulo": "Por um Fio"
+  },
+  "conquista-torre-de-pisa": {
+    "x": 80,
+    "y": 61,
+    "w": 17,
+    "h": 20,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "torre-de-pisa",
+    "rotulo": "Torre de Pisa"
+  },
+  "conquista-placebo": {
+    "x": 99,
+    "y": 61,
+    "w": 19,
+    "h": 21,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "placebo",
+    "rotulo": "Placebo"
+  },
+  "conquista-investidor": {
+    "x": 121,
+    "y": 63,
+    "w": 16,
+    "h": 17,
+    "zona": "parede",
+    "sala": "sala",
+    "conquista": "investidor",
+    "rotulo": "Investidor de Risco"
+  },
+  "conquista-mestre": {
+    "x": 97,
+    "y": 135,
+    "w": 33,
+    "h": 35,
+    "zona": "mesa",
+    "sala": "sala",
+    "conquista": "mestre",
+    "rotulo": "Mestre da Diagrameria",
+    "elevavel": true,
+    "apoio": "p-baixo"
   },
   "poster-vaporwave": {
     "x": 20,

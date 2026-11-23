@@ -32,7 +32,6 @@
 .aba-pedido.urgente { border-color: var(--c-rose); background: var(--c-blush); }
 .aba-pedido.urgente.ativa { box-shadow: inset 3px 3px 0 var(--c-rose); }
 .aba-pedido.acabando .tempo { color: var(--c-rose); }
-.editor-requisitos .aviso-vazio { margin: 0; font-size: 18px; line-height: 1; text-align: center; color: var(--c-plum); }
 .editor-requisitos h4 { margin: 4px 0 0; font-family: var(--f-titulo); font-size: 11px; line-height: 1.4; }
 .editor-requisitos .assunto { font-size: 22px; color: var(--c-plum); }
 .editor-requisitos .lista { flex: 1; min-height: 0; font-size: 21px; line-height: 1; padding: 4px 8px; background: var(--c-cream); border: 3px solid var(--c-ink); }
@@ -40,7 +39,7 @@
 .editor-requisitos .atraso { margin: 0; font-size: 20px; color: var(--c-rose); }
 .editor-requisitos .relogio-pedido { align-self: flex-start; }
 
-.editor-centro { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.editor-centro { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .editor-barra {
   display: flex;
   overflow: hidden;
@@ -114,8 +113,10 @@
   padding: 8px;
   background: var(--c-mist);
   border-left: var(--px) solid var(--c-ink);
-  overflow-y: auto;
+  overflow: hidden;
+  min-height: 0;
 }
+.paleta-itens { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
 .editor-paleta h5 { margin: 6px 0 2px; font-family: var(--f-titulo); font-size: 10px; color: var(--c-grape); }
 .item-paleta {
   display: flex;
@@ -187,3 +188,46 @@
   white-space: pre;
 }
 .escrita-classe.nome { text-align: center; font-weight: bold; background: var(--c-lilac); }
+/* botões de visibilidade (- privado, + público, # protegido) ao lado de cada linha de membro */
+.vis-botao {
+  position: absolute; z-index: 4; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: center; padding: 0; overflow: hidden; cursor: pointer;
+  font-family: var(--f-texto); font-weight: bold; line-height: 0.7; color: var(--c-ink);
+  background: var(--c-cream); border: 2px solid var(--c-lavender);
+}
+.vis-botao:hover { background: var(--c-butter); border-color: var(--c-grape); }
+
+/* Clode (lib/clode.js): robozinho no pé da paleta (referência: clode_referencia.png) */
+.clode { flex: none; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; border-top: 3px dashed var(--c-lavender); }
+.clode-linha { display: flex; align-items: center; gap: 8px; }
+.clode-botao { flex: none; width: 58px; height: 58px; display: grid; place-items: center; padding: 0; cursor: pointer; background: var(--c-cream); border: var(--px) solid var(--c-ink); box-shadow: 3px 3px 0 var(--sombra-texto); }
+.clode-botao:hover:not(:disabled) { background: var(--c-lilac); transform: translateY(-2px); }
+.clode-botao:active:not(:disabled) { transform: translateY(1px); }
+.clode-botao:disabled { cursor: default; filter: grayscale(1); opacity: 0.6; }
+.clode-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.clode-texto strong { font-family: var(--f-titulo); font-size: 10px; color: var(--c-grape); }
+.clode-texto small { font-size: 14px; line-height: 0.95; color: var(--c-plum); }
+.clode-preco { font-family: var(--f-titulo); font-size: 9px; color: var(--c-ink); }
+.clode-fala { position: absolute; right: 12px; bottom: 44px; max-width: 360px; margin: 0; padding: 8px 10px 6px; font-size: 17px; line-height: 1.1; color: var(--c-ink); background: var(--c-butter); border: 3px solid var(--c-ink); box-shadow: 3px 3px 0 var(--sombra-texto); animation: clode-fala 0.2s steps(2) both; z-index: 5; }
+.clode-fala.nada { background: var(--c-mist); }
+.clode-fala::after { content: ''; position: absolute; right: -19px; bottom: 10px; border: 8px solid transparent; border-left-color: var(--c-ink); }
+.clode-fala b { font-family: var(--f-titulo); font-size: 10px; }
+@keyframes clode-fala { from { transform: translateY(6px); opacity: 0; } }
+
+/* pedido de treino do tutorial (data/treino.js): cartão do passo na coluna dos requisitos, embaixo
+   do e-mail, e destaque pulsando no que o passo pede */
+.relogio-pedido.treino { background: var(--c-mint); }
+.treino-cartao {
+  flex: none; box-sizing: border-box; padding: 8px 8px 8px; font-size: 18px; line-height: 1.05; color: var(--c-ink);
+  background: var(--c-butter); border: var(--px) solid var(--c-ink); box-shadow: 4px 4px 0 var(--sombra-texto);
+}
+.treino-cartao p { margin: 0 0 8px; animation: treino-passo 0.25s steps(3) both; }
+.treino-topo { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.treino-topo .tutorial-mascote { width: 50px; height: 50px; }
+.treino-topo b { display: flex; flex-direction: column; gap: 4px; font-family: var(--f-titulo); font-size: 12px; color: var(--c-grape); }
+.treino-topo small { font-size: 8px; color: var(--c-plum); }
+.treino-cartao .px-btn { display: block; margin-left: auto; }
+.treino-alvo { position: relative; outline: var(--px) dashed var(--c-butter); outline-offset: 2px; animation: treino-pulsa 1s steps(2) infinite; z-index: 2; }
+@keyframes treino-pulsa { 50% { outline-color: var(--c-rose); } }
+@keyframes treino-passo { from { opacity: 0; transform: translateY(4px); } }
+@media (prefers-reduced-motion: reduce) { .treino-alvo, .treino-cartao p { animation: none; } }

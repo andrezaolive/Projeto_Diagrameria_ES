@@ -1,14 +1,27 @@
 import { useState } from 'react';
 import escritorio from '../assets/scenes/office-320x180.png';
-import mascote from '../assets/sprites/mascote-32x40.png';
 import { Botao, Modal } from '../components/ui.jsx';
 import { Avatar } from '../components/Avatar.jsx';
 import { useGame } from '../state/GameContext.jsx';
+import { sortearNomeFeliz, spriteMascote } from '../data/mascote.js';
+import { useSpritesAtualizados } from '../data/spritesVivos.js';
 import Configuracoes from './Configuracoes.jsx';
 import Perfil from './Perfil.jsx';
 import Estatisticas from './Estatisticas.jsx';
+import Conquistas from './Conquistas.jsx';
+import { IconeEngrenagem, IconeGrafico, IconeMedalha } from '../components/IconesMenu.jsx';
+import { sfx } from '../lib/sfx.js';
 import './abertura.css';
 import './perfil.css';
+
+// Botão quadrado com um ícone em pixel art (tela inicial); o nome aparece no title e no aria-label
+function BotaoIcone({ rotulo, onClick, className = '', children }) {
+  return (
+    <button className={`menu-icone ${className}`} onClick={() => { sfx.clique(); onClick(); }} title={rotulo} aria-label={rotulo}>
+      {children}
+    </button>
+  );
+}
 
 export function FundoMenu() {
   return (
@@ -23,6 +36,11 @@ export function FundoMenu() {
 export default function Menu({ onJogar, onEditarPerfil, onConta, onResetado, sobreposto = false }) {
   const { state, dispatch } = useGame();
   const [modal, setModal] = useState(null);
+  const [mascote] = useState(sortearNomeFeliz); // um dos dois felizes, sorteado a cada vez que o menu abre
+  useSpritesAtualizados(); // PNG do mascote editado (npm run dev): desenha de novo
+  // as estatísticas abrem do menu ou do perfil; fechar volta para onde estava
+  const [voltarEstatisticas, setVoltarEstatisticas] = useState(null);
+  const abrirEstatisticas = (de) => { setVoltarEstatisticas(de); setModal('estatisticas'); };
   const { nome, avatar, conta } = state.perfil;
 
   const resetar = () => {
@@ -37,14 +55,20 @@ export default function Menu({ onJogar, onEditarPerfil, onConta, onResetado, sob
       <div className="menu">
         <h1 className="titulo-px logo">DIAGRAMERIA</h1>
         <p className="subtitulo">sua agência de diagramas sob demanda</p>
-        <img src={mascote} alt="" className="mascote pixel flutuar" />
-        <Botao variante="rosa" tamanho="grande" onClick={onJogar} autoFocus={!sobreposto}>
-          Jogar
-        </Botao>
-        <div className="acoes">
-          <Botao onClick={() => setModal('config')}>Configurações</Botao>
-          <Botao onClick={() => setModal('creditos')}>Créditos</Botao>
+        <img src={spriteMascote(mascote)} alt="" className="mascote pixel flutuar" />
+        {/* estatísticas (gráfico) à esquerda do Jogar, conquistas (medalha) à direita */}
+        <div className="menu-jogar">
+          <BotaoIcone rotulo="Estatísticas" onClick={() => abrirEstatisticas(null)}>
+            <IconeGrafico />
+          </BotaoIcone>
+          <Botao variante="rosa" tamanho="grande" className="botao-jogar" onClick={onJogar} autoFocus={!sobreposto}>
+            Jogar
+          </Botao>
+          <BotaoIcone rotulo="Conquistas" onClick={() => setModal('conquistas')}>
+            <IconeMedalha />
+          </BotaoIcone>
         </div>
+        <Botao className="botao-creditos" onClick={() => setModal('creditos')}>Créditos</Botao>
         <span className="versao">v0.1 · Eng. de Software II</span>
       </div>
 
@@ -56,15 +80,24 @@ export default function Menu({ onJogar, onEditarPerfil, onConta, onResetado, sob
           <small>{conta ? conta.email : 'sem conta · entrar'}</small>
         </span>
       </button>
+      {/* configurações: engrenagem embaixo do perfil */}
+      <BotaoIcone className="menu-config" rotulo="Configurações" onClick={() => setModal('config')}>
+        <IconeEngrenagem />
+      </BotaoIcone>
 
       {!sobreposto && modal === 'perfil' && (
         <Modal titulo="PERFIL.EXE" w={520} h={conta ? 520 : 560} onFechar={() => setModal(null)}>
-          <Perfil onEditar={onEditarPerfil} onConta={onConta} onEstatisticas={() => setModal('estatisticas')} onFechar={() => setModal(null)} />
+          <Perfil onEditar={onEditarPerfil} onConta={onConta} onEstatisticas={() => abrirEstatisticas('perfil')} onFechar={() => setModal(null)} />
         </Modal>
       )}
       {!sobreposto && modal === 'estatisticas' && (
-        <Modal titulo="ESTATISTICAS.EXE" w={980} h={560} onFechar={() => setModal('perfil')}>
-          <Estatisticas onVoltar={() => setModal('perfil')} />
+        <Modal titulo="ESTATISTICAS.EXE" w={980} h={560} onFechar={() => setModal(voltarEstatisticas)}>
+          <Estatisticas onVoltar={() => setModal(voltarEstatisticas)} />
+        </Modal>
+      )}
+      {!sobreposto && modal === 'conquistas' && (
+        <Modal titulo="CONQUISTAS.EXE" w={1040} h={600} onFechar={() => setModal(null)}>
+          <Conquistas onVoltar={() => setModal(null)} />
         </Modal>
       )}
       {!sobreposto && modal === 'config' && (

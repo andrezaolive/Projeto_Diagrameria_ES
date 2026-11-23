@@ -4,7 +4,7 @@ import moeda from '../assets/ui/icon-moeda-16.png';
 
 // Tamanho da interface (Configurações → Interface): reduzido | auto | grande.
 // Botões usam --ui-btn (CSS); janelas modais são ampliadas por ESCALA_JANELA, sem passar do palco.
-export const ESCALA_JANELA = { reduzido: 1, auto: 1, grande: 1.12 };
+export const ESCALA_JANELA = { reduzido: 0.88, auto: 1, grande: 1.12 };
 const NivelUi = createContext('auto');
 
 // Prévia do filtro VHS enquanto o jogador mexe nas Configurações (antes de Aplicar)
