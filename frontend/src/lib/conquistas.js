@@ -193,12 +193,12 @@ const media = (t) => (t?.n ? t.soma / t.n : 0);
 const golds = (s) => Object.values(s.campanha.concluidos).filter((r) => r.media >= OURO).length;
 // Quantos diagramas de um tipo ja foram entregues (barra de 3 das conquistas de primeiros diagramas)
 const entreguesDoTipo = (tipo) => (s) => s.estatisticas.porTipo[tipo]?.n ?? 0;
-const primeiros = (tipo) => ({ cond: (s) => entreguesDoTipo(tipo)(s) >= 3, progresso: entreguesDoTipo(tipo) });
+const primeiros = (tipo) => ({ cond: (s) => entreguesDoTipo(tipo)(s) >= 10, progresso: entreguesDoTipo(tipo) }); // bronze: 10 do tipo
 // O dia tem pedido medio ou dificil?
 const diaPuxado = (sessao) => sessao.pedidos.some((p) => { const m = modeloPorId(p.modelo); return m && nivelDoModelo(m).id !== 'facil'; });
 const SEMANAS = [0, 1, 2, 3, 4].map((k) => Array.from({ length: DIAS_CAMPANHA }, (_, i) => i + 1).filter((d) => Math.floor((dataDoDia(d) - 1) / 7) === k));
 const especialista = (tipo) => ({
-  cond: (s) => (s.estatisticas.porTipo[tipo]?.n ?? 0) >= 15 && media(s.estatisticas.porTipo[tipo]) >= 80,
+  cond: (s) => (s.estatisticas.porTipo[tipo]?.n ?? 0) >= 20 && media(s.estatisticas.porTipo[tipo]) >= 80, // prata: 20 do tipo
   progresso: (s) => s.estatisticas.porTipo[tipo]?.n ?? 0,
 });
 const pedidosNormais = (sessao) => sessao.pedidos.filter((p) => !p.urgente);

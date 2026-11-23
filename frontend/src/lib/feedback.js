@@ -99,8 +99,8 @@ export const CONCEITOS = {
     titulo: 'Decisão (losango)',
     texto:
       'Um ponto em que o caminho se divide conforme uma condição. É um losango com a pergunta dentro; chega nele uma seta (com o evento) e saem várias, ' +
-      'cada uma com a sua condição entre colchetes. Só uma das condições pode ser verdadeira por vez.',
-    exemplo: '"Em análise" —avaliar→ ◇ "Aprovado?" —[sim]→ "Pago" e —[não]→ "Recusado".',
+      'cada uma com a sua condição (sim, não...). Só uma das condições pode ser verdadeira por vez.',
+    exemplo: '"Em análise" —avaliar→ ◇ "Aprovado?" —sim→ "Pago" e —não→ "Recusado".',
   },
   transicao: {
     titulo: 'Transição',

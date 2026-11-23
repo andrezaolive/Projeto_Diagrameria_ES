@@ -64,12 +64,12 @@ export const CONQUISTAS = [
   medalha('bombeiro', 'tempo', 'chama', 'Bombeiro', 'Entregue 3 pedidos urgentes no prazo no mesmo dia.', { meta: 3, interrompivel: true }),
 
   // UML
-  broche('primeira-classe', 'uml', 'bronze', 'classe', 'Primeira Classe', 'Entregue 3 diagramas de classes.', { meta: 3 }),
-  broche('ator-principal', 'uml', 'bronze', 'ator', 'Ator Principal', 'Entregue 3 diagramas de casos de uso.', { meta: 3 }),
-  broche('mudanca-de-estado', 'uml', 'bronze', 'estado', 'Mudança de Estado', 'Entregue 3 diagramas de estados.', { meta: 3 }),
-  broche('especialista-classes', 'uml', 'prata', 'classe', 'Especialista em Classes', 'Entregue 15 diagramas de classes com média de 80% ou mais.', { meta: 15 }),
-  broche('especialista-casos', 'uml', 'prata', 'ator', 'Especialista em Casos de Uso', 'Entregue 15 diagramas de casos de uso com média de 80% ou mais.', { meta: 15 }),
-  broche('especialista-estados', 'uml', 'prata', 'estado', 'Especialista em Estados', 'Entregue 15 diagramas de estados com média de 80% ou mais.', { meta: 15 }),
+  broche('primeira-classe', 'uml', 'bronze', 'classe', 'Primeira Classe', 'Entregue 10 diagramas de classes.', { meta: 10 }),
+  broche('ator-principal', 'uml', 'bronze', 'ator', 'Ator Principal', 'Entregue 10 diagramas de casos de uso.', { meta: 10 }),
+  broche('mudanca-de-estado', 'uml', 'bronze', 'estado', 'Mudança de Estado', 'Entregue 10 diagramas de estados.', { meta: 10 }),
+  broche('especialista-classes', 'uml', 'prata', 'classe', 'Especialista em Classes', 'Entregue 20 diagramas de classes com média de 80% ou mais.', { meta: 20 }),
+  broche('especialista-casos', 'uml', 'prata', 'ator', 'Especialista em Casos de Uso', 'Entregue 20 diagramas de casos de uso com média de 80% ou mais.', { meta: 20 }),
+  broche('especialista-estados', 'uml', 'prata', 'estado', 'Especialista em Estados', 'Entregue 20 diagramas de estados com média de 80% ou mais.', { meta: 20 }),
   broche('encapsulamento', 'uml', 'prata', 'chave', 'Encapsulamento', 'Acerte a visibilidade (+ - #) de todos os membros em 10 pedidos de classes que usam + ou #.', { meta: 10 }),
   trofeu('poliglota-uml', 'uml', 'esforco', 'm', 'globo', 'Poliglota UML', 'Tenha média de 90% ou mais nos três tipos de diagrama (10 entregas de cada, no mínimo).'),
 

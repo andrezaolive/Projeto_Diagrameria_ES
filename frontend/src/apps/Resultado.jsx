@@ -5,6 +5,7 @@ import { REACOES, reacaoMascote } from '../lib/mascote.js';
 import { sortearMascoteFeliz } from '../data/mascote.js';
 import { diagramaVazio } from '../lib/feedback.js';
 import Feedback from './Feedback.jsx';
+import ZoomDiagrama from '../components/ZoomDiagrama.jsx';
 import './apps.css';
 
 // sprites das reações do mascote (50x50, desenhados à mão pela equipe), indexados pelo nome da reação
@@ -48,7 +49,9 @@ export default function Resultado({ resultado, onOk }) {
       <div className="resultado">
         <div className="lado">
           <h4>SEU DIAGRAMA</h4>
-          <DiagramaEstatico key={indiceParte} diagrama={diagrama} prefixo={`rj${indiceParte}`} />
+          <ZoomDiagrama key={indiceParte}>
+            <DiagramaEstatico diagrama={diagrama} prefixo={`rj${indiceParte}`} />
+          </ZoomDiagrama>
         </div>
         <div className={`meio ${compacto ? 'compacto' : ''}`}>
           <div className={`reacao reacao-${reacao}`}>
@@ -97,7 +100,9 @@ export default function Resultado({ resultado, onOk }) {
               ))}
             </div>
           )}
-          <DiagramaEstatico key={indiceParte} diagrama={esperado} prefixo={`re${indiceParte}`} />
+          <ZoomDiagrama key={indiceParte}>
+            <DiagramaEstatico diagrama={esperado} prefixo={`re${indiceParte}`} />
+          </ZoomDiagrama>
         </div>
       </div>
     </Modal>

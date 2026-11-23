@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Botao, formatarReais } from '../components/ui.jsx';
 import { useGame } from '../state/GameContext.jsx';
-import { EVENTOS, janelasDaPane } from '../lib/eventos.js';
+import { EVENTOS, janelasDaPane, nivelDoCansaco } from '../lib/eventos.js';
 import { precoNoExpediente } from '../lib/modificadores.js';
 import { sfx } from '../lib/sfx.js';
 
@@ -153,11 +153,37 @@ function Raio() {
 // por cima da tela e fica; o Jogo tira o jogador do computador 1 s depois. No escritório, o aviso
 // "a energia volta em N segundos" tem do lado direito o botão do raio, que abre (deslizando para a
 // direita) a opção de ligar o gerador pelo preço sorteado na queda.
-export function QuedaDeEnergia({ noComputador }) {
+// faíscas de um clique num raio: quadradinhos que saem do ponto do clique
+const FAISCAS = 8;
+function Faiscas({ x, y }) {
+  return (
+    <span className="faiscas" style={{ left: x, top: y }} aria-hidden="true">
+      {Array.from({ length: FAISCAS }, (_, i) => {
+        const a = (i / FAISCAS) * Math.PI * 2 + Math.random() * 0.6;
+        const d = 26 + Math.random() * 26;
+        return <i key={i} className={i % 3 ? '' : 'clara'} style={{ '--dx': `${Math.round(Math.cos(a) * d)}px`, '--dy': `${Math.round(Math.sin(a) * d)}px` }} />;
+      })}
+    </span>
+  );
+}
+
+export function QuedaDeEnergia({ noComputador, sala = 'escritorio', mostrarRaios = true }) {
   const { state, dispatch } = useGame();
   const b = state.sessao?.bloqueio;
   const ativa = b?.tipo === 'energia';
   const [aberto, setAberto] = useState(false);
+  const [faiscas, setFaiscas] = useState([]);
+  const raios = ativa ? b.raios ?? [] : [];
+  const aqui = raios.filter((r) => r.sala === sala);
+  const naOutra = raios.length - aqui.length;
+  const clicarRaio = (r) => {
+    sfx.clique();
+    if (r.falta <= 1) sfx.ligar();
+    const id = Date.now() + Math.random();
+    setFaiscas((f) => [...f, { id, x: r.x, y: r.y }]);
+    setTimeout(() => setFaiscas((f) => f.filter((x) => x.id !== id)), 600);
+    dispatch({ type: 'COLETAR_RAIO', id: r.id });
+  };
   useEffect(() => {
     setAberto(false);
     if (ativa) sfx.erro();
@@ -172,10 +198,32 @@ export function QuedaDeEnergia({ noComputador }) {
   return (
     <>
       <div className={`apagao ${reduzMovimento() ? '' : 'piscando'}`} aria-hidden="true" />
+      {/* raios para coletar nesta sala (clique de 1 a 3 vezes em cada) */}
+      {!noComputador && mostrarRaios && (
+        <div className="raios-coleta">
+          {aqui.map((r) => (
+            <button key={r.id} className="raio-coleta" style={{ left: r.x, top: r.y }} onClick={() => clicarRaio(r)} aria-label={`Raio: faltam ${r.falta} cliques`} title="Clique para coletar a energia">
+              <Raio />
+              <span className="raio-pips" aria-hidden="true">
+                {Array.from({ length: r.falta }, (_, i) => <i key={i} />)}
+              </span>
+            </button>
+          ))}
+          {faiscas.map((f) => <Faiscas key={f.id} x={f.x} y={f.y} />)}
+        </div>
+      )}
       {!noComputador && (
         <div className="energia-aviso" role="status">
           <span className="energia-texto">
-            A energia volta em <b>{b.falta}</b> {b.falta === 1 ? 'segundo' : 'segundos'}
+            <span>
+              A energia volta em <b>{b.falta}</b> {b.falta === 1 ? 'segundo' : 'segundos'}
+            </span>
+            {raios.length > 0 && (
+              <small className="energia-contador">
+                Raios para coletar: <b>{raios.length}</b>
+                {naOutra > 0 && ` (${naOutra} ${sala === 'sala' ? 'no escritório' : 'na sala de exposição'})`}
+              </small>
+            )}
           </span>
           <button className={`energia-raio ${aberto ? 'aberto' : ''}`} onClick={() => { sfx.clique(); setAberto((a) => !a); }} aria-expanded={aberto} aria-label="Gerador de energia">
             <Raio />
@@ -192,5 +240,51 @@ export function QuedaDeEnergia({ noComputador }) {
         </div>
       )}
     </>
+  );
+}
+
+// Cansaço (sessao.cansaco): a tela escurece em vinheta, das bordas para o meio, até ficar preta
+// (nivelDoCansaco, de 0 a 1, conta pelo relógio do jogo); o texto fica por cima. Some ao beber café.
+export function Cansaco() {
+  const { state } = useGame();
+  const sessao = state.sessao;
+  if (!sessao?.cansaco) return null;
+  const n = nivelDoCansaco(sessao);
+  return (
+    <div className="cansaco" aria-hidden="false">
+      <div className="cansaco-vinheta" style={{ opacity: Math.min(1, n * 1.6) }} />
+      <div className="cansaco-preto" style={{ opacity: Math.max(0, (n - 0.45) / 0.55) }} />
+      <p className="cansaco-texto" role="status">Nossa que cansaço...um café cairia bem</p>
+    </div>
+  );
+}
+
+// Dormiu (cansaço sem café): tela preta com "Zzz" enquanto `sessao.dormindo`; ao acordar, um aviso
+// diz o que aconteceu (`sessao.acordou`), por alguns segundos
+export function Sono() {
+  const { state } = useGame();
+  const sessao = state.sessao;
+  const [aviso, setAviso] = useState(null);
+  const n = sessao?.acordou?.n;
+  const dormindo = Boolean(sessao?.dormindo);
+  useEffect(() => {
+    if (!n || dormindo) return;
+    setAviso(sessao.acordou);
+    const t = setTimeout(() => setAviso(null), 6000);
+    return () => clearTimeout(t);
+  }, [n, dormindo]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (dormindo)
+    return (
+      <div className="sono" role="status" aria-label="Dormindo">
+        <span className="zzz">Z<small>z</small><small className="mini">z</small></span>
+        <span className="sono-texto">dormindo... {sessao.dormindo.falta} s</span>
+      </div>
+    );
+  if (!aviso) return null;
+  return (
+    <p className="acordou" role="status">
+      Você cochilou! {sessao?.modo === 'infinito' ? 'Perdeu um coração e os pedidos atrasaram' : 'Os pedidos atrasaram'}
+      {aviso.chegaram ? ` (chegaram mais ${aviso.chegaram})` : ''}.
+    </p>
   );
 }

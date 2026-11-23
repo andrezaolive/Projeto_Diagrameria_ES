@@ -3,8 +3,9 @@ import { FATOR_REPETICAO, JUMBO_NA_CAMPANHA, TODOS_MODELOS, criarPedido, ehJumbo
 import { corDoDesempenho, medalhaDaNota, naColecao, registrarEntrega } from '../lib/colecao.js';
 import { composicaoDoDia, dataDoDia, niveisDoDia, nivelDoModelo } from '../lib/dificuldade.js';
 import { estadoInicial, reducer, sortearUrgente } from './reducer.js';
+import { chegarFilaAgora } from './testeAjuda.js';
 
-const rodar = (s, ...acoes) => acoes.reduce(reducer, s);
+const rodar = (s, ...acoes) => acoes.reduce((x, a) => chegarFilaAgora(reducer(x, a)), s); // próximo da fila na hora
 const colecaoCom = (ids) => Object.fromEntries(ids.map((id) => [id, { entregas: 1, melhorNota: 70 }]));
 const doNivel = (dia) => TODOS_MODELOS.filter((m) => niveisDoDia(dia).includes(nivelDoModelo(m).id) && (dia >= JUMBO_NA_CAMPANHA || !ehJumbo(m)));
 

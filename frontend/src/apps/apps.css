@@ -47,7 +47,8 @@
   border: var(--px) solid var(--c-ink);
   box-shadow: 6px 6px 0 var(--c-grape);
 }
-.dica-imagem > svg { position: absolute; inset: 0; width: 100%; height: 100%; padding: 8px; }
+.dica-imagem > .zoom-area { position: absolute; inset: 0; }
+.dica-imagem .zoom-conteudo > svg { position: absolute; inset: 0; width: 100%; height: 100%; padding: 8px; }
 .dica-tampas { position: absolute; inset: 0; display: grid; }
 .tampa {
   display: flex;
@@ -101,7 +102,8 @@
 .resultado { display: grid; grid-template-columns: 1fr 260px 1fr; gap: 16px; height: 100%; padding: 16px; }
 .resultado .lado { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
 .resultado .lado h4 { margin: 0; font-family: var(--f-titulo); font-size: 12px; text-align: center; }
-.resultado .lado svg { flex: 1; width: 100%; min-height: 0; background: var(--c-cream); border: var(--px) solid var(--c-ink); }
+.resultado .lado .zoom-area { flex: 1; width: 100%; min-height: 0; background: var(--c-cream); border: var(--px) solid var(--c-ink); }
+.resultado .lado .zoom-conteudo > svg { display: block; width: 100%; height: 100%; }
 .resultado .meio { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; font-size: 22px; }
 .resultado .nota { font-family: var(--f-titulo); font-size: 44px; color: var(--c-grape); text-shadow: 4px 4px 0 var(--c-lavender); }
 .resultado .barra { width: 200px; height: 18px; background: var(--c-mist); border: 3px solid var(--c-ink); }
@@ -407,7 +409,6 @@
 /* dicas com 16 pedaços (pedido complexo) */
 .dica-tampas.miuda .tampa img { width: 32px; height: 32px; }
 .dica-tampas.miuda .preco-tampa { font-size: 9px; padding: 3px 4px 2px; border-width: 2px; }
-.aviso-jumbo { margin: 4px 0; padding: 4px 8px; font-size: 18px; line-height: 1.1; color: var(--c-ink); background: var(--c-lilac); border: 3px solid var(--c-grape); }
 .secao-paleta { position: relative; }
 .secao-montada { position: absolute; top: 2px; right: 2px; width: 8px; height: 8px; background: var(--c-mint); border: 2px solid var(--c-ink); }
 /* tela de resultado: escolher qual diagrama do JUMBO ver */
@@ -457,3 +458,13 @@ button.colecao-item:hover { background: var(--c-butter); }
 .arquivo-leitura .linha-de { display: flex; gap: 8px; align-items: center; font-size: 22px; }
 .arquivo-buscando { margin: 0; padding: 8px 16px 6px; font-size: 20px; background: var(--c-butter); border-bottom: var(--px) solid var(--c-ink); }
 .tag-jumbo.tag-retorno, .selo.selo-retorno { background: var(--c-sky); color: var(--c-ink); }
+
+/* zoom nos diagramas prontos (components/ZoomDiagrama.jsx): dicas e resultado */
+.zoom-area { position: relative; overflow: hidden; touch-action: none; }
+.zoom-area.ampliado { cursor: grab; }
+.zoom-area.arrastando { cursor: grabbing; }
+.zoom-conteudo { position: absolute; inset: 0; transform-origin: 0 0; }
+.zoom-controles { position: absolute; right: 6px; bottom: 6px; z-index: 3; display: flex; gap: 4px; }
+.zoom-controles button { width: 30px; height: 30px; padding: 0; font-family: var(--f-titulo); font-size: 14px; line-height: 1; color: var(--c-ink); background: var(--c-lilac); border: 3px solid var(--c-ink); box-shadow: 2px 2px 0 var(--sombra-texto); cursor: pointer; }
+.zoom-controles button:hover:not(:disabled) { background: var(--c-mist); }
+.zoom-controles button:disabled { opacity: 0.45; cursor: default; }

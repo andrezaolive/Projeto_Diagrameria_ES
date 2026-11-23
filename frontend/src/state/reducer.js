@@ -1,11 +1,12 @@
 import { FATOR_INFINITO, FATOR_REPETICAO, MODELOS, despesaDoDia, TODOS_MODELOS, URGENTE, criarPedido, criarPedidoUrgente, ehComplexo, ehJumbo, intervaloChegada, modeloPorId, multaPedido, partesDoModelo, pedacosDoModelo, pedidosDoFimDeSemana, precoPedaco, sortearPedidosDoDia } from '../data/pedidos.js';
 import { registrarEntrega } from '../lib/colecao.js';
-import { derramouCafe, quedaDeEnergia, resolverEvento, sortearEvento } from '../lib/eventos.js';
+import { CANSACO, depoisDoCafe, derramouCafe, nivelDoCansaco, quedaDeEnergia, resolverEvento, sortearCansaco, sortearEvento } from '../lib/eventos.js';
 import { RETORNO, arquivar, criarRetorno, podeChegarRetorno, registroCerto, registroDaEntrega } from '../lib/retorno.js';
 import { NOTA_AUDITORIA, aplicarModificador, avancarCiclo, caixaInicial, chanceDeUrgente, cicloInicial, crescerCaixa, precoNoExpediente, tamanhoDaCaixa, temModificador } from '../lib/modificadores.js';
 import { ALEATORIA, faixasDoJogador, temTocaFitas } from '../data/musicas.js';
 import { avatarPadrao } from '../lib/avatar.js';
-import { niveisNoInfinito, nivelDoModelo, sextaAntes } from '../lib/dificuldade.js';
+import { dataDoDia, niveisNoInfinito, nivelDoModelo, sextaAntes } from '../lib/dificuldade.js';
+import { AUMENTO_CLODE, PRECO_CLODE, PRECO_CLODE_INFINITO } from '../lib/clode.js';
 import { CAPSULAS, EFEITO_SEGUNDOS, cafeInicial, motivoSemCafe, ritmoDoJogo, temCafeteira, tempoDePreparo } from '../data/cafe.js';
 import { conteudoDe, ehPorta, grupoDoObjeto, membrosDoGrupo, moverComConteudo, soltarDependentes } from '../lib/decoracao.js';
 import { arrumarPremios, desbloquear, marcosIniciais, verificarConquistas } from '../lib/conquistas.js';
@@ -69,7 +70,7 @@ function registrarDesempenho(e, pedido, { nota, atrasado, erros, notasPartes }) 
   const nv = e.porNivel?.[nivel] ?? { n: 0, soma: 0 };
   const errosTotal = { ...e.erros };
   for (const [tipo, q] of Object.entries(erros ?? {})) errosTotal[tipo] = (errosTotal[tipo] ?? 0) + q;
-  const dica = (pedido.pedacos ?? []).length ? 'comDica' : 'semDica';
+  const dica = (pedido.pedacos ?? []).length || pedido.clode ? 'comDica' : 'semDica'; // (o Clode conta como dica)
   return {
     ...e,
     porTipo,
@@ -161,7 +162,46 @@ function novoPedidoAleatorio(sessao) {
   return naSessao({ ...sessao, modo: 'infinito' }, criarPedido(m.id, sessao.seq, 1));
 }
 
-const NA_FILA = ['novo', 'aceito'];
+export const NA_FILA = ['novo', 'aceito'];
+
+// Cansaço que chegou ao fim (tela preta) sem café: o jogador dorme CANSACO.sono s e acorda com tudo
+// atrasado. Campanha: chegam de uma vez todos os pedidos que faltavam no dia, mais 1 ou 2 urgentes, e
+// todos os em aberto viram aceitos com o prazo esgotado. Infinito: os em aberto viram aceitos com o
+// prazo esgotado (marcados `dormiu`: entregar atrasado não tira outro coração), chegam 2 pedidos já
+// aceitos com metade do prazo, e o jogador perde 1 coração. `sessao.acordou` mostra o aviso.
+function adormecer(state, action) {
+  const s = state.sessao;
+  if (!s?.cansaco || s.dormindo || partidaEncerrada(s) || nivelDoCansaco(s) < 1) return state;
+  const atrasar = (p) => (NA_FILA.includes(p.status) && !p.retorno ? { ...p, status: 'aceito', tempoRestante: 0, atraso: p.atraso ?? 0, dormiu: true } : p);
+  let sessao = { ...s, cansaco: null, semCansacoAte: s.segundos + CANSACO.descanso, dormindo: { falta: CANSACO.sono, total: CANSACO.sono } };
+  let novos = [];
+  if (s.modo === 'campanha') {
+    let seq = s.seq;
+    for (const id of s.fila ?? []) novos.push(naSessao(sessao, criarPedido(id, seq++, s.dia)));
+    const [min, max] = CANSACO.urgentesAoDormir;
+    const quantos = (action?.sorteio ?? 0) < 0.5 ? min : max;
+    const usados = new Set([...s.pedidos, ...novos].map((p) => p.modelo));
+    const opcoes = MODELOS.filter((m) => !usados.has(m.id));
+    for (let k = 0; k < quantos; k++) {
+      const m = (opcoes.length ? opcoes : MODELOS)[(Math.floor((action?.sorteioChegada ?? 0.5) * 997) + k * 7) % (opcoes.length || MODELOS.length)];
+      novos.push(naSessao(sessao, criarPedidoUrgente(m.id, seq++, s.dia)));
+    }
+    sessao = { ...sessao, seq, fila: [], proximoEm: null, pedidos: [...s.pedidos, ...novos].map(atrasar) };
+  } else {
+    sessao = { ...sessao, pedidos: s.pedidos.map(atrasar) };
+    for (let k = 0; k < CANSACO.novosAoDormir; k++) {
+      const p = novoPedidoAleatorio(sessao);
+      const metade = { ...p, status: 'aceito', tempoRestante: Math.ceil(p.tempo / 2), dormiu: true };
+      sessao = { ...sessao, pedidos: [...sessao.pedidos, metade], seq: sessao.seq + 1 };
+      novos.push(metade);
+    }
+  }
+  const atrasados = sessao.pedidos.filter((p) => p.dormiu).length;
+  const ativo = sessao.pedidos.some((p) => p.id === sessao.ativo && p.status === 'aceito') ? sessao.ativo : sessao.pedidos.find((p) => p.status === 'aceito')?.id ?? null;
+  sessao = { ...sessao, ativo, acordou: { n: (s.acordou?.n ?? 0) + 1, atrasados, chegaram: novos.length } };
+  const depois = { ...state, sessao };
+  return s.modo === 'infinito' ? perderVidas(depois, 1) : depois;
+}
 
 // Modo infinito: o pedido que substitui um terminado não chega na hora; chega de 10 a 20 s de jogo
 // depois (`sessao.chegadas` = segundos de jogo em que cada um chega, liberados no TICK)
@@ -241,10 +281,15 @@ const atualizarPedido = (sessao, id, f) => ({
 
 // Pedidos que já não pedem nada do jogador
 export const FINALIZADOS = ['entregue', 'recusado', 'expirado'];
-// Relógio do jogo precisa correr? (pedido em andamento, cliente esperando resposta ou, no modo
-// infinito, pedido a caminho: `sessao.chegadas`)
+// Relógio do jogo precisa correr? (pedido em andamento, cliente esperando resposta ou pedido a
+// caminho: `sessao.chegadas` no modo infinito, a fila do dia na campanha)
 export const temRelogio = (sessao) =>
-  Boolean(sessao?.chegadas?.length || sessao?.pedidos.some((p) => p.status === 'aceito' || (p.status === 'novo' && p.paciencia != null)));
+  Boolean(
+    sessao?.chegadas?.length ||
+      (sessao?.fila?.length && !sessao.esperaTutorial) ||
+      sessao?.dormindo ||
+      sessao?.pedidos.some((p) => p.status === 'aceito' || (p.status === 'novo' && p.paciencia != null)),
+  );
 
 // Vários pedidos podem estar aceitos ao mesmo tempo; `sessao.ativo` é o que está aberto no editor.
 // Quando ele sai (entregue/recusado), o editor passa para outro aceito (o mais antigo), se houver.
@@ -277,13 +322,17 @@ function perderVidas(state, n) {
   };
 }
 
-// Libera o próximo pedido da fila do dia: na hora marcada (`proximoEm`, em segundos de jogo) ou na
-// hora, se não sobrou nenhum pedido normal em aberto (o jogador entregou/recusou o anterior antes).
-function liberarFila(sessao, sorteio) {
+// Libera o próximo pedido da fila do dia na hora marcada (`proximoEm`, em segundos de jogo). Se não
+// sobrou nenhum pedido normal em aberto (o jogador entregou/recusou o anterior antes), a hora é
+// adiantada para daqui a 10 a 20 s (`esperaDoProximo`, como no modo infinito); não chega na hora.
+export function liberarFila(sessao, sorteio) {
   if (!sessao.fila?.length) return sessao;
   const segundos = sessao.segundos ?? 0;
   const semPendente = !sessao.pedidos.some((p) => !p.urgente && NA_FILA.includes(p.status));
-  if (!semPendente && segundos < sessao.proximoEm) return sessao;
+  if (segundos < sessao.proximoEm) {
+    const cedo = segundos + esperaDoProximo(sorteio);
+    return semPendente && cedo < sessao.proximoEm ? { ...sessao, proximoEm: cedo } : sessao;
+  }
   const [id, ...fila] = sessao.fila;
   return {
     ...sessao,
@@ -430,6 +479,7 @@ function reducerBase(state, action) {
     case 'DEBUG_EVENTO':
       if (!state.sessao || partidaEncerrada(state.sessao) || state.sessao.evento) return state;
       if (action.tipo === 'energia') return { ...state, sessao: { ...state.sessao, bloqueio: quedaDeEnergia(action.sorteio ?? 0) } };
+      if (action.tipo === 'cansaco') return { ...state, sessao: { ...state.sessao, cansaco: { inicio: state.sessao.segundos ?? 0 } } };
       if (action.tipo === 'cafe') return temCafeteira(state) ? { ...state, cafe: { ...state.cafe, preparando: null }, sessao: { ...state.sessao, cafeDerramado: true } } : state;
       return { ...state, sessao: { ...state.sessao, evento: { tipo: action.tipo }, bloqueio: null } };
 
@@ -483,6 +533,8 @@ function reducerBase(state, action) {
       let s = state.sessao;
       // evento aleatório esperando a escolha do jogador (lib/eventos.js): o relógio fica parado
       if (!s || s.fimDeJogo || s.evento) return state;
+      // dormindo (cansaço sem café): o relógio do jogo fica parado; cada TICK é 1 s real de sono
+      if (s.dormindo) return { ...state, sessao: { ...s, dormindo: s.dormindo.falta > 1 ? { ...s.dormindo, falta: s.dormindo.falta - 1 } : null } };
       // café: o relógio anda mais devagar. Cada TICK (1 s real) avança só `ritmo` de um segundo de jogo;
       // o segundo de jogo só passa quando a fração acumulada (`sessao.passo`) chega a 1.
       const ritmo = ritmoDoJogo(state.cafe);
@@ -517,15 +569,17 @@ function reducerBase(state, action) {
       // contratempo de um evento (tela apagada, computador reiniciando...): conta os segundos de jogo
       if (sessao.bloqueio) sessao = { ...sessao, bloqueio: sessao.bloqueio.falta > 1 ? { ...sessao.bloqueio, falta: sessao.bloqueio.falta - 1 } : null };
       // evento aleatório (pane ou queda de energia), sorteado a cada minuto de jogo (infinito e campanha)
+      // cansaço (a tela vai escurecendo até o jogador tomar um café), sorteado a cada minuto depois dos 5
+      if (!partidaEncerrada(sessao) && sortearCansaco(sessao, action.sorteioCansaco, temCafeteira(state))) sessao = { ...sessao, cansaco: { inicio: sessao.segundos } };
       const evento = !partidaEncerrada(sessao) && sortearEvento(sessao, action.sorteioEvento);
       // a queda de energia não abre janela: vira direto o contratempo (o preço do gerador sai do sorteio)
       if (evento?.tipo === 'energia') sessao = { ...sessao, bloqueio: quedaDeEnergia((action.sorteioEvento * 97) % 1) };
       else if (evento) sessao = { ...sessao, evento };
-      if (!foram) return { ...state, sessao };
+      if (!foram) return adormecer({ ...state, sessao }, action);
       sessao = { ...sessao, ganho: s.ganho - multas };
       const e = state.estatisticas;
       const estatisticas = { ...e, expirados: (e.expirados ?? 0) + foram, multas: (e.multas ?? 0) + multas };
-      return perderVidas(concluirDiaSeFor({ ...state, dinheiro: state.dinheiro - multas, estatisticas, sessao }), foram);
+      return adormecer(perderVidas(concluirDiaSeFor({ ...state, dinheiro: state.dinheiro - multas, estatisticas, sessao }), foram), action);
     }
 
     case 'SET_DIAGRAMA':
@@ -564,7 +618,8 @@ function reducerBase(state, action) {
       const depois = concluirDiaSeFor({ ...state, dinheiro: state.dinheiro + valor, estatisticas, colecao, arquivo, sessao, diagramas: semDiagrama(state.diagramas, id) });
       // semana de auditoria (modificador do ciclo em que o pedido foi entregue): nota baixa custa um coração
       const auditoria = temModificador(s, 'auditoria') && nota < NOTA_AUDITORIA ? 1 : 0;
-      return perderVidas(depois, (action.atrasado ? 1 : 0) + auditoria);
+      // (atrasado por ter dormido não tira coração de novo: o sono já tirou um)
+      return perderVidas(depois, (action.atrasado && !entregue?.dormiu ? 1 : 0) + auditoria);
     }
 
     // Cafeteira (data/cafe.js). Cápsulas: compradas uma a uma, ficam guardadas na cafeteira.
@@ -625,6 +680,16 @@ function reducerBase(state, action) {
       if (!state.sessao?.cafeDerramado) return state;
       return { ...state, sessao: { ...state.sessao, cafeDerramado: false } };
 
+    // Queda de energia: um clique num raio espalhado pela sala (lib/eventos.js, raiosDaQueda); o raio
+    // some depois de 1 a 3 cliques, e com todos coletados a energia volta de graça
+    case 'COLETAR_RAIO': {
+      const s = state.sessao;
+      const b = s?.bloqueio;
+      if (b?.tipo !== 'energia' || !b.raios?.some((r) => r.id === action.id)) return state;
+      const raios = b.raios.map((r) => (r.id === action.id ? { ...r, falta: r.falta - 1 } : r)).filter((r) => r.falta > 0);
+      return { ...state, sessao: { ...s, bloqueio: raios.length ? { ...b, raios } : null } };
+    }
+
     // Queda de energia: ligar o gerador (preço sorteado na queda) faz a energia voltar na hora
     case 'LIGAR_GERADOR': {
       const s = state.sessao;
@@ -649,7 +714,8 @@ function reducerBase(state, action) {
     case 'BEBER_CAFE': {
       const { xicara } = state.cafe;
       if (!xicara) return state;
-      return { ...state, cafe: { ...state.cafe, xicara: null, efeito: { tipo: xicara, falta: EFEITO_SEGUNDOS } } };
+      // o café também tira o cansaço e deixa o jogador livre dele por 1 a 3 minutos (lib/eventos.js)
+      return { ...state, cafe: { ...state.cafe, xicara: null, efeito: { tipo: xicara, falta: EFEITO_SEGUNDOS } }, sessao: depoisDoCafe(state.sessao, xicara) };
     }
 
     case 'COMPRAR': {
@@ -685,6 +751,24 @@ function reducerBase(state, action) {
     }
 
     // Dica: compra um pedaço da imagem-resposta do pedido em andamento
+    // Clode (lib/clode.js): o editor calcula a ação e manda o diagrama já mexido; aqui só cobra e grava.
+    // Preço pelo nível do pedido (PRECO_CLODE, "bem caro"), com o orçamento apertado do infinito.
+    case 'USAR_CLODE': {
+      const s = state.sessao;
+      const p = s?.pedidos.find((x) => x.id === action.id && x.status === 'aceito');
+      if (!p || !action.chave || !action.diagrama) return state;
+      const preco = precoDoClode(p, s);
+      if (state.dinheiro < preco) return state;
+      const clode = { usos: (s.clode?.usos ?? 0) + 1, ultimo: precoBrutoDoClode(p, s) };
+      return {
+        ...state,
+        dinheiro: state.dinheiro - preco,
+        estatisticas: gastar(state.estatisticas, 'clode', preco),
+        diagramas: { ...state.diagramas, [action.chave]: action.diagrama },
+        sessao: { ...s, clode, pedidos: s.pedidos.map((x) => (x.id === p.id ? { ...x, clode: (x.clode ?? 0) + 1 } : x)) },
+      };
+    }
+
     case 'COMPRAR_PEDACO': {
       const s = state.sessao;
       const p = s?.pedidos.find((x) => x.id === s.ativo);
@@ -908,10 +992,21 @@ function concluirDiaSeFor(state) {
 
 // Nome do dia da sessão da campanha: "Dia 3" ou, no fim de semana, "Sábado 6" / "Domingo 7"
 export const nomeDoDia = (sessao) =>
-  sessao?.fimDeSemana ? `${(sessao.fimDeSemana - 1) % 7 === 5 ? 'Sábado' : 'Domingo'} ${sessao.fimDeSemana}` : `Dia ${sessao?.dia}`;
+  sessao?.fimDeSemana ? `${(sessao.fimDeSemana - 1) % 7 === 5 ? 'Sábado' : 'Domingo'} ${sessao.fimDeSemana}` : `Dia ${dataDoDia(sessao?.dia)}`;
+// (o número mostrado é a data do calendário, não o índice do dia útil da campanha)
 
 export const chaveDiagrama = (sessao) => (sessao?.ativo ? `pedido:${sessao.ativo}` : 'livre');
 // Pedido JUMBO: cada diagrama fica salvo na aba (seção) do editor em que é montado
 export const chaveDaParte = (pedidoId, secao) => `pedido:${pedidoId}:${secao}`;
+// Preço do Clode no dia (`sessao.clode = { usos, ultimo }`, zera só numa partida nova): o do nível do
+// pedido + 10% dele a cada uso já feito no dia (AUMENTO_CLODE), e nunca menos que o último pago (usar
+// num pedido difícil e depois num fácil mantém o preço alto). `precoBrutoDoClode` é antes do
+// orçamento apertado do modo infinito, que `precoDoClode` aplica por cima.
+export function precoBrutoDoClode(pedido, sessao) {
+  const { usos = 0, ultimo = 0 } = sessao?.clode ?? {};
+  const base = (sessao?.modo === 'infinito' ? PRECO_CLODE_INFINITO : PRECO_CLODE)[nivelDoModelo(modeloPorId(pedido.modelo)).id];
+  return Math.max(Math.round(base * (1 + AUMENTO_CLODE * usos)), ultimo);
+}
+export const precoDoClode = (pedido, sessao) => precoNoExpediente(precoBrutoDoClode(pedido, sessao), sessao);
 export const pedidoEhJumbo = (pedido) => Boolean(pedido) && ehJumbo(modeloPorId(pedido.modelo));
 export const diagramaDe = (state, chave) => state.diagramas[chave] || vazio();

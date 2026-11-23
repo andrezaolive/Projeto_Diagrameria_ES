@@ -39,7 +39,7 @@
 .editor-requisitos .atraso { margin: 0; font-size: 20px; color: var(--c-rose); }
 .editor-requisitos .relogio-pedido { align-self: flex-start; }
 
-.editor-centro { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.editor-centro { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .editor-barra {
   display: flex;
   overflow: hidden;
@@ -113,8 +113,10 @@
   padding: 8px;
   background: var(--c-mist);
   border-left: var(--px) solid var(--c-ink);
-  overflow-y: auto;
+  overflow: hidden;
+  min-height: 0;
 }
+.paleta-itens { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 4px; overflow-y: auto; }
 .editor-paleta h5 { margin: 6px 0 2px; font-family: var(--f-titulo); font-size: 10px; color: var(--c-grape); }
 .item-paleta {
   display: flex;
@@ -194,3 +196,20 @@
   background: var(--c-cream); border: 2px solid var(--c-lavender);
 }
 .vis-botao:hover { background: var(--c-butter); border-color: var(--c-grape); }
+
+/* Clode (lib/clode.js): robozinho no pé da paleta (referência: clode_referencia.png) */
+.clode { flex: none; padding-top: 6px; display: flex; flex-direction: column; gap: 4px; border-top: 3px dashed var(--c-lavender); }
+.clode-linha { display: flex; align-items: center; gap: 8px; }
+.clode-botao { flex: none; width: 58px; height: 58px; display: grid; place-items: center; padding: 0; cursor: pointer; background: var(--c-cream); border: var(--px) solid var(--c-ink); box-shadow: 3px 3px 0 var(--sombra-texto); }
+.clode-botao:hover:not(:disabled) { background: var(--c-lilac); transform: translateY(-2px); }
+.clode-botao:active:not(:disabled) { transform: translateY(1px); }
+.clode-botao:disabled { cursor: default; filter: grayscale(1); opacity: 0.6; }
+.clode-texto { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.clode-texto strong { font-family: var(--f-titulo); font-size: 10px; color: var(--c-grape); }
+.clode-texto small { font-size: 14px; line-height: 0.95; color: var(--c-plum); }
+.clode-preco { font-family: var(--f-titulo); font-size: 9px; color: var(--c-ink); }
+.clode-fala { position: absolute; right: 12px; bottom: 44px; max-width: 360px; margin: 0; padding: 8px 10px 6px; font-size: 17px; line-height: 1.1; color: var(--c-ink); background: var(--c-butter); border: 3px solid var(--c-ink); box-shadow: 3px 3px 0 var(--sombra-texto); animation: clode-fala 0.2s steps(2) both; z-index: 5; }
+.clode-fala.nada { background: var(--c-mist); }
+.clode-fala::after { content: ''; position: absolute; right: -19px; bottom: 10px; border: 8px solid transparent; border-left-color: var(--c-ink); }
+.clode-fala b { font-family: var(--f-titulo); font-size: 10px; }
+@keyframes clode-fala { from { transform: translateY(6px); opacity: 0; } }

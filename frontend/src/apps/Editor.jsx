@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import LogoEmpresa from '../components/LogoEmpresa.jsx';
 import iRelogio from '../assets/ui/icon-relogio-16.png';
-import { Botao } from '../components/ui.jsx';
+import { Botao, formatarReais } from '../components/ui.jsx';
+import roboClode from '../assets/ui/clode-robo-16.png';
+import { acaoDoClode } from '../lib/clode.js';
 import { Alcas, Aresta, Defs, ELEMENTOS, Forma, IconePaleta, RELACOES, ROTULO_FIXO, SECOES } from '../editor/Formas.jsx';
 import { MULTIPLICIDADES, TEM_MULTIPLICIDADE } from '../lib/multiplicidade.js';
 import { REDIMENSIONAVEIS, TAMANHOS, TAMANHO_MINIMO, centro, contido, foraDoLugar, posicaoAoSoltar, redimensionar, retangulo, snap, telaParaMundo, zoomEm } from '../lib/grid.js';
@@ -9,7 +11,7 @@ import { avaliar, avaliarPartes, pagamentoDaEntrega } from '../lib/avaliacao.js'
 import { diagramaVazio, gerarFeedback } from '../lib/feedback.js';
 import { ehComplexo, ehJumbo, modeloPorId } from '../data/pedidos.js';
 import { useGame } from '../state/GameContext.jsx';
-import { chaveDaParte, chaveDiagrama, diagramaDe, pedidosAceitos } from '../state/reducer.js';
+import { chaveDaParte, chaveDiagrama, diagramaDe, pedidosAceitos, precoDoClode } from '../state/reducer.js';
 import { formatarTempo } from '../screens/Computador.jsx';
 import { sfx } from '../lib/sfx.js';
 import { LINHA_MEMBRO, SIMBOLO, TOPO_CLASSE, VIS_PADRAO, VISIBILIDADES, alinharVisibilidades, medidasClasse, proximaVisibilidade, separarMembro } from '../lib/membros.js';
@@ -69,6 +71,30 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
   diagRef.current = diagrama;
 
   const salvar = (d) => dispatch({ type: 'SET_DIAGRAMA', chave, diagrama: d });
+
+  // Clode (lib/clode.js): põe um elemento que falta ou corrige uma coisa, comparando com o gabarito do
+  // diagrama desta aba; sem nada a fazer, só avisa (e não cobra). A fala fica um tempo embaixo do botão.
+  const [falaClode, setFalaClode] = useState(null);
+  useEffect(() => {
+    if (!falaClode) return;
+    const t = setTimeout(() => setFalaClode(null), 4500);
+    return () => clearTimeout(t);
+  }, [falaClode]);
+  useEffect(() => setFalaClode(null), [pedido?.id, secao]);
+  const precoClode = pedido ? precoDoClode(pedido, sessao) : 0;
+  const usarClode = () => {
+    const esperado = jumbo ? modelo.partes.find((p) => p.secao === secao)?.esperado : modelo.esperado;
+    const a = acaoDoClode(diagRef.current, esperado);
+    if (a.tipo === 'nada') {
+      sfx.erro();
+      return setFalaClode({ n: Date.now(), texto: 'Nada a ser feito.', nada: true });
+    }
+    if (state.dinheiro < precoClode) return sfx.erro();
+    sfx.moeda();
+    dispatch({ type: 'USAR_CLODE', id: pedido.id, chave, diagrama: a.diagrama });
+    setSel(null);
+    setFalaClode({ n: Date.now(), texto: a.texto });
+  };
 
   // Coordenadas do ponteiro dentro da área (desfaz a escala do palco)
   const local = (e) => {
@@ -435,11 +461,6 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             <div className="lista rolagem">
               {modelo.corpo.map((l, i) => <p key={i}>{l}</p>)}
             </div>
-            {jumbo && (
-              <p className="aviso-jumbo">
-                Pedido JUMBO: monte cada diagrama na sua aba da paleta ({modelo.partes.map((p) => SECOES.find((x) => x.id === p.secao).nome).join(' + ')}). Cada aba guarda o seu.
-              </p>
-            )}
             {pedido.tempoRestante === 0 && <p className="atraso">Prazo esgotado: pagamento pela metade.</p>}
             <Botao tamanho="pequeno" variante="claro" onClick={() => abrirApp('dicas')}>Ver dicas</Botao>
             <Botao variante="rosa" som="" onClick={entregar} disabled={vazio} title={vazio ? 'Monte o diagrama antes de entregar' : ''}>
@@ -464,7 +485,7 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
               <input
                 ref={eventoRef}
                 value={transicao.rotulo ?? ''}
-                placeholder="ex.: pagar, [sim] (vazio no início/fim)"
+                placeholder="ex.: pagar, sim (vazio no início/fim)"
                 maxLength={28}
                 onChange={(e) => mudarEvento(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
@@ -570,6 +591,12 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             />
           )}
         </div>
+        {/* fala do Clode: no canto da área de montagem, apontando para o botão dele */}
+        {falaClode && (
+          <p key={falaClode.n} className={`clode-fala ${falaClode.nada ? 'nada' : ''}`} role="status">
+            <b>Clode:</b> {falaClode.texto}
+          </p>
+        )}
         <div className="editor-ajuda">{ajuda}</div>
       </div>
 
@@ -592,6 +619,8 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             </button>
           ))}
         </div>
+        {/* só a lista rola; o Clode fica sempre no pé da paleta */}
+        <div className="paleta-itens">
         <h5>Elementos</h5>
         {secaoAtual.elementos.map((t) => ELEMENTOS.find((el) => el.tipo === t)).map((el) => (
           <button
@@ -616,6 +645,28 @@ export default function Editor({ focado, abrirApp, onEntregue, abertura }) {
             {r.nome}
           </button>
         ))}
+        </div>
+        {/* Clode: o robozinho que compra um elemento pronto ou corrige uma coisa (pago) */}
+        {pedido && (
+          <div className="clode">
+            <div className="clode-linha">
+              <button
+                className="clode-botao"
+                onClick={usarClode}
+                disabled={state.dinheiro < precoClode}
+                aria-label={`Clode: usar por ${formatarReais(precoClode)}`}
+                title={state.dinheiro < precoClode ? 'Dinheiro insuficiente para o Clode' : 'Clode: põe um elemento pronto ou corrige uma coisa'}
+              >
+                <img src={roboClode} alt="" className="pixel" width={48} height={48} draggable={false} />
+              </button>
+              <span className="clode-texto">
+                <strong>Clode</strong>
+                <small>Compra um elemento pronto ou corrige uma coisa no diagrama.</small>
+              </span>
+            </div>
+            <span className="clode-preco">preço: {formatarReais(precoClode)}</span>
+          </div>
+        )}
       </aside>
     </div>
   );

@@ -12,7 +12,7 @@ export const ELEMENTOS = [
   { tipo: 'estadoInicial', nome: 'Início', rotulo: 'Início', fixo: true },
   { tipo: 'estado', nome: 'Estado', rotulo: 'Estado' },
   { tipo: 'estadoFinal', nome: 'Fim', rotulo: 'Fim', fixo: true },
-  // decisão (losango): a pergunta fica dentro; as setas que saem levam a condição, ex.: [sim] / [não]
+  // decisão (losango): a pergunta fica dentro; as setas que saem levam a condição, ex.: sim / não
   { tipo: 'decisao', nome: 'Decisão', rotulo: 'Decisão?' },
 ];
 export const ROTULO_FIXO = Object.fromEntries(ELEMENTOS.filter((e) => e.fixo).map((e) => [e.tipo, e.rotulo]));

@@ -38,7 +38,7 @@ export const ERROS = {
     conselho: '"Sempre" = include, "às vezes" = extend, "é um tipo de" = herança, "some junto" = composição, "continua existindo" = agregação.',
   },
   sentidoInvertido: { curto: 'Sentido', nome: 'Relação no sentido invertido', conselho: 'Herança sai do filho para o pai; composição e agregação saem do todo; extend sai do opcional.' },
-  eventoErrado: { curto: 'Evento', nome: 'Evento errado na transição', conselho: 'O evento da seta é o que vem entre aspas no e-mail; condições da decisão vão entre colchetes.' },
+  eventoErrado: { curto: 'Evento', nome: 'Evento errado na transição', conselho: 'O evento da seta é o que vem entre aspas no e-mail; nas setas que saem da decisão vai a condição (sim, não).' },
   multiplicidade: { curto: 'Mult.', nome: 'Multiplicidade errada', conselho: 'O número fica na ponta da classe que está sendo contada (1, 0..1, 1..*, 0..*).' },
   membroFaltando: { curto: 'Membro', nome: 'Atributo/método faltando', conselho: 'Cada atributo e método entre aspas no e-mail vai na classe dele.' },
   membroNoLugarErrado: { curto: 'Classe', nome: 'Membro na classe errada', conselho: 'Releia de quem é cada atributo ou método.' },
@@ -82,6 +82,7 @@ export function resumoEstatisticas(state) {
   const saidas = [
     { rotulo: 'Loja', valor: g.loja ?? 0 },
     { rotulo: 'Dicas', valor: g.dicas ?? 0 },
+    { rotulo: 'Clode', valor: g.clode ?? 0 },
     { rotulo: 'Café', valor: g.cafe ?? 0 },
     { rotulo: 'Imprevistos', valor: g.eventos ?? 0 }, // gerador e limpeza (eventos do modo infinito)
     { rotulo: 'Multas', valor: e.multas ?? 0 },

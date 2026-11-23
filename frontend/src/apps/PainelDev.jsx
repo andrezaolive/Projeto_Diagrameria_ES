@@ -122,7 +122,7 @@ export default function PainelDev({ onFechar }) {
           <h4>Eventos aleatórios</h4>
           {sessao ? (
             <div className="linha">
-              {[['pane', 'Pane'], ['energia', 'Queda de energia'], ['cafe', 'Café derramado']].map(([tipo, nome]) => (
+              {[['pane', 'Pane'], ['energia', 'Queda de energia'], ['cafe', 'Café derramado'], ['cansaco', 'Cansaço']].map(([tipo, nome]) => (
                 <Botao key={tipo} tamanho="pequeno" variante="claro" disabled={Boolean(sessao.evento)} onClick={() => { dispatch({ type: 'DEBUG_EVENTO', tipo, sorteio: Math.random() }); onFechar(); }}>
                   {nome}
                 </Botao>

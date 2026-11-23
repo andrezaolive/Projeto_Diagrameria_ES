@@ -131,7 +131,6 @@ function Detalhe({ state, cq, ok }) {
       <h4>{escondida ? '???' : cq.nome}</h4>
       <div className="tags">
         <span className={`tag-raridade ${cq.raridade}`}>{RARIDADES[cq.raridade].dificuldade}</span>
-        <span className="tag-premio">{premio}</span>
       </div>
       <p className="conquista-descricao">{escondida ? 'Conquista secreta: jogue para descobrir.' : cq.descricao}</p>
       {progresso && <Barra progresso={progresso} />}

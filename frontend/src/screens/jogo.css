@@ -715,3 +715,40 @@
 .poca-cafe.limpando .poca { animation: poca-esfrega 0.25s steps(2) infinite; }
 @keyframes poca-esfrega { 50% { translate: 3px 0; } }
 .dica-monitor.reiniciando.fixa { opacity: 1; }
+
+/* cansaço (Cansaco em EventoAleatorio.jsx): vinheta que fecha das bordas e depois o preto por cima;
+   as opacidades mudam a cada segundo de jogo e a transição de 1 s deixa contínuo */
+.cansaco { position: absolute; inset: 0; z-index: 868; pointer-events: none; }
+.cansaco-vinheta { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0.7) 62%, #000 100%); transition: opacity 1s linear; }
+.cansaco-preto { position: absolute; inset: 0; background: #000; transition: opacity 1s linear; }
+.cansaco-texto { position: absolute; left: 50%; top: 90px; transform: translateX(-50%); margin: 0; padding: 10px 18px 8px; white-space: nowrap; font-size: 26px; color: var(--c-cream); background: rgba(30, 26, 46, 0.85); border: var(--px) solid var(--c-grape); box-shadow: 4px 4px 0 var(--sombra-texto); animation: cansaco-texto 1.2s steps(6) both; }
+@keyframes cansaco-texto { from { opacity: 0; transform: translate(-50%, -8px); } }
+@media (prefers-reduced-motion: reduce) { .cansaco-vinheta, .cansaco-preto { transition: none; } .cansaco-texto { animation: none; } }
+
+/* sono (Sono em EventoAleatorio.jsx): tela preta com Zzz; ao acordar, um aviso no topo */
+.sono { position: absolute; inset: 0; z-index: 869; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #000; color: var(--c-lavender); pointer-events: auto; }
+.sono .zzz { font-family: var(--f-titulo); font-size: 56px; color: var(--c-cream); animation: zzz 1.6s steps(4) infinite; }
+.sono .zzz small { font-size: 36px; margin-left: 8px; }
+.sono .zzz small.mini { font-size: 22px; }
+.sono-texto { font-size: 24px; }
+@keyframes zzz { 50% { transform: translateY(-8px); opacity: 0.7; } }
+.acordou { position: absolute; left: 50%; top: 90px; z-index: 869; transform: translateX(-50%); margin: 0; padding: 10px 18px 8px; white-space: nowrap; font-size: 24px; color: var(--c-ink); background: var(--c-butter); border: var(--px) solid var(--c-ink); box-shadow: 4px 4px 0 var(--sombra-texto); pointer-events: none; animation: cansaco-texto 0.6s steps(4) both; }
+@media (prefers-reduced-motion: reduce) { .sono .zzz { animation: none; } }
+
+/* raios para coletar na queda de energia (QuedaDeEnergia): acima do apagão, abaixo do aviso */
+.raios-coleta { position: absolute; inset: 0; z-index: 867; pointer-events: none; }
+.raio-coleta { position: absolute; width: 56px; height: 72px; margin: -36px 0 0 -28px; display: grid; place-items: center; padding: 0; background: none; border: 0; cursor: pointer; pointer-events: auto; filter: drop-shadow(0 0 6px rgba(242, 230, 160, 0.9)); animation: raio-surge 0.35s steps(4) both, raio-brilho 0.9s steps(2) 0.35s infinite; }
+@keyframes raio-surge { from { opacity: 0; transform: scale(0.3); } }
+.raio-coleta .raio { width: 42px; height: 60px; }
+.raio-coleta:hover { transform: scale(1.1); }
+.raio-coleta:active { transform: scale(0.9); }
+.raio-pips { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; }
+.raio-pips i { width: 6px; height: 6px; background: var(--c-butter); border: 2px solid var(--c-ink); }
+@keyframes raio-brilho { 50% { filter: drop-shadow(0 0 12px rgba(242, 230, 160, 1)); } }
+.faiscas { position: absolute; width: 0; height: 0; pointer-events: none; }
+.faiscas i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; background: var(--c-butter); animation: faisca 0.5s steps(5) forwards; }
+.faiscas i.clara { background: var(--c-cream); width: 4px; height: 4px; }
+@keyframes faisca { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.energia-texto { flex-direction: column; align-items: flex-start; gap: 2px; }
+.energia-contador { font-size: 20px; color: var(--c-butter); }
+@media (prefers-reduced-motion: reduce) { .raio-coleta { animation: none; } }

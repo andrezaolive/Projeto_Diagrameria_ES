@@ -99,7 +99,7 @@ export function FolhaCalendario({ onEscolher }) {
                   className={`dia ${liberado ? '' : 'bloqueado'} ${hoje ? 'hoje' : ''}`}
                   disabled={!liberado}
                   onClick={() => { sfx.clique(); onEscolher({ dia: c.campanha }); }}
-                  title={!liberado ? `Conclua o dia anterior com ${MEDIA_MINIMA}% ou mais` : feito ? `Dia ${c.campanha} já concluído: jogar de novo paga metade e só traz pedidos que você já desbloqueou` : `Dia ${c.campanha}`}
+                  title={!liberado ? `Conclua o dia anterior com ${MEDIA_MINIMA}% ou mais` : feito ? `Dia ${c.data} já concluído: jogar de novo paga metade e só traz pedidos que você já desbloqueou` : `Dia ${c.data}`}
                 >
                   {c.data}
                   {!liberado && <img src={cadeado} alt="bloqueado" className="pixel" />}

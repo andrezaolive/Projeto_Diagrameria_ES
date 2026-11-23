@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { conquistaPorId, nomeDoPremio } from '../art/conquistas.js';
+import { conquistaPorId } from '../art/conquistas.js';
 import { Premio } from '../screens/Conquistas.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { sfx } from '../lib/sfx.js';
@@ -19,7 +19,6 @@ export default function AvisoConquista() {
   }, [aviso, cq, dispatch]);
 
   if (!aviso || !cq) return null;
-  const premio = nomeDoPremio(cq);
   const tipo = cq.forma === 'trofeu' ? 'o troféu' : cq.forma === 'medalha' ? 'a medalha' : 'o broche';
   const fechar = () => dispatch({ type: 'CONQUISTA_VISTA' });
   return (
@@ -34,7 +33,7 @@ export default function AvisoConquista() {
         <span className={`onde ${aviso.noBau ? 'bau' : ''}`}>
           {aviso.noBau
             ? `Sem espaço na sala: veja ${tipo} no baú.`
-            : `${premio} · ${cq.forma === 'trofeu' ? 'nas prateleiras' : 'no quadro'} da sala de exposição`}
+            : `${cq.forma === 'trofeu' ? 'Nas prateleiras' : 'No quadro'} da sala de exposição`}
         </span>
       </span>
     </div>

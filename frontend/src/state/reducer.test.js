@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { MEDIA_MINIMA, desempenhoDoDia, diaEncerrado, estadoInicial, migrar, reducer } from './reducer.js';
 import { avaliar } from '../lib/avaliacao.js';
-import { chegarAgora } from './testeAjuda.js';
+import { chegarAgora, chegarFilaAgora } from './testeAjuda.js';
 import { MODELOS, TOTAL_PEDACOS, despesaDoDia, modeloPorId, pedidosNoDia, precoPedaco } from '../data/pedidos.js';
 
-const rodar = (state, ...acoes) => acoes.reduce(reducer, state);
+// (na campanha, o próximo pedido da fila chega na hora: chegarFilaAgora)
+const rodar = (state, ...acoes) => acoes.reduce((s, a) => chegarFilaAgora(reducer(s, a)), state);
 const ticks = (state, n) => rodar(state, ...Array.from({ length: n }, () => ({ type: 'TICK' })));
 
 describe('avaliação', () => {

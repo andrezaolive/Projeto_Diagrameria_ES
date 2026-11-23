@@ -3,6 +3,7 @@ import cadeado from '../assets/ui/icon-cadeado-16.png';
 import lampada from '../assets/ui/icon-dicas-16.png';
 import { Botao, Dinheiro } from '../components/ui.jsx';
 import { DiagramaEstatico } from '../editor/Formas.jsx';
+import ZoomDiagrama from '../components/ZoomDiagrama.jsx';
 import { precoNoExpediente } from '../lib/modificadores.js';
 import { gradeDePedacos, modeloPorId, partesDoModelo, pedacosDoModelo, precoPedaco } from '../data/pedidos.js';
 import { nomeDaParte } from './Resultado.jsx';
@@ -64,7 +65,9 @@ export default function Dicas({ abrirApp }) {
         </div>
       )}
       <div className="dica-imagem">
-        <DiagramaEstatico key={k} diagrama={partes[k].esperado} prefixo={`dc${k}`} />
+        {/* zoom: o diagrama e as tampas ampliam juntos (key: volta ao normal ao trocar de parte) */}
+        <ZoomDiagrama key={k}>
+        <DiagramaEstatico diagrama={partes[k].esperado} prefixo={`dc${k}`} />
         <div
           className={`dica-tampas ${total > 4 ? 'miuda' : ''}`}
           style={{ gridTemplateColumns: `repeat(${grade.colunas}, 1fr)`, gridTemplateRows: `repeat(${grade.linhas}, 1fr)` }}
@@ -80,6 +83,7 @@ export default function Dicas({ abrirApp }) {
             ),
           )}
         </div>
+        </ZoomDiagrama>
       </div>
 
       <p className="dica-rodape">

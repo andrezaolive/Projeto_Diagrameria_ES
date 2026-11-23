@@ -8,6 +8,7 @@ import ResumoDia from './ResumoDia.jsx';
 import { Botao, Dinheiro, Modal, formatarReais } from '../components/ui.jsx';
 import { useGame } from '../state/GameContext.jsx';
 import { DIAS_CAMPANHA, MEDIA_MINIMA, VIDAS_INFINITO, nomeDoDia, partidaEncerrada, temRelogio } from '../state/reducer.js';
+import { dataDoDia } from '../lib/dificuldade.js';
 import { sfx } from '../lib/sfx.js';
 import { FADE_IN_JOGO, pararCafe, tocarCafe, tocarMusica } from '../lib/musica.js';
 import { ALEATORIA, MUSICAS_CAFE, faixaInicial, faixaPorId, sortearFaixa } from '../data/musicas.js';
@@ -19,7 +20,7 @@ import { FolhaCalendario } from './Calendario.jsx';
 import EfeitoCafe from '../components/EfeitoCafe.jsx';
 import VelocidadeCafe from '../components/VelocidadeCafe.jsx';
 import Coracoes from '../components/Coracoes.jsx';
-import EventoAleatorio, { BloqueioEvento, QuedaDeEnergia } from './EventoAleatorio.jsx';
+import EventoAleatorio, { BloqueioEvento, Cansaco, QuedaDeEnergia, Sono } from './EventoAleatorio.jsx';
 import './jogo.css';
 
 // Fases: escritorio -> entrando (zoom no monitor) -> computador -> saindo -> escritorio
@@ -50,13 +51,16 @@ export default function Jogo({ onMenu, onCalendario }) {
     const f = faixaPorId(faixa);
     if (f) tocarMusica(f.url, { loop: f.loop, excessoDb: f.excessoDb, fadeIn: FADE_IN_JOGO });
   }, [faixa]);
-  // Café fazendo efeito: toca a música do tipo bebido (a de fundo fica muda até o efeito acabar)
-  const tipoCafe = state.cafe.efeito?.tipo ?? null;
+  // Café fazendo efeito: toca uma das 3 músicas de café, sorteada a cada vez que o efeito começa,
+  // qualquer que seja o tipo bebido (a de fundo fica muda até o efeito acabar). Beber outro café
+  // com o efeito ainda valendo não troca a música.
+  const comCafe = Boolean(state.cafe.efeito);
   useEffect(() => {
-    const m = MUSICAS_CAFE[tipoCafe];
-    if (m) tocarCafe(m.url, { loop: m.loop });
-    else pararCafe();
-  }, [tipoCafe]);
+    if (!comCafe) return void pararCafe();
+    const opcoes = Object.values(MUSICAS_CAFE);
+    const m = opcoes[Math.floor(Math.random() * opcoes.length)];
+    tocarCafe(m.url, { loop: m.loop });
+  }, [comCafe]);
   useEffect(() => () => pararCafe(), []); // saiu do jogo (menu): devolve a música de fundo
   const escolherMusica = (id) => {
     dispatch({ type: 'ESCOLHER_MUSICA', id });
@@ -72,6 +76,13 @@ export default function Jogo({ onMenu, onCalendario }) {
   }, [aviso]);
 
   const noComputador = fase === 'computador' || fase === 'saindo';
+  // escritório parado: já em "escritorio" e passado o zoom de saída (transição de 0,75 s da .camada-escritorio)
+  const [escritorioParado, setEscritorioParado] = useState(true);
+  useEffect(() => {
+    if (fase !== 'escritorio') return void setEscritorioParado(false);
+    const t = setTimeout(() => setEscritorioParado(true), 780);
+    return () => clearTimeout(t);
+  }, [fase]);
   // fim do dia da campanha ou fim de jogo do modo infinito (sem corações); espera fechar o resultado
   const fimDoDia = partidaEncerrada(sessao) && !resultado;
 
@@ -159,7 +170,7 @@ export default function Jogo({ onMenu, onCalendario }) {
     if (pausado || resultado || fimDoDia || !relogio || revendoTutorial || sessao?.evento) return;
     // `sorteio`: chance de chegar um pedido urgente a cada minuto (ver sortearUrgente no reducer)
     // `sorteioEvento`: eventos aleatórios (pane, queda de energia: lib/eventos.js)
-    const t = setInterval(() => dispatch({ type: 'TICK', sorteio: Math.random(), sorteioChegada: Math.random(), sorteioEvento: Math.random(), sorteioRetorno: Math.random() }), 1000);
+    const t = setInterval(() => dispatch({ type: 'TICK', sorteio: Math.random(), sorteioChegada: Math.random(), sorteioEvento: Math.random(), sorteioRetorno: Math.random(), sorteioCansaco: Math.random() }), 1000);
     return () => clearInterval(t);
   }, [pausado, resultado, fimDoDia, relogio, revendoTutorial, sessao?.evento, dispatch]);
 
@@ -256,7 +267,10 @@ export default function Jogo({ onMenu, onCalendario }) {
 
       {/* eventos aleatórios do modo infinito: contratempo (tela bloqueada) e a janela da escolha */}
       <BloqueioEvento noComputador={noComputador} />
-      <QuedaDeEnergia noComputador={noComputador} />
+      {/* os raios só aparecem com o escritório parado (fim do zoom de saída e do deslize entre salas) */}
+      <QuedaDeEnergia noComputador={noComputador} sala={sala} mostrarRaios={escritorioParado && !vindoDe} />
+      <Cansaco />
+      <Sono />
       {!resultado && !fimDoDia && !pausado && <EventoAleatorio />}
 
       {/* modo infinito: corações no topo da tela, no escritório e no computador
@@ -335,7 +349,7 @@ export default function Jogo({ onMenu, onCalendario }) {
       {fimDoDia && !pausado && !vendoResumo && !sessao.fimDeJogo && (
         <Modal titulo="RELATORIO_DO_DIA.TXT" w={620} h={560}>
           <div className="fim-dia">
-            <h3>{sessao.fimDeSemana ? `FIM DO ${nomeDoDia(sessao).toUpperCase().replace('Á', 'A')}!` : `FIM DO DIA ${sessao.dia}!`}</h3>
+            <h3>{`FIM DO ${nomeDoDia(sessao).toUpperCase().replace('Á', 'A')}!`}</h3>
             <div className="fim-dia-linha">
               <span>
                 Entregues: {sessao.pedidos.filter((p) => p.status === 'entregue').length}/{sessao.pedidos.length}
@@ -376,7 +390,7 @@ export default function Jogo({ onMenu, onCalendario }) {
                 {sessao.relatorio?.aprovado ? 'Fim de semana concluído: medalha no calendário!' : `Abaixo de ${MEDIA_MINIMA}%: sem medalha desta vez. O fim de semana não trava a campanha.`}
               </p>
             ) : sessao.relatorio?.aprovado ? (
-              <p className="veredito aprovado">{sessao.dia < DIAS_CAMPANHA ? `Dia ${sessao.dia + 1} liberado!` : 'Campanha concluída!'}</p>
+              <p className="veredito aprovado">{sessao.dia < DIAS_CAMPANHA ? `Dia ${dataDoDia(sessao.dia + 1)} liberado!` : 'Campanha concluída!'}</p>
             ) : (
               <p className="veredito reprovado">Abaixo de {MEDIA_MINIMA}%: o dia {sessao.dia + 1} continua bloqueado. Tente de novo!</p>
             )}
@@ -425,7 +439,7 @@ export default function Jogo({ onMenu, onCalendario }) {
             <h3 id="aviso-saida">Você vai perder o progresso atual</h3>
             <p>
               {sessao.modo === 'campanha'
-                ? `${sessao.fimDeSemana ? `O ${nomeDoDia(sessao).toLowerCase()}` : `O dia ${sessao.dia}`} recomeça do zero na próxima vez: os pedidos e os diagramas deste dia são descartados.`
+                ? `${sessao.fimDeSemana ? `O ${nomeDoDia(sessao).toLowerCase()}` : `O dia ${dataDoDia(sessao.dia)}`} recomeça do zero na próxima vez: os pedidos e os diagramas deste dia são descartados.`
                 : 'Os pedidos e os diagramas desta partida são descartados.'}
             </p>
             <p className="nota-saida">O dinheiro que você já ganhou (e as multas que pagou) continua.</p>
