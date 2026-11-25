@@ -116,7 +116,7 @@ Apps da área de trabalho (janelas estilo desktop retrô, ver `assets_exemplo.pn
   image-rendering: pixelated;
   image-rendering: crisp-edges;
   ```
-- Fonte pixel: `Press Start 2P` para títulos, `VT323` ou `Silkscreen` para textos (Google Fonts).
+- Fonte pixel: `Press Start 2P` para títulos, `VT323` ou `Silkscreen` para textos. As fontes vêm dentro do pacote (`@fontsource/press-start-2p` e `@fontsource/vt323`, importadas em `src/main.jsx`), sem Google Fonts: o jogo funciona offline e em qualquer sistema.
 - Bordas de UI em 9-slice (janelas, botões, campos), cantos chanfrados de 1–2px.
 
 ### Paleta (16 cores — usar somente estas)

@@ -3,6 +3,9 @@ import { createRoot } from 'react-dom/client';
 import App from './App.jsx';
 import ErroDoJogo from './components/ErroDoJogo.jsx';
 import { GameProvider } from './state/GameContext.jsx';
+// fontes do jogo dentro do pacote (@fontsource, licença OFL): funcionam sem internet e sem instalar nada
+import '@fontsource/press-start-2p';
+import '@fontsource/vt323';
 import './styles/global.css';
 import { sortearMascoteFeliz } from './data/mascote.js';
 
