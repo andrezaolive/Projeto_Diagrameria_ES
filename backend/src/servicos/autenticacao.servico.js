@@ -85,4 +85,30 @@ async function perfil(id) {
   return paraResposta(usuario);
 }
 
-module.exports = { cadastrar, entrar, perfil };
+/**
+ * Troca email e/ou senha de quem esta logado. Exige a senha atual: um token
+ * esquecido num computador do laboratorio nao basta para tomar a conta.
+ *
+ * Devolve token novo porque o JWT carrega o email.
+ *
+ * @param {string} id
+ * @param {{senhaAtual: string, email?: string, senha?: string}} dados
+ * @returns {Promise<{usuario: object, token: string}>}
+ */
+async function alterar(id, { senhaAtual, email, senha }) {
+  const usuario = await repositorio.buscarPorId(id);
+  if (!usuario) {
+    throw new ErroNaoEncontrado('Usuario nao encontrado.');
+  }
+
+  if (!(await bcrypt.compare(senhaAtual, usuario.senha_hash))) {
+    throw new ErroDeAutenticacao('Senha atual incorreta.');
+  }
+
+  const senhaHash = senha ? await bcrypt.hash(senha, custoBcrypt) : undefined;
+  const atualizado = await repositorio.atualizar(id, { email, senhaHash });
+
+  return { usuario: paraResposta(atualizado), token: token.gerar(atualizado) };
+}
+
+module.exports = { cadastrar, entrar, perfil, alterar };

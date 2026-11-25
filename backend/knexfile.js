@@ -10,17 +10,11 @@ const ambiente = require('./src/config/ambiente');
  * e o servidor procurar em outro.
  */
 
-const conexao = {
-  host: ambiente.banco.host,
-  port: ambiente.banco.porta,
-  user: ambiente.banco.usuario,
-  password: ambiente.banco.senha,
-  database: ambiente.banco.nome,
-};
+const { conexaoDoBanco } = require('./src/config/conexao');
 
 const base = {
   client: 'pg',
-  connection: conexao,
+  connection: conexaoDoBanco(ambiente.banco),
   migrations: {
     directory: path.join(__dirname, 'db', 'migrations'),
     tableName: 'knex_migrations',
@@ -43,8 +37,19 @@ module.exports = {
     pool: { min: 0, max: 1 },
   },
 
+  // Na Vercel cada instancia da funcao abre o proprio pool, e varias podem
+  // existir ao mesmo tempo: poucas conexoes por instancia, nenhuma presa ociosa.
+  // O pooler do Neon (DATABASE_URL) e quem segura a multidao.
   production: {
     ...base,
-    pool: { min: 2, max: 20 },
+    pool: { min: 0, max: 2 },
+  },
+
+  // So para migrations em producao (`npm run migrate:direto`, scripts/vercel-build.js):
+  // conexao direta, sem o pooler, que nao combina com DDL em transacao.
+  migracao: {
+    ...base,
+    connection: conexaoDoBanco(ambiente.banco, { direta: true }),
+    pool: { min: 0, max: 1 },
   },
 };

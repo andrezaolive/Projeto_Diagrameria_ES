@@ -11,6 +11,8 @@
     "start": "node src/server.js",
     "migrate": "knex migrate:latest",
     "migrate:rollback": "knex migrate:rollback",
+    "migrate:direto": "knex migrate:latest --env migracao",
+    "vercel-build": "node scripts/vercel-build.js",
     "seed": "knex seed:run",
     "test": "jest --runInBand",
     "test:unitarios": "jest testes/unitarios",

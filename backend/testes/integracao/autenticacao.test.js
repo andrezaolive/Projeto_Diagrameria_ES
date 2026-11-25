@@ -258,6 +258,94 @@ describe('GET /api/auth/eu', () => {
   });
 });
 
+describe('PATCH /api/auth/eu', () => {
+  async function entrar() {
+    const resposta = await request(app).post('/api/auth/cadastro').send(NOVO_USUARIO);
+    return `Bearer ${resposta.body.token}`;
+  }
+
+  it('troca a senha com a senha atual certa', async () => {
+    const auth = await entrar();
+    const resposta = await request(app)
+      .patch('/api/auth/eu')
+      .set('Authorization', auth)
+      .send({ senhaAtual: NOVO_USUARIO.senha, senha: 'outra-senha-grande' });
+    expect(resposta.status).toBe(200);
+
+    const comNova = await request(app)
+      .post('/api/auth/login')
+      .send({ email: NOVO_USUARIO.email, senha: 'outra-senha-grande' });
+    expect(comNova.status).toBe(200);
+
+    const comVelha = await request(app)
+      .post('/api/auth/login')
+      .send({ email: NOVO_USUARIO.email, senha: NOVO_USUARIO.senha });
+    expect(comVelha.status).toBe(401);
+  });
+
+  it('troca o email e devolve token novo com ele', async () => {
+    const auth = await entrar();
+    const resposta = await request(app)
+      .patch('/api/auth/eu')
+      .set('Authorization', auth)
+      .send({ senhaAtual: NOVO_USUARIO.senha, email: 'Nova@Diagrameria.dev' });
+
+    expect(resposta.status).toBe(200);
+    expect(resposta.body.usuario.email).toBe('nova@diagrameria.dev');
+
+    const eu = await request(app)
+      .get('/api/auth/eu')
+      .set('Authorization', `Bearer ${resposta.body.token}`);
+    expect(eu.body.usuario.email).toBe('nova@diagrameria.dev');
+  });
+
+  it('recusa senha atual errada', async () => {
+    const auth = await entrar();
+    const resposta = await request(app)
+      .patch('/api/auth/eu')
+      .set('Authorization', auth)
+      .send({ senhaAtual: 'nao-e-essa', senha: 'outra-senha-grande' });
+    expect(resposta.status).toBe(401);
+  });
+
+  it('recusa email que ja e de outra conta', async () => {
+    await request(app)
+      .post('/api/auth/cadastro')
+      .send({ ...NOVO_USUARIO, email: 'outra@diagrameria.dev' });
+    const auth = await entrar();
+
+    const resposta = await request(app)
+      .patch('/api/auth/eu')
+      .set('Authorization', auth)
+      .send({ senhaAtual: NOVO_USUARIO.senha, email: 'outra@diagrameria.dev' });
+    expect(resposta.status).toBe(409);
+    expect(resposta.body.erro.codigo).toBe('EMAIL_EM_USO');
+  });
+
+  it('recusa senha nova curta e pedido sem nada para trocar', async () => {
+    const auth = await entrar();
+
+    const curta = await request(app)
+      .patch('/api/auth/eu')
+      .set('Authorization', auth)
+      .send({ senhaAtual: NOVO_USUARIO.senha, senha: '1234567' });
+    expect(curta.status).toBe(400);
+
+    const vazio = await request(app)
+      .patch('/api/auth/eu')
+      .set('Authorization', auth)
+      .send({ senhaAtual: NOVO_USUARIO.senha });
+    expect(vazio.status).toBe(400);
+  });
+
+  it('exige login', async () => {
+    const resposta = await request(app)
+      .patch('/api/auth/eu')
+      .send({ senhaAtual: NOVO_USUARIO.senha, senha: 'outra-senha-grande' });
+    expect(resposta.status).toBe(401);
+  });
+});
+
 describe('erros gerais da API', () => {
   it('rota inexistente devolve 404 no formato padrao', async () => {
     const resposta = await request(app).get('/api/nao-existe');

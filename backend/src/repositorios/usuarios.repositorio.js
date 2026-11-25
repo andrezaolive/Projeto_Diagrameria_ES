@@ -55,4 +55,28 @@ async function inserir({ nome, email, senhaHash }) {
   }
 }
 
-module.exports = { buscarPorEmail, buscarPorId, inserir, normalizarEmail };
+/**
+ * Troca email e/ou senha. Campo ausente fica como esta.
+ *
+ * @param {string} id
+ * @param {{email?: string, senhaHash?: string}} mudancas
+ * @returns {Promise<object>} a linha atualizada.
+ * @throws {ErroDeConflito} EMAIL_EM_USO se o email novo ja e de outra conta.
+ */
+async function atualizar(id, { email, senhaHash }) {
+  const campos = {};
+  if (email) campos.email = normalizarEmail(email);
+  if (senhaHash) campos.senha_hash = senhaHash;
+
+  try {
+    const [usuario] = await bancoDeDados(TABELA).where({ id }).update(campos).returning('*');
+    return usuario;
+  } catch (erro) {
+    if (erro.code === VIOLACAO_DE_UNICIDADE) {
+      throw new ErroDeConflito('Ja existe uma conta com este email.', 'EMAIL_EM_USO');
+    }
+    throw erro;
+  }
+}
+
+module.exports = { buscarPorEmail, buscarPorId, inserir, atualizar, normalizarEmail };
