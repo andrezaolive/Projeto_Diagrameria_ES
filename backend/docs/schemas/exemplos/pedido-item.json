@@ -1,0 +1,42 @@
+{
+  "versao": "1.0",
+  "classes": [
+    {
+      "id": "c1",
+      "nome": "Pedido",
+      "estereotipo": "classe",
+      "atributos": [
+        { "nome": "numero", "tipo": "int", "visibilidade": "privado" },
+        { "nome": "total", "tipo": "double", "visibilidade": "privado" }
+      ],
+      "metodos": [
+        { "nome": "calcularTotal", "retorno": "double", "visibilidade": "publico" },
+        { "nome": "adicionarItem", "retorno": "void", "visibilidade": "publico" }
+      ],
+      "posicao": { "x": 120, "y": 80 }
+    },
+    {
+      "id": "c2",
+      "nome": "Item",
+      "estereotipo": "classe",
+      "atributos": [
+        { "nome": "descricao", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "quantidade", "tipo": "int", "visibilidade": "privado" },
+        { "nome": "precoUnitario", "tipo": "double", "visibilidade": "privado" }
+      ],
+      "metodos": [{ "nome": "subtotal", "retorno": "double", "visibilidade": "publico" }],
+      "posicao": { "x": 420, "y": 80 }
+    }
+  ],
+  "relacionamentos": [
+    {
+      "id": "r1",
+      "tipo": "composicao",
+      "origem": "c1",
+      "destino": "c2",
+      "multiplicidadeOrigem": "1",
+      "multiplicidadeDestino": "1..*",
+      "rotulo": "contem"
+    }
+  ]
+}

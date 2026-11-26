@@ -1,0 +1,1318 @@
+// Gera os assets em pixel art (PNG) usando só a paleta oficial.
+// Uso: npm run assets
+import { Canvas, rng } from './pixel.mjs';
+import { DESK_Y, ESTANTE, MONITOR, MONITOR_SCREEN, SALA, SCENE_W, SCENE_H } from '../src/art/layout.js';
+import { fileURLToPath } from 'node:url';
+import { existsSync, writeFileSync } from 'node:fs';
+import { albumConquistas, conquistas } from './arte-conquistas.mjs';
+import { avatar } from './arte-avatar.mjs';
+
+const OUT = fileURLToPath(new URL('../src/assets/', import.meta.url));
+const W = SCENE_W, H = SCENE_H;
+
+// ---------------------------------------------------------------- escritório
+function office() {
+  const c = new Canvas(W, H);
+  const r = rng(7);
+
+  // Parede escura com luz do monitor (lofi noturno)
+  c.rect(0, 0, W, DESK_Y, 'night');
+  for (let x = 0; x < W; x += 20) c.vline(x, 0, DESK_Y, 'ink');
+  c.ellipse(160, 80, 150, 90, 'plum', 'dither');
+  c.ellipse(160, 80, 105, 66, 'plum');
+  c.ellipse(160, 80, 70, 48, 'grape', 'dither');
+  for (let x = 0; x < W; x += 20) c.vline(x, 0, DESK_Y, null);
+
+  // Janela com noite chuvosa
+  const wx = 20, wy = 14, ww = 74, wh = 66;
+  c.box(wx, wy, ww, wh, 'ink', 'ink');
+  c.rect(wx + 3, wy + 3, ww - 6, wh - 6, 'ink');
+  c.dither(wx + 3, wy + 3, ww - 6, 20, 'night');
+  for (let i = 0; i < 14; i++) c.px(wx + 4 + r() * (ww - 8), wy + 4 + r() * 30, 'cream');
+  c.circle(wx + 54, wy + 16, 7, 'mist');
+  c.circle(wx + 51, wy + 14, 2, 'lilac');
+  c.px(wx + 57, wy + 19, 'lilac');
+  // prédios
+  let bx = wx + 3;
+  while (bx < wx + ww - 3) {
+    const bw = 6 + Math.floor(r() * 8);
+    const bh = 10 + Math.floor(r() * 22);
+    const right = Math.min(bx + bw, wx + ww - 3);
+    c.rect(bx, wy + wh - 3 - bh, right - bx, bh, r() > 0.5 ? 'plum' : 'night');
+    for (let j = wy + wh - bh; j < wy + wh - 4; j += 3)
+      for (let i = bx + 1; i < right - 1; i += 2) if (r() > 0.6) c.px(i, j, 'butter');
+    bx = right + 1;
+  }
+  // chuva
+  for (let i = 0; i < 40; i++) {
+    const x = wx + 4 + Math.floor(r() * (ww - 8));
+    const y = wy + 4 + Math.floor(r() * (wh - 12));
+    c.vline(x, y, y + 2, 'sky');
+  }
+  // moldura e travessas
+  c.rect(wx, wy, ww, 3, 'grape');
+  c.rect(wx, wy + wh - 3, ww, 3, 'grape');
+  c.rect(wx, wy, 3, wh, 'grape');
+  c.rect(wx + ww - 3, wy, 3, wh, 'grape');
+  c.rect(wx + ww / 2 - 1, wy, 2, wh, 'grape');
+  c.rect(wx, wy + wh / 2 - 1, ww, 2, 'grape');
+  c.hline(wx, wx + ww - 1, wy, 'violet');
+  c.rect(wx - 3, wy + wh, ww + 6, 3, 'violet');
+  c.hline(wx - 3, wx + ww + 2, wy + wh, 'orchid');
+  c.hline(wx - 3, wx + ww + 2, wy + wh + 3, 'ink');
+
+  // Prateleira (os livros e o vasinho em cima dela são objetos: ver officeItems)
+  const sx = ESTANTE.x, sy = ESTANTE.y;
+  c.box(sx, sy, ESTANTE.w, 4, 'violet');
+  c.hline(sx + 1, sx + ESTANTE.w - 2, sy + 1, 'orchid');
+  c.rect(sx + 6, sy + 4, 2, 4, 'ink');
+  c.rect(sx + ESTANTE.w - 8, sy + 4, 2, 4, 'ink');
+
+  // Mesa
+  c.rect(0, DESK_Y, W, H - DESK_Y, 'grape');
+  c.hline(0, W, DESK_Y, 'ink');
+  c.hline(0, W, DESK_Y + 1, 'orchid');
+  c.hline(0, W, DESK_Y + 2, 'violet');
+  for (let i = 0; i < 26; i++) {
+    const gx = Math.floor(r() * W), gy = DESK_Y + 6 + Math.floor(r() * 56);
+    c.hline(gx, gx + 6 + Math.floor(r() * 14), gy, 'plum');
+  }
+  c.ellipse(160, 140, 110, 30, 'violet', 'dither');
+
+  // Monitor CRT
+  const m = MONITOR, s = MONITOR_SCREEN;
+  c.box(m.x - 6, m.y + 6, m.w + 12, m.h - 4, 'violet'); // corpo traseiro
+  c.box(m.x, m.y, m.w, m.h, 'lavender');
+  c.hline(m.x + 1, m.x + m.w - 2, m.y + 1, 'lilac');
+  c.vline(m.x + 1, m.y + 1, m.y + m.h - 2, 'lilac');
+  c.rect(m.x + m.w - 4, m.y + 2, 3, m.h - 3, 'orchid');
+  c.rect(m.x + 2, m.y + m.h - 4, m.w - 3, 3, 'orchid');
+  c.box(s.x - 4, s.y - 3, s.w + 8, s.h + 6, 'violet');
+  c.rect(s.x, s.y, s.w, s.h, 'lilac');
+  c.dither(s.x, s.y, s.w, s.h, 'mist');
+  for (let j = s.y; j < s.y + s.h; j += 2) c.hline(s.x, s.x + s.w - 1, j, 'lilac');
+  // mini diagrama na tela
+  c.box(s.x + 8, s.y + 8, 14, 10, 'cream');
+  c.box(s.x + 40, s.y + 6, 16, 10, 'cream');
+  c.box(s.x + 26, s.y + 30, 16, 10, 'cream');
+  c.line(s.x + 22, s.y + 13, s.x + 40, s.y + 11, 'grape');
+  c.line(s.x + 15, s.y + 18, s.x + 28, s.y + 30, 'grape');
+  c.line(s.x + 48, s.y + 16, s.x + 40, s.y + 30, 'grape');
+  c.px(s.x + 39, s.y + 10, 'ink'); c.px(s.x + 39, s.y + 12, 'ink');
+  // cantos arredondados da tela
+  for (const [cx, cy] of [[s.x, s.y], [s.x + s.w - 1, s.y], [s.x, s.y + s.h - 1], [s.x + s.w - 1, s.y + s.h - 1]])
+    c.px(cx, cy, 'violet');
+  c.rect(m.x + m.w - 14, m.y + m.h - 9, 3, 2, 'mint');
+  c.hline(m.x + 8, m.x + 30, m.y + m.h - 8, 'violet');
+  // suporte
+  c.box(m.x + 30, m.y + m.h - 1, 28, 7, 'violet');
+  c.box(m.x + 20, m.y + m.h + 5, 48, 4, 'orchid');
+
+  // Teclado
+  const kx = 112, ky = 132;
+  c.box(kx, ky, 96, 18, 'lavender');
+  c.rect(kx + 1, ky + 15, 94, 2, 'orchid');
+  for (let row = 0; row < 3; row++)
+    for (let col = 0; col < 15; col++) {
+      const px = kx + 3 + col * 6 + (row % 2) * 2;
+      if (px > kx + 90) continue;
+      c.rect(px, ky + 2 + row * 4, 5, 3, 'mist');
+      c.hline(px, px + 4, ky + 4 + row * 4, 'lilac');
+    }
+  c.rect(kx + 30, ky + 14, 34, 2, 'mist');
+  // Mouse e fio
+  c.box(216, 136, 10, 14, 'lavender');
+  c.vline(221, 137, 141, 'grape');
+  c.line(221, 136, 214, 124, 'ink');
+  c.line(214, 124, 204, 116, 'ink');
+
+  c.save(OUT + 'scenes/office-320x180.png');
+}
+
+// ------------------------------------------- objetos móveis do escritório
+// Cada objeto é desenhado nas coordenadas da cena, recortado e salvo como sprite.
+// A posição original vira a posição padrão; a zona define onde ele pode ser arrastado.
+const OBJETOS = {};
+// extra: metadados a mais
+//   elevavel: pode subir em superfícies altas (monitor, estante) e em cima de objetos empilháveis
+//   empilhavel: outros objetos podem ficar em cima dele (livros)
+//   rotulo: nome exibido no inventário (itens da loja usam o nome da loja)
+//   variante: sprite alternativo de outro objeto (ex.: livro deitado); não é um objeto próprio
+// `arquivo`: onde o PNG fica (padrão: assets/objetos/<id>.png). Com `preservar`, um PNG que já existe
+// (editado à mão) não é sobrescrito: vale o desenho do arquivo, com a base e o centro do gerado.
+function objeto(id, zona, draw, extra = {}, { arquivo = OUT + `objetos/${id}.png`, preservar = false } = {}) {
+  const c = new Canvas(W, H);
+  draw(c);
+  let { sprite, x, y, w, h } = c.crop();
+  if (preservar && existsSync(arquivo)) {
+    const lido = Canvas.ler(arquivo);
+    x += Math.round((w - lido.w) / 2);
+    y += h - lido.h;
+    [sprite, w, h] = [lido, lido.w, lido.h];
+  } else sprite.save(arquivo);
+  OBJETOS[id] = { x, y, w, h, zona, ...extra };
+  return { sprite, x, y, w, h };
+}
+const overlay = (id, draw, zona = 'mesa') => objeto(id, zona, draw);
+
+function officeItems() {
+  // Livros da estante: cada um é um objeto, em pé (padrão) ou deitado (variante "-deitado")
+  const livros = [
+    ['livro-rosa', 'Livro rosa', 5, 14, 'blush'],
+    ['livro-azul', 'Livro azul', 4, 16, 'sky'],
+    ['livro-menta', 'Livro menta', 6, 13, 'mint'],
+    ['livro-amarelo', 'Livro amarelo', 5, 17, 'butter'],
+    ['livro-lilas', 'Livro lilás', 4, 15, 'orchid'],
+    ['livro-vermelho', 'Livro vermelho', 6, 12, 'rose'],
+    ['livro-lavanda', 'Livro lavanda', 5, 16, 'lilac'],
+    ['livro-pessego', 'Livro pêssego', 5, 15, 'peach'],
+  ];
+  let lx = ESTANTE.x + 3;
+  for (const [id, rotulo, bw, bh, col] of livros) {
+    const x0 = lx;
+    objeto(id, 'mesa', (c) => {
+      c.box(x0, ESTANTE.y - bh, bw, bh, col);
+      c.hline(x0 + 1, x0 + bw - 2, ESTANTE.y - bh + 3, 'cream');
+    }, { elevavel: true, empilhavel: true, apoio: 'estante', rotulo });
+    // deitado: largura e altura trocadas, lombada (faixa clara) na ponta esquerda
+    objeto(`${id}-deitado`, 'mesa', (c) => {
+      c.box(x0, 100, bh, bw, col);
+      c.vline(x0 + 3, 101, 100 + bw - 2, 'cream');
+    }, { elevavel: true, empilhavel: true, variante: true });
+    lx += bw;
+  }
+  // vasinho com cacto na ponta da estante
+  objeto('vaso-estante', 'mesa', (c) => {
+    const vx = ESTANTE.x + 62, vy = ESTANTE.y;
+    c.box(vx, vy - 9, 8, 9, 'blush');
+    c.rect(vx + 2, vy - 14, 1, 5, 'mint');
+    c.rect(vx + 4, vy - 16, 1, 7, 'mint');
+  }, { elevavel: true, apoio: 'estante', rotulo: 'Cacto da estante' });
+
+  // Notas adesivas ao redor do monitor: objetos de parede, arrastáveis
+  const notas = [['postit-amarelo', 100, 46, 'butter'], ['postit-rosa', 96, 62, 'blush'], ['postit-menta', 210, 44, 'mint'], ['postit-azul', 212, 64, 'sky']];
+  for (const [id, nx, ny, col] of notas)
+    objeto(id, 'parede', (c) => {
+      c.box(nx, ny, 10, 10, col);
+      c.hline(nx + 2, nx + 7, ny + 3, 'grape');
+      c.hline(nx + 2, nx + 6, ny + 5, 'grape');
+      c.px(nx + 4, ny, 'rose');
+    }, { rotulo: `Post-it ${{ butter: 'amarelo', blush: 'rosa', mint: 'menta', sky: 'azul' }[col]}` });
+
+  // Caneca: vem vazia; enche na cafeteira (variantes caneca-cheia-<tipo>, mesmo recorte; a cor do café
+  // mostra a força). O vapor é um sprite à parte, desenhado por cima da caneca cheia no jogo.
+  // Posição inicial: na mesa, à direita do calendário (canto do sprite em 77,116).
+  // O desenho foi feito em 240,126; KX/KY deslocam caneca, variantes e vapor juntos.
+  const KX = 77 - 240, KY = 116 - 126;
+  const desenharCaneca = (c, topo, fundo, crema) => {
+    c.box(KX + 240, KY + 126, 12, 14, 'blush');
+    c.hline(KX + 241, KX + 250, KY + 127, topo);
+    c.hline(KX + 241, KX + 250, KY + 128, fundo);
+    if (crema) for (const x of [243, 246, 248]) c.px(KX + x, KY + 127, crema);
+    c.box(KX + 251, KY + 129, 5, 7, 'blush');
+    c.rect(KX + 252, KY + 130, 3, 5, 'grape');
+    c.vline(KX + 243, KY + 132, KY + 136, 'cream');
+  };
+  objeto('caneca', 'mesa', (c) => desenharCaneca(c, 'plum', 'grape'), { elevavel: true, xicara: true, rotulo: 'Caneca' });
+  const CAFES = { descafeinado: ['peach', 'peach', 'cream'], normal: ['plum', 'plum', 'peach'], forte: ['night', 'night', 'plum'] };
+  for (const [tipo, [topo, fundo, crema]] of Object.entries(CAFES))
+    objeto(`caneca-cheia-${tipo}`, 'mesa', (c) => desenharCaneca(c, topo, fundo, crema), { variante: true });
+  objeto('vapor', 'mesa', (c) => {
+    for (let j = 0; j < 7; j++) {
+      c.px(KX + 245 + (j % 2), KY + 124 - j * 1.5, 'mist');
+      c.px(KX + 249 - (j % 2), KY + 122 - j * 1.4, 'lilac');
+    }
+  }, { variante: true });
+
+  // Cafeteira de cápsula (item da loja): a caneca encaixa na bandeja, debaixo do bico
+  // (`bandeja`: x da caneca e base dela, relativos ao canto do sprite). Os 3 botões da coluna têm as
+  // cores das cápsulas (descafeinado, café, extra forte).
+  const CF = { x: 252, y: 101 }; // na mesa, à direita (base em 131)
+  objeto('cafeteira', 'mesa', (c) => {
+    c.box(CF.x + 15, CF.y + 4, 9, 24, 'violet'); // coluna
+    c.vline(CF.x + 16, CF.y + 9, CF.y + 25, 'orchid');
+    c.px(CF.x + 19, CF.y + 11, 'mint');
+    c.px(CF.x + 19, CF.y + 14, 'butter');
+    c.px(CF.x + 19, CF.y + 17, 'rose');
+    c.box(CF.x, CF.y + 26, 24, 4, 'grape'); // base com a bandeja
+    c.hline(CF.x + 2, CF.x + 13, CF.y + 27, 'lavender');
+    c.box(CF.x, CF.y, 24, 9, 'violet'); // cabeça
+    c.hline(CF.x + 1, CF.x + 22, CF.y + 1, 'orchid');
+    c.hline(CF.x + 3, CF.x + 10, CF.y + 4, 'grape'); // tampa da cápsula
+    c.rect(CF.x + 6, CF.y + 9, 3, 2, 'ink'); // bico
+  }, { bandeja: { x: 2, base: 26 }, rotulo: 'Cafeteira' });
+
+  objeto('papeis', 'mesa', (c) => {
+    c.box(36, 140, 30, 20, 'mist');
+    c.box(40, 136, 30, 20, 'cream');
+    for (let j = 0; j < 4; j++) c.hline(44, 60 - j * 2, 141 + j * 4, 'lavender');
+    c.line(56, 162, 76, 154, 'butter');
+    c.line(56, 163, 76, 155, 'peach');
+    c.px(55, 163, 'ink');
+    c.px(77, 154, 'rose');
+  }, { rotulo: 'Papéis' });
+
+  // Calendário de mesa (vem no escritório): clicar abre o calendário da campanha (Escritorio.jsx)
+  objeto('calendario-mesa', 'mesa', (c) => {
+    // posição inicial: canto esquerdo da mesa (canto do sprite, com as argolas, em 35,108)
+    const x = 35, y = 110, w = 22, h = 20;
+    c.rect(x + 2, y + h, w - 4, 1, 'grape'); // pezinho de apoio, atrás da folha
+    c.box(x, y, w, h, 'cream');
+    c.rect(x + 1, y + 1, w - 2, 5, 'rose'); // cabeçalho do mês
+    c.hline(x + 1, x + w - 2, y + 6, 'ink');
+    c.hline(x + 7, x + w - 8, y + 3, 'cream');
+    // argolas
+    for (const ax of [x + 5, x + w - 6]) { c.rect(ax, y - 2, 1, 3, 'ink'); c.px(ax, y - 2, 'lavender'); }
+    // dias: grade de pontinhos, com o dia de hoje marcado
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 5; i++) c.px(x + 3 + i * 4, y + 9 + j * 3, j === 0 && i < 2 ? 'mint' : 'grape');
+    c.rect(x + 10, y + 11, 3, 3, 'butter');
+    c.px(x + 11, y + 12, 'rose');
+  }, { rotulo: 'Calendário' });
+
+  overlay('planta', (c) => {
+    const r = rng(3);
+    // folhas
+    const leaves = [[-14, -40], [-6, -48], [4, -44], [12, -36], [-18, -26], [16, -24], [0, -54]];
+    for (const [dx, dy] of leaves) {
+      const tx = 290 + dx, ty = 130 + dy;
+      c.line(290, 126, tx, ty, 'grape');
+      c.ellipse(tx, ty, 5, 3, 'ink');
+      c.ellipse(tx, ty, 4, 2, 'mint');
+      c.px(tx - 1, ty - 1, 'cream');
+      if (r() > 0.5) c.px(tx + 2, ty + 1, 'sky');
+    }
+    c.box(280, 124, 20, 22, 'rose');
+    c.rect(281, 125, 18, 3, 'blush');
+    c.vline(283, 129, 142, 'blush');
+    c.rect(280, 144, 20, 2, 'ink');
+  });
+
+  objeto('gato', 'mesa', (c) => {
+    // gato dormindo enrolado ao lado do teclado
+    const cx = 86, cy = 128;
+    c.ellipse(cx, cy, 16, 9, 'ink');
+    c.ellipse(cx, cy, 15, 8, 'orchid');
+    c.ellipse(cx + 2, cy + 2, 11, 5, 'lavender', 'dither');
+    c.ellipse(cx - 11, cy - 3, 7, 6, 'ink');
+    c.ellipse(cx - 11, cy - 3, 6, 5, 'orchid');
+    c.line(cx - 16, cy - 7, cx - 15, cy - 12, 'ink');
+    c.line(cx - 15, cy - 12, cx - 12, cy - 8, 'ink');
+    c.px(cx - 15, cy - 9, 'blush');
+    c.line(cx - 9, cy - 8, cx - 7, cy - 12, 'ink');
+    c.line(cx - 7, cy - 12, cx - 5, cy - 7, 'ink');
+    c.px(cx - 7, cy - 9, 'blush');
+    c.hline(cx - 15, cx - 13, cy - 3, 'ink');
+    c.hline(cx - 10, cx - 8, cy - 3, 'ink');
+    c.px(cx - 12, cy - 1, 'rose');
+    // rabo
+    c.line(cx + 14, cy + 2, cx + 18, cy + 8, 'ink');
+    c.line(cx + 18, cy + 8, cx + 8, cy + 9, 'ink');
+    c.line(cx + 13, cy + 3, cx + 16, cy + 7, 'orchid');
+    // zzz
+    c.sprite(['kkk', '..k', '.k.', 'kkk'], cx - 22, cy - 22);
+    c.sprite(['kk', '.k', 'kk'], cx - 26, cy - 28);
+  }, { elevavel: true });
+
+  objeto('poster', 'parede', (c) => {
+    const x = 238, y = 46, w = 52, h = 60;
+    c.box(x, y, w, h, 'mist');
+    c.rect(x + 3, y + 3, w - 6, 34, 'plum');
+    c.rect(x + 3, y + 3, w - 6, 8, 'grape');
+    c.dither(x + 3, y + 11, w - 6, 6, 'violet');
+    c.rect(x + 3, y + 17, w - 6, 8, 'orchid');
+    c.dither(x + 3, y + 25, w - 6, 4, 'blush');
+    c.rect(x + 3, y + 29, w - 6, 8, 'blush');
+    c.circle(x + w / 2, y + 31, 10, 'butter');
+    c.circle(x + w / 2, y + 31, 10, 'peach', 'dither');
+    for (let j = y + 28; j < y + 38; j += 3) c.hline(x + 10, x + w - 11, j, 'blush');
+    c.rect(x + 3, y + 37, w - 6, 2, 'grape');
+    c.hline(x + 8, x + w - 9, y + 44, 'grape');
+    c.hline(x + 12, x + w - 13, y + 48, 'lavender');
+    c.hline(x + 14, x + w - 15, y + 52, 'lavender');
+    c.px(x + w / 2, y + 1, 'rose');
+    c.px(x + w / 2, y + 2, 'rose');
+  });
+
+  objeto('luzinhas', 'fixo', (c) => {
+    const cols = ['butter', 'blush', 'sky', 'mint'];
+    let prev = null, n = 0;
+    for (let x = 0; x <= W; x += 2) {
+      const y = 6 + Math.round(Math.abs(Math.sin((x / W) * Math.PI * 3)) * 10);
+      if (prev) c.line(prev[0], prev[1], x, y, 'ink');
+      prev = [x, y];
+      if (x % 16 === 8) {
+        const col = cols[n++ % cols.length];
+        c.circle(x, y + 3, 4, col, 'sparse');
+        c.rect(x - 1, y + 1, 3, 4, col);
+        c.px(x, y + 1, 'cream');
+      }
+    }
+  });
+
+  overlay('abajur', (c) => {
+    const X = -70; // canto esquerdo da mesa (brilho inteiro dentro da cena)
+    // luz no chão da mesa
+    c.ellipse(X + 108, 132, 34, 10, 'peach', 'sparse');
+    c.ellipse(X + 108, 132, 22, 6, 'peach', 'dither');
+    c.box(X + 96, 140, 22, 5, 'violet');
+    c.line(X + 106, 140, X + 100, 118, 'ink');
+    c.line(X + 107, 140, X + 101, 118, 'ink');
+    c.line(X + 100, 118, X + 108, 104, 'ink');
+    c.line(X + 101, 118, X + 109, 104, 'ink');
+    // cúpula: trapézio estreito em cima (x 104–116, y 95) e largo embaixo (x 96–124, y 105).
+    // Cada linha do preenchimento acompanha as laterais, abrindo 0,8px por linha para baixo.
+    for (let k = 1; k <= 9; k++) {
+      const esq = Math.round(X + 104 - 0.8 * k) + 1;
+      const dir = Math.round(X + 116 + 0.8 * k) - 1;
+      c.hline(esq, dir, 95 + k, 'butter');
+      c.hline(dir - 1, dir, 95 + k, 'peach'); // sombra do lado direito, longe do abajur da cena
+    }
+    c.hline(X + 96, X + 124, 105, 'ink');
+    c.line(X + 96, 105, X + 104, 95, 'ink');
+    c.line(X + 124, 105, X + 116, 95, 'ink');
+    c.hline(X + 104, X + 116, 95, 'ink');
+    c.dither(X + 100, 106, 22, 6, 'peach');
+  });
+
+  // ---------- novos itens de mesa
+  objeto('pato', 'mesa', (c) => {
+    c.ellipse(208, 166, 9, 6, 'ink');
+    c.ellipse(208, 166, 8, 5, 'butter');
+    c.hline(202, 213, 170, 'peach');
+    c.circle(202, 158, 5, 'ink');
+    c.circle(202, 158, 4, 'butter');
+    c.rect(195, 158, 4, 2, 'peach');
+    c.hline(195, 198, 160, 'rose');
+    c.px(201, 157, 'ink');
+    c.px(203, 156, 'cream');
+    c.line(207, 165, 212, 163, 'peach');
+    c.px(216, 162, 'ink');
+    c.px(216, 163, 'butter');
+  }, { elevavel: true });
+
+  objeto('cacto', 'mesa', (c) => {
+    c.box(262, 162, 14, 11, 'peach');
+    c.rect(263, 163, 12, 2, 'butter');
+    c.hline(262, 275, 165, 'ink');
+    c.box(266, 146, 7, 17, 'mint');
+    c.box(261, 151, 6, 4, 'mint');
+    c.box(261, 148, 3, 6, 'mint');
+    c.box(272, 153, 6, 4, 'mint');
+    c.box(275, 150, 3, 6, 'mint');
+    c.vline(268, 148, 160, 'cream');
+    for (const [x, y] of [[270, 149], [270, 154], [270, 158], [262, 150], [276, 152]]) c.px(x, y, 'ink');
+    c.rect(268, 144, 3, 2, 'blush');
+    c.px(269, 143, 'rose');
+  }, { elevavel: true });
+
+  objeto('radio', 'mesa', (c) => {
+    // toca-fitas lofi com notinhas
+    c.line(178, 156, 186, 144, 'ink');
+    c.px(186, 143, 'rose');
+    c.box(150, 156, 36, 20, 'grape');
+    c.hline(151, 184, 157, 'violet');
+    c.box(156, 152, 24, 5, 'violet');
+    c.rect(158, 153, 20, 3, 'night');
+    for (const cx of [157, 179]) {
+      c.circle(cx, 167, 6, 'ink');
+      c.circle(cx, 167, 5, 'lavender');
+      c.circle(cx, 167, 5, 'violet', 'dither');
+      c.px(cx, 167, 'ink');
+    }
+    c.box(163, 161, 10, 9, 'mist');
+    c.px(166, 165, 'ink');
+    c.px(170, 165, 'ink');
+    c.hline(165, 171, 163, 'lavender');
+    c.rect(164, 172, 2, 2, 'butter');
+    c.rect(168, 172, 2, 2, 'rose');
+    c.rect(172, 172, 2, 2, 'mint');
+    c.sprite(['.kk', '.kk', '.k.', 'kk.', 'kk.'], 148, 141);
+    c.sprite(['.kkk', '.k.k', 'kk.k', 'kkkk'], 190, 136);
+  }, { elevavel: true });
+
+  // Pilha de livros (item da loja): a imagem inteira só aparece na loja/inventário; na mesa, cada
+  // livro é um objeto próprio, deitado, e eles vêm empilhados (sobrePadrao = o livro de baixo)
+  objeto('livros', 'mesa', (c) => {
+    c.box(6, 168, 32, 7, 'sky');
+    c.vline(35, 169, 173, 'mist');
+    c.box(9, 161, 28, 7, 'blush');
+    c.vline(34, 162, 166, 'mist');
+    c.hline(12, 20, 164, 'cream');
+    c.box(7, 154, 26, 7, 'mint');
+    c.vline(30, 155, 159, 'mist');
+    c.box(12, 147, 20, 7, 'butter');
+    c.vline(29, 148, 152, 'mist');
+    c.hline(14, 22, 150, 'peach');
+  }, { soLoja: true, elevavel: true });
+  const pilha = [
+    ['pilha-azul', 'Livro azul (pilha)', 6, 168, 32, 'sky', 35, null],
+    ['pilha-rosa', 'Livro rosa (pilha)', 9, 161, 28, 'blush', 34, 'pilha-azul'],
+    ['pilha-menta', 'Livro menta (pilha)', 7, 154, 26, 'mint', 30, 'pilha-rosa'],
+    ['pilha-amarelo', 'Livro amarelo (pilha)', 12, 147, 20, 'butter', 29, 'pilha-menta'],
+  ];
+  for (const [id, rotulo, bx, by, bw, col, lomb, sobre] of pilha)
+    objeto(id, 'mesa', (c) => {
+      c.box(bx, by, bw, 7, col);
+      c.vline(lomb, by + 1, by + 5, 'mist');
+      c.hline(bx + 3, bx + Math.min(10, bw - 6), by + 3, 'cream');
+    }, { elevavel: true, empilhavel: true, rotulo, grupo: 'obj-livros', ...(sobre ? { sobrePadrao: sobre } : {}) });
+
+  // Pote de canetas (item da loja): o pote e 10 canetas, cada uma um objeto próprio que fica DENTRO
+  // do pote (porta: o pote guarda coisas em pé, com a ponta escondida). A imagem do conjunto
+  // ('canetas', soLoja) aparece na loja, no inventário e enquanto o pote cheio está na mão.
+  const POTE = { x: 262, y: 144, w: 15, h: 14 };
+  const CANETAS = [
+    ['branco', 'Caneta branca'], ['preto', 'Caneta preta'], ['azul', 'Caneta azul'], ['roxo', 'Caneta roxa'],
+    ['vermelho', 'Caneta vermelha'], ['rosa', 'Caneta rosa'], ['laranja', 'Caneta laranja'],
+    ['amarelo', 'Caneta amarela'], ['verde', 'Caneta verde'], ['ciano', 'Caneta ciano'],
+  ];
+  // leque inicial: todas com a base no centro do fundo do pote, de 10° a 30° para cada lado
+  // (as mesmas regras de quando o jogador devolve uma caneta; assim nenhuma vaza pelas laterais)
+  const ANGULOS = [-30, -26, -21, -16, -11, 11, 16, 21, 26, 30];
+  const FUNDO_POTE = 11; // a ponta da caneta fica 11px abaixo da boca do pote
+  const desenharPote = (c) => {
+    c.box(POTE.x, POTE.y, POTE.w, POTE.h, 'grape');
+    c.rect(POTE.x + 1, POTE.y + 1, POTE.w - 2, 2, 'orchid');
+    c.vline(POTE.x + 3, POTE.y + 4, POTE.y + POTE.h - 3, 'violet');
+  };
+  // caneta sem contorno: no pote elas se sobrepõem, e o contorno escondia as cores
+  const PEN = { w: 3, h: 22 };
+  // cor do pixel (lx, ly) da caneta em pé (0 ≤ lx < PEN.w, 0 ≤ ly < PEN.h)
+  const corDaCaneta = (lx, ly, cor) => {
+    if (ly < 3) return cor === 'preto' ? 'plum' : 'ink'; // tampa
+    if (lx === PEN.w - 1) return cor === 'preto' ? 'night' : 'plum'; // sombra de um lado
+    if (lx === 0 && ly === 5) return cor === 'branco' ? 'lilac' : 'cream'; // brilho
+    return `tinta-${cor}`;
+  };
+  const desenharCaneta = (c, x, y, cor) => {
+    for (let ly = 0; ly < PEN.h; ly++) for (let lx = 0; lx < PEN.w; lx++) c.px(x + lx, y + ly, corDaCaneta(lx, ly, cor));
+  };
+  // a mesma caneta girada `ang` graus em volta do meio da base (como o rotate do CSS no jogo),
+  // por amostragem inversa: cada pixel de destino pega a cor do pixel da caneta reta que cai nele
+  const desenharCanetaGirada = (c, x, y, cor, ang) => {
+    const cx = x + PEN.w / 2, cy = y + PEN.h;
+    const r = (ang * Math.PI) / 180, cos = Math.cos(r), sin = Math.sin(r);
+    for (let j = Math.floor(cy - PEN.h - 2); j <= cy + 2; j++)
+      for (let i = Math.floor(cx - PEN.h); i <= cx + PEN.h; i++) {
+        const dx = i + 0.5 - cx, dy = j + 0.5 - cy;
+        const lx = Math.floor(cx + dx * cos + dy * sin - x), ly = Math.floor(cy - dx * sin + dy * cos - y);
+        if (lx >= 0 && ly >= 0 && lx < PEN.w && ly < PEN.h) c.px(i, j, corDaCaneta(lx, ly, cor));
+      }
+  };
+  // snap no centro inferior: a base de todas fica no meio do fundo do pote
+  const xCaneta = () => POTE.x + Math.round((POTE.w - PEN.w) / 2);
+  objeto('canetas', 'mesa', (c) => {
+    CANETAS.forEach(([cor], i) => desenharCanetaGirada(c, xCaneta(i), POTE.y + FUNDO_POTE - PEN.h, cor, ANGULOS[i]));
+    desenharPote(c);
+  }, { soLoja: true, elevavel: true });
+  objeto('pote-canetas', 'mesa', desenharPote, { elevavel: true, porta: true, fundo: FUNDO_POTE, rotulo: 'Pote de canetas', grupo: 'obj-canetas' });
+  CANETAS.forEach(([cor, rotulo], i) =>
+    objeto(`caneta-${cor}`, 'mesa', (c) => desenharCaneta(c, xCaneta(i), POTE.y + FUNDO_POTE - PEN.h, cor), {
+      elevavel: true,
+      caneta: true,
+      rotulo,
+      tinta: cor,
+      grupo: 'obj-canetas',
+      sobrePadrao: 'pote-canetas',
+      anguloPadrao: ANGULOS[i],
+    }),
+  );
+
+  objeto('fone', 'mesa', (c) => {
+    c.hline(232, 248, 156, 'ink');
+    c.hline(232, 248, 157, 'orchid');
+    c.line(231, 157, 227, 165, 'ink');
+    c.line(249, 157, 253, 165, 'ink');
+    c.box(224, 164, 8, 11, 'orchid');
+    c.rect(225, 165, 2, 9, 'lavender');
+    c.box(248, 164, 8, 11, 'orchid');
+    c.rect(253, 165, 2, 9, 'lavender');
+    c.px(228, 169, 'blush');
+    c.px(252, 169, 'blush');
+  }, { elevavel: true });
+
+  objeto('vela', 'mesa', (c) => {
+    c.circle(116, 156, 9, 'peach', 'sparse');
+    c.box(110, 162, 13, 13, 'lilac');
+    c.rect(111, 165, 11, 9, 'blush');
+    c.hline(111, 121, 164, 'cream');
+    c.vline(116, 158, 162, 'ink');
+    c.rect(115, 155, 3, 3, 'butter');
+    c.px(116, 154, 'peach');
+    c.px(116, 153, 'butter');
+  }, { elevavel: true });
+
+  // ---------- novos itens de parede
+  objeto('relogio', 'parede', (c) => {
+    c.circle(110, 22, 11, 'ink');
+    c.circle(110, 22, 10, 'cream');
+    c.circle(110, 22, 10, 'mist', 'sparse');
+    for (const [dx, dy] of [[0, -8], [8, 0], [0, 8], [-8, 0]]) c.px(110 + dx, 22 + dy, 'grape');
+    c.line(110, 22, 110, 15, 'ink');
+    c.line(110, 22, 115, 24, 'ink');
+    c.px(110, 22, 'rose');
+  });
+
+  objeto('cortica', 'parede', (c) => {
+    c.box(140, 4, 44, 30, 'grape');
+    c.rect(142, 6, 40, 26, 'peach');
+    c.dither(142, 6, 40, 26, 'butter');
+    c.box(145, 9, 12, 11, 'blush');
+    c.box(160, 8, 10, 10, 'sky');
+    c.box(172, 12, 9, 12, 'mint');
+    c.box(147, 22, 16, 8, 'cream');
+    c.hline(149, 159, 25, 'lavender');
+    c.hline(149, 156, 27, 'lavender');
+    c.box(162, 20, 7, 5, 'cream');
+    c.line(165, 25, 167, 29, 'ink');
+    for (const [x, y] of [[151, 9], [165, 8], [176, 12], [155, 22]]) c.px(x, y, 'rose');
+  });
+
+  objeto('neon', 'parede', (c) => {
+    // lua crescente em neon
+    const cx = 302, cy = 70;
+    c.circle(cx, cy, 14, 'rose', 'sparse');
+    for (let y = cy - 11; y <= cy + 11; y++)
+      for (let x = cx - 11; x <= cx + 11; x++) {
+        const fora = (x - cx) ** 2 + (y - cy) ** 2 <= 121;
+        const dentro = (x - cx - 6) ** 2 + (y - cy + 4) ** 2 <= 100;
+        if (fora && !dentro) c.px(x, y, (x + y) % 3 ? 'blush' : 'cream');
+      }
+    c.px(cx + 8, cy + 8, 'butter');
+    c.px(cx + 9, cy + 7, 'butter');
+    c.px(cx + 10, cy + 8, 'butter');
+    c.px(cx + 9, cy + 9, 'butter');
+  });
+}
+
+function wallpaperAurora() {
+  const c = new Canvas(W, H);
+  const r = rng(41);
+  bands(c, 0, ['ink', 'night', 'plum'], 40);
+  c.rect(0, 120, W, 60, 'night');
+  for (let i = 0; i < 70; i++) c.px(r() * W, r() * 100, r() > 0.8 ? 'butter' : 'cream');
+  // cortinas da aurora
+  const cores = ['mint', 'sky', 'lilac'];
+  cores.forEach((col, k) => {
+    for (let x = 0; x < W; x++) {
+      const topo = 20 + k * 10 + Math.sin(x / 22 + k) * 12 + Math.sin(x / 7) * 3;
+      const alt = 18 + Math.sin(x / 13 + k * 2) * 8;
+      for (let y = topo; y < topo + alt; y++) if ((x + Math.round(y)) % (y < topo + alt / 2 ? 1 : 2) === 0) c.px(x, y, col);
+    }
+  });
+  // montanhas nevadas
+  for (const [px, alt, larg] of [[40, 50, 70], [130, 70, 90], [230, 56, 80], [300, 44, 60]]) {
+    for (let x = px - larg; x <= px + larg; x++) {
+      const y = 120 - alt * (1 - Math.abs(x - px) / larg);
+      c.vline(x, y, 120, 'grape');
+      if (y < 120 - alt * 0.6) c.vline(x, y, 120 - alt * 0.6, 'mist');
+    }
+  }
+  // lago com reflexo
+  for (let j = 124; j < H; j += 3)
+    for (let x = (j * 7) % 11; x < W; x += 9 + Math.floor(r() * 8)) c.hline(x, x + 3, j, ['mint', 'sky', 'lilac'][j % 3]);
+  c.save(OUT + 'scenes/wallpaper-aurora-320x180.png');
+}
+
+
+// ------------------------------------------- pôsteres extras (lojinha → Parede)
+// Tema pastel / vaporwave / lo-fi. Posições padrão nos vãos livres da parede (abaixo da janela
+// e no canto direito); o jogador arrasta para onde quiser.
+function postersExtras() {
+  // sol listrado sobre a grade neon, com uma palmeira
+  objeto('poster-vaporwave', 'parede', (c) => {
+    const x = 20, y = 87, w = 36, h = 28;
+    c.box(x, y, w, h, 'mist');
+    const ix = x + 2, iy = y + 2, iw = w - 4;
+    c.rect(ix, iy, iw, 4, 'plum');
+    c.rect(ix, iy + 4, iw, 4, 'grape');
+    c.dither(ix, iy + 7, iw, 2, 'orchid');
+    c.rect(ix, iy + 9, iw, 5, 'orchid');
+    c.dither(ix, iy + 13, iw, 2, 'blush');
+    // sol
+    const sx = x + 18, sy = y + 14;
+    for (let j = sy - 7; j < sy; j++) {
+      if (j === sy - 2 || j === sy - 4) continue;
+      const half = Math.floor(Math.sqrt(49 - (j - sy) ** 2));
+      c.hline(sx - half, sx + half, j, j < sy - 4 ? 'butter' : 'peach');
+    }
+    // chão com a grade
+    c.rect(ix, sy, iw, y + h - 2 - sy, 'night');
+    for (const d of [1, 3, 6, 10]) if (sy + d < y + h - 2) c.hline(ix, ix + iw - 1, sy + d, 'orchid');
+    for (let k = -2; k <= 2; k++) c.line(sx, sy, sx + k * 7, y + h - 3, 'orchid');
+    // palmeira
+    const px = x + 7;
+    c.vline(px, sy - 6, sy - 1, 'ink');
+    c.px(px + 1, sy - 3, 'ink');
+    for (const [dx, dy] of [[-4, 2], [4, 2], [-3, -2], [3, -2]]) c.line(px, sy - 6, px + dx, sy - 6 + dy, 'ink');
+    c.px(sx, y + 1, 'rose');
+  }, { rotulo: 'Pôster vaporwave' });
+
+  // fita cassete lo-fi
+  objeto('poster-fita', 'parede', (c) => {
+    const x = 60, y = 88, w = 34, h = 26;
+    c.box(x, y, w, h, 'lilac');
+    c.dither(x + 1, y + 1, w - 2, 3, 'mist');
+    c.box(x + 4, y + 5, 26, 16, 'peach');
+    c.rect(x + 7, y + 7, 20, 5, 'cream');
+    c.hline(x + 9, x + 24, y + 9, 'blush');
+    c.rect(x + 10, y + 13, 14, 4, 'night');
+    c.rect(x + 11, y + 14, 2, 2, 'cream');
+    c.rect(x + 21, y + 14, 2, 2, 'cream');
+    c.hline(x + 9, x + 25, y + 19, 'grape');
+    // notinhas
+    c.sprite(['.k', '.k', 'kk'], x + 29, y + 1);
+    c.px(x + 3, y + 22, 'rose');
+    c.px(x + w / 2, y + 1, 'rose');
+  }, { rotulo: 'Pôster fita cassete' });
+
+  // gatinho na frente da lua
+  objeto('poster-gato', 'parede', (c) => {
+    const x = 294, y = 86, w = 24, h = 30;
+    c.box(x, y, w, h, 'plum');
+    c.dither(x + 1, y + 1, w - 2, 8, 'night');
+    for (const [i, j] of [[3, 3], [19, 5], [5, 14], [20, 16], [16, 2]]) c.px(x + i, y + j, 'cream');
+    c.circle(x + 12, y + 11, 6, 'butter');
+    c.px(x + 10, y + 8, 'peach');
+    c.px(x + 14, y + 12, 'peach');
+    c.rect(x + 1, y + h - 4, w - 2, 3, 'grape');
+    // gato sentado (silhueta)
+    c.ellipse(x + 12, y + 23, 4, 3, 'ink');
+    c.circle(x + 12, y + 18, 3, 'ink');
+    c.px(x + 10, y + 15, 'ink');
+    c.px(x + 14, y + 15, 'ink');
+    c.px(x + 11, y + 18, 'mint');
+    c.px(x + 13, y + 18, 'mint');
+    c.line(x + 16, y + 25, x + 19, y + 21, 'ink');
+  }, { rotulo: 'Pôster gato e lua' });
+}
+
+// ---------------------------------------------------------------- sala de exposição
+// Sala ao lado do escritório: quadro de broches (cortiça com coisas presas por alfinetes), armário de
+// portas de vidro e prateleiras. O vidro é um sprite à parte, desenhado por cima dos objetos.
+function prateleira(c, p, grossa = false) {
+  const h = grossa ? 5 : 4;
+  c.box(p.x, p.y, p.w, h, 'violet');
+  c.hline(p.x + 1, p.x + p.w - 2, p.y + 1, 'orchid');
+  if (!grossa) {
+    c.rect(p.x + 8, p.y + h, 2, 4, 'ink');
+    c.rect(p.x + p.w - 10, p.y + h, 2, 4, 'ink');
+  }
+}
+
+function sala() {
+  const c = new Canvas(W, H);
+  const r = rng(21);
+  // parede com a luz do abajur do escritório chegando pela esquerda
+  c.rect(0, 0, W, H, 'night');
+  for (let x = 10; x < W; x += 20) c.vline(x, 0, SALA.chao, 'ink');
+  c.ellipse(120, 70, 190, 110, 'plum', 'dither');
+  c.ellipse(110, 70, 120, 70, 'plum');
+  c.ellipse(100, 70, 70, 46, 'grape', 'dither');
+  // rodapé e chão
+  c.rect(0, SALA.chao, W, H - SALA.chao, 'plum');
+  c.hline(0, W, SALA.chao, 'ink');
+  c.hline(0, W, SALA.chao + 1, 'grape');
+
+  // quadro de broches: moldura e cortiça
+  const q = SALA.quadro;
+  c.box(q.x, q.y, q.w, q.h, 'grape');
+  c.rect(q.x + 1, q.y + 1, q.w - 2, 2, 'violet');
+  c.rect(q.x + 4, q.y + 4, q.w - 8, q.h - 8, 'peach');
+  c.dither(q.x + 4, q.y + 4, q.w - 8, q.h - 8, 'butter', true);
+  for (let i = 0; i < 90; i++) c.px(q.x + 5 + Math.floor(r() * (q.w - 10)), q.y + 5 + Math.floor(r() * (q.h - 10)), r() > 0.5 ? 'blush' : 'cream');
+  c.rect(q.x + 3, q.y + 3, q.w - 6, 1, 'ink');
+  // (o quadro fica vazio por enquanto: broches e coisas presas virão depois)
+
+  // armário de portas de vidro (o vidro vem no sprite de cima)
+  const a = SALA.armario;
+  c.box(a.x, a.y, a.w, a.h, 'violet');
+  c.rect(a.x + 1, a.y + 1, a.w - 2, 2, 'orchid');
+  c.rect(a.x + 3, a.y + 3, a.w - 6, a.h - 6, 'plum');
+  c.dither(a.x + 3, a.y + 3, a.w - 6, a.h - 6, 'night');
+  c.rect(a.x + 3, SALA.prateleiras['armario-cima'].y, a.w - 6, 3, 'grape');
+  c.hline(a.x + 3, a.x + a.w - 4, SALA.prateleiras['armario-cima'].y, 'orchid');
+  c.rect(a.x + 3, SALA.prateleiras['armario-baixo'].y - 1, a.w - 6, 2, 'grape');
+  // prateleiras da parede
+  prateleira(c, SALA.prateleiras.p1);
+  prateleira(c, SALA.prateleiras.p2);
+  prateleira(c, SALA.prateleiras['p-baixo'], true);
+  c.save(OUT + 'scenes/sala-320x180.png');
+
+  // vidro das portas: brilho em diagonal e reflexo pontilhado, por cima do que estiver dentro
+  const v = new Canvas(W, H);
+  const meio = a.x + Math.floor(a.w / 2);
+  // brilho fino nas bordas do vidro (o meio fica limpo para ver o que está dentro)
+  v.hline(a.x + 3, a.x + a.w - 4, a.y + 3, 'lilac');
+  v.vline(a.x + 3, a.y + 3, a.y + a.h - 4, 'lilac');
+  v.vline(meio + 1, a.y + 3, a.y + a.h - 4, 'lilac');
+  for (const x0 of [a.x + 14, a.x + 22, meio + 12, meio + 20])
+    for (let k = 0; k < 18; k++) v.px(x0 + k, a.y + 46 - k * 2, 'cream'), v.px(x0 + k, a.y + 47 - k * 2, 'cream');
+  v.rect(meio - 1, a.y + 2, 2, a.h - 4, 'violet');
+  v.vline(meio - 1, a.y + 2, a.y + a.h - 3, 'orchid');
+  v.rect(meio - 5, a.y + 28, 2, 6, 'butter');
+  v.rect(meio + 3, a.y + 28, 2, 6, 'butter');
+  v.save(OUT + 'scenes/sala-vidro-320x180.png');
+}
+
+// Objetos básicos da sala (móveis como os do escritório; `sala` e `apoio` dão o lugar padrão)
+function salaItems() {
+  const P = SALA.prateleiras;
+  // boneco do mascote na prateleira de cima
+  objeto('boneco-mascote', 'mesa', (c) => {
+    const x = 196, b = P.p1.y;
+    c.box(x, b - 4, 18, 4, 'grape');
+    c.hline(x + 1, x + 16, b - 3, 'violet');
+    c.box(x + 4, b - 22, 11, 18, 'cream');
+    c.rect(x + 11, b - 22, 3, 3, 'lilac');
+    c.px(x + 7, b - 16, 'ink'); c.px(x + 11, b - 16, 'ink');
+    c.hline(x + 8, x + 10, b - 13, 'ink');
+    c.px(x + 6, b - 14, 'blush'); c.px(x + 12, b - 14, 'blush');
+    c.hline(x + 6, x + 12, b - 9, 'lavender');
+    c.line(x + 4, b - 13, x + 1, b - 19, 'ink');
+    c.line(x + 14, b - 13, x + 17, b - 19, 'ink');
+  }, { elevavel: true, sala: 'sala', apoio: 'p1', rotulo: 'Boneco do mascote' });
+  // globo terrestre
+  objeto('globo', 'mesa', (c) => {
+    const x = 270, b = P.p1.y;
+    c.box(x, b - 3, 14, 3, 'grape');
+    c.vline(x + 7, b - 6, b - 3, 'ink');
+    c.circle(x + 7, b - 13, 7, 'ink');
+    c.circle(x + 7, b - 13, 6, 'sky');
+    c.rect(x + 3, b - 17, 4, 3, 'mint');
+    c.rect(x + 7, b - 12, 4, 4, 'mint');
+    c.px(x + 5, b - 9, 'mint');
+    c.px(x + 4, b - 16, 'cream');
+  }, { elevavel: true, sala: 'sala', apoio: 'p1', rotulo: 'Globo' });
+  // pilha de discos de vinil na prateleira de baixo
+  objeto('discos', 'mesa', (c) => {
+    const x = 200, b = P.p2.y;
+    for (let i = 0; i < 4; i++) {
+      c.box(x + i, b - 4 - i * 4, 26 - i * 2, 4, ['violet', 'blush', 'sky', 'mint'][i]);
+      c.px(x + 12, b - 3 - i * 4, 'cream');
+    }
+  }, { elevavel: true, empilhavel: true, sala: 'sala', apoio: 'p2', rotulo: 'Discos de vinil' });
+  // planta grande no chão (prateleira baixa)
+  objeto('planta-sala', 'mesa', (c) => {
+    const x = 160, b = P['p-baixo'].y;
+    c.box(x, b - 12, 16, 12, 'blush');
+    c.hline(x + 1, x + 14, b - 10, 'rose');
+    c.vline(x + 8, b - 30, b - 13, 'grape');
+    for (const [fx, fy, rr] of [[x + 8, b - 31, 4], [x + 2, b - 24, 4], [x + 14, b - 26, 4], [x + 3, b - 16, 3], [x + 13, b - 17, 3]]) {
+      c.circle(fx, fy, rr, 'ink');
+      c.circle(fx, fy, rr - 1, 'mint');
+      c.px(fx - 1, fy - 1, 'cream');
+    }
+  }, { elevavel: true, sala: 'sala', apoio: 'p-baixo', rotulo: 'Planta grande' });
+  // dentro do armário: porta-retrato e vasinho com flor
+  // porta-retrato com a foto do jogador: a janela (`foto`, relativa ao sprite) recebe o avatar no jogo
+  objeto('porta-retrato', 'mesa', (c) => {
+    const x = 200, y = P['armario-baixo'].y - 24;
+    c.box(x, y, 22, 24, 'butter');
+    c.hline(x + 1, x + 20, y + 1, 'cream');
+    c.rect(x + 2, y + 21, 18, 2, 'peach');
+    c.box(x + 2, y + 2, 18, 18, 'sky', 'grape');
+    c.dither(x + 3, y + 12, 16, 7, 'lilac');
+  }, { elevavel: true, sala: 'sala', apoio: 'armario-baixo', rotulo: 'Porta-retrato', foto: { x: 3, y: 3, w: 16, h: 16 } });
+  objeto('vaso-flor', 'mesa', (c) => {
+    const x = 280, b = P['armario-cima'].y;
+    c.box(x, b - 10, 8, 10, 'sky');
+    c.vline(x + 4, b - 18, b - 10, 'mint');
+    c.circle(x + 4, b - 19, 2, 'rose');
+    c.px(x + 4, b - 19, 'butter');
+  }, { elevavel: true, sala: 'sala', apoio: 'armario-cima', rotulo: 'Vasinho com flor' });
+}
+
+// -------------------------------------------------------- papéis de parede
+function bands(c, y0, colors, bandH) {
+  colors.forEach((col, i) => {
+    const y = y0 + i * bandH;
+    c.rect(0, y, W, bandH, col);
+    if (i > 0) c.dither(0, y - 2, W, 4, colors[i - 1]);
+  });
+}
+
+function wallpaperSunset() {
+  const c = new Canvas(W, H);
+  const r = rng(11);
+  bands(c, 0, ['night', 'plum', 'grape', 'violet', 'orchid', 'blush', 'peach'], 18);
+  for (let i = 0; i < 40; i++) c.px(r() * W, r() * 30, r() > 0.7 ? 'butter' : 'cream');
+  // sol retrô listrado
+  const cx = 160, cy = 120;
+  for (let j = cy - 44; j < cy; j++) {
+    const gap = j > cy - 22 && (j - cy) % 5 === 0;
+    if (gap) continue;
+    const half = Math.sqrt(Math.max(0, 44 * 44 - (j - cy) ** 2));
+    c.hline(cx - half, cx + half, j, j < cy - 26 ? 'butter' : 'peach');
+  }
+  // nuvens
+  for (const [x, y, w] of [[30, 50, 50], [230, 40, 60], [70, 78, 40], [250, 86, 36]]) {
+    c.rect(x, y, w, 3, 'lilac');
+    c.rect(x + 8, y - 2, w - 18, 2, 'lilac');
+    c.hline(x, x + w - 1, y + 3, 'orchid');
+  }
+  // morros
+  for (let x = 0; x < W; x++) {
+    const h1 = 10 + Math.sin(x / 26) * 6 + Math.sin(x / 9) * 2;
+    c.vline(x, 120 - h1, 120, 'grape');
+  }
+  // mar
+  c.rect(0, 120, W, 60, 'plum');
+  c.dither(0, 140, W, 40, 'night');
+  for (let j = 122; j < 178; j += 4) {
+    const half = 40 - (j - 122) * 0.5;
+    const col = j < 140 ? 'peach' : 'blush';
+    for (let x = cx - half; x < cx + half; x += 6 + Math.floor(r() * 4)) c.hline(x, x + 3, j, col);
+  }
+  c.save(OUT + 'scenes/wallpaper-por-do-sol-320x180.png');
+}
+
+function wallpaperRain() {
+  const c = new Canvas(W, H);
+  const r = rng(21);
+  bands(c, 0, ['ink', 'night', 'plum', 'grape'], 36);
+  c.rect(0, 144, W, 36, 'night');
+  c.circle(250, 36, 18, 'mist');
+  c.circle(250, 36, 22, 'lilac', 'sparse');
+  c.circle(244, 30, 4, 'lilac');
+  c.circle(256, 42, 3, 'lilac');
+  for (let i = 0; i < 50; i++) c.px(r() * W, r() * 70, 'cream');
+  // cidade em 2 camadas
+  for (const [base, col, win] of [[150, 'plum', 'lavender'], [160, 'night', 'butter']]) {
+    let x = 0;
+    while (x < W) {
+      const bw = 12 + Math.floor(r() * 20), bh = 20 + Math.floor(r() * 50);
+      c.rect(x, base - bh, bw, bh, col);
+      if (r() > 0.6) c.vline(x + bw / 2, base - bh - 8, base - bh, col);
+      for (let j = base - bh + 4; j < base - 4; j += 5)
+        for (let i = x + 2; i < x + bw - 2; i += 4) if (r() > 0.55) c.rect(i, j, 2, 2, win);
+      x += bw + 1;
+    }
+  }
+  c.rect(0, 160, W, 20, 'ink');
+  for (let i = 0; i < 60; i++) {
+    const x = r() * W;
+    c.hline(x, x + 4 + r() * 8, 162 + r() * 16, ['butter', 'lavender', 'blush'][i % 3]);
+  }
+  for (let i = 0; i < 160; i++) {
+    const x = Math.floor(r() * W), y = Math.floor(r() * 160);
+    c.vline(x, y, y + 3, 'sky');
+  }
+  c.save(OUT + 'scenes/wallpaper-noite-chuvosa-320x180.png');
+}
+
+function wallpaperLavender() {
+  const c = new Canvas(W, H);
+  const r = rng(31);
+  bands(c, 0, ['sky', 'lilac', 'mist', 'blush'], 30);
+  c.circle(70, 40, 14, 'cream');
+  c.circle(70, 40, 18, 'mist', 'sparse');
+  for (const [x, y, w] of [[150, 26, 60], [240, 50, 50], [20, 70, 44]]) {
+    c.ellipse(x + w / 2, y, w / 2, 5, 'cream');
+    c.ellipse(x + w / 2 - 8, y - 4, w / 4, 4, 'cream');
+    c.hline(x + 4, x + w - 4, y + 5, 'lilac');
+  }
+  const hills = [[110, 'orchid', 40], [125, 'violet', 30], [145, 'grape', 22], [165, 'plum', 16]];
+  hills.forEach(([base, col, amp], k) => {
+    for (let x = 0; x < W; x++) {
+      const y = base - Math.sin(x / (30 + k * 10) + k) * amp * 0.4 - amp * 0.3;
+      c.vline(x, y, H, col);
+      if (x % 3 === 0 && k > 0) c.px(x, y + 2 + (x % 7), k % 2 ? 'lavender' : 'orchid');
+    }
+  });
+  // fileiras de lavanda
+  for (let j = 150; j < H; j += 4)
+    for (let x = (j % 8); x < W; x += 6) c.vline(x, j, j + 2, r() > 0.3 ? 'orchid' : 'lavender');
+  c.save(OUT + 'scenes/wallpaper-campo-lavanda-320x180.png');
+}
+
+
+// Vaporwave: sol listrado, grade neon até o horizonte e palmeiras
+function wallpaperGradeNeon() {
+  const c = new Canvas(W, H);
+  const r = rng(51);
+  bands(c, 0, ['night', 'plum', 'grape', 'orchid', 'blush'], 22);
+  for (let i = 0; i < 50; i++) c.px(r() * W, r() * 40, r() > 0.8 ? 'butter' : 'cream');
+  const cx = 160, hz = 110;
+  for (let j = hz - 46; j < hz; j++) {
+    if (j > hz - 26 && (hz - j) % 5 < 2) continue; // faixas do sol
+    const half = Math.sqrt(Math.max(0, 46 * 46 - (j - hz) ** 2));
+    c.hline(cx - half, cx + half, j, j < hz - 30 ? 'butter' : j < hz - 16 ? 'peach' : 'blush');
+  }
+  // montanhas em wireframe
+  for (const [px, alt, larg] of [[40, 26, 50], [90, 16, 40], [240, 22, 46], [290, 30, 50]]) {
+    for (let x = px - larg; x <= px + larg; x++) {
+      const y = hz - alt * (1 - Math.abs(x - px) / larg);
+      c.vline(x, y, hz, 'grape');
+      c.px(x, y, 'sky');
+    }
+  }
+  c.rect(0, hz, W, H - hz, 'night');
+  for (let i = 1; hz + i * i * 0.55 < H; i++) c.hline(0, W - 1, hz + Math.round(i * i * 0.55), 'orchid');
+  for (let k = -14; k <= 14; k++) c.line(cx, hz, cx + k * 34, H + 20, 'orchid');
+  c.hline(0, W - 1, hz, 'sky');
+  // palmeiras
+  for (const [px, base, alt] of [[26, 150, 52], [298, 158, 60]]) {
+    for (let k = 0; k < alt; k++) c.px(px + Math.round(Math.sin(k / 14) * 4), base - k, 'ink'), c.px(px + 1 + Math.round(Math.sin(k / 14) * 4), base - k, 'ink');
+    const tx = px + Math.round(Math.sin(alt / 14) * 4), ty = base - alt;
+    for (const [dx, dy] of [[-18, 8], [18, 8], [-14, -6], [14, -6], [-22, 2], [22, 2], [0, -10]]) {
+      c.line(tx, ty, tx + dx, ty + dy, 'ink');
+      c.line(tx, ty + 1, tx + dx, ty + dy + 1, 'ink');
+    }
+  }
+  c.save(OUT + 'scenes/wallpaper-grade-neon-320x180.png');
+}
+
+// Espaço pastel: planeta com anel, planetinha e lua
+function wallpaperPlanetas() {
+  const c = new Canvas(W, H);
+  const r = rng(61);
+  bands(c, 0, ['ink', 'night', 'plum'], 60);
+  for (let i = 0; i < 120; i++) c.px(r() * W, r() * H, ['cream', 'lilac', 'butter', 'sky'][i % 4]);
+  for (const [x, y] of [[40, 30], [280, 150], [150, 20], [20, 120]]) {
+    c.px(x, y, 'cream');
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) c.px(x + dx, y + dy, 'lilac');
+  }
+  const px = 220, py = 80, pr = 36;
+  const anel = (frente) => {
+    for (let t = 0; t < Math.PI * 2; t += 0.01) {
+      const ex = Math.cos(t) * 58, ey = Math.sin(t) * 11;
+      if ((ey > 0) !== frente) continue;
+      c.px(px + ex, py + ey, 'lilac');
+      c.px(px + ex, py + ey + 1, 'lavender');
+      c.px(px + ex * 0.88, py + ey * 0.88, 'mist');
+    }
+  };
+  anel(false);
+  c.circle(px, py, pr, 'blush');
+  for (let j = py - pr; j <= py + pr; j++) {
+    const half = Math.sqrt(Math.max(0, pr * pr - (j - py) ** 2));
+    if ((j - py + 40) % 12 < 3) c.hline(px - half, px + half, j, 'rose');
+    else if ((j - py + 40) % 12 < 5) c.hline(px - half, px + half, j, 'peach');
+  }
+  c.circle(px + 12, py + 12, pr - 14, 'rose', 'sparse');
+  anel(true);
+  c.circle(70, 128, 18, 'mint');
+  c.circle(76, 134, 12, 'sky', 'sparse');
+  for (const [dx, dy, rr] of [[-6, -5, 3], [5, 4, 2], [-2, 8, 2]]) c.circle(70 + dx, 128 + dy, rr, 'sky');
+  c.circle(110, 42, 7, 'lavender');
+  c.px(108, 40, 'lilac');
+  c.px(112, 44, 'orchid');
+  c.save(OUT + 'scenes/wallpaper-planetas-320x180.png');
+}
+
+// Lo-fi: cerejeira florida num morro, pétalas caindo
+function wallpaperCerejeiras() {
+  const c = new Canvas(W, H);
+  const r = rng(71);
+  bands(c, 0, ['sky', 'lilac', 'mist', 'blush'], 32);
+  c.circle(250, 44, 16, 'cream');
+  c.circle(250, 44, 20, 'mist', 'sparse');
+  for (let x = 0; x < W; x++) {
+    c.vline(x, 120 - Math.sin(x / 40) * 10 - 6, H, 'lavender');
+    c.vline(x, 138 - Math.sin(x / 28 + 2) * 8, H, 'orchid');
+    c.vline(x, 156 - Math.sin(x / 50 + 1) * 6, H, 'violet');
+  }
+  // tronco e galhos
+  const tx = 100;
+  for (let k = 0; k < 50; k++) c.hline(tx - 3 + Math.round(Math.sin(k / 9) * 2), tx + 3 + Math.round(Math.sin(k / 9) * 2) - Math.floor(k / 20), 156 - k, 'plum');
+  for (const [dx, dy] of [[-40, -30], [42, -26], [-20, -44], [24, -46], [0, -52]]) {
+    c.line(tx, 112, tx + dx, 112 + dy, 'plum');
+    c.line(tx + 1, 112, tx + dx + 1, 112 + dy, 'plum');
+  }
+  // copa
+  for (const [dx, dy, rr] of [[-42, -32, 18], [44, -28, 18], [-20, -48, 20], [24, -50, 20], [0, -58, 18], [0, -36, 22], [-34, -14, 12], [34, -12, 12]]) {
+    c.circle(tx + dx, 112 + dy, rr, 'blush');
+    c.circle(tx + dx + 3, 112 + dy + 4, rr - 5, 'rose', 'dither');
+    c.circle(tx + dx - 4, 112 + dy - 5, Math.max(3, rr - 12), 'cream', 'sparse');
+  }
+  // pétalas caindo
+  for (let i = 0; i < 70; i++) {
+    const x = Math.floor(r() * W), y = Math.floor(30 + r() * 145);
+    c.px(x, y, i % 3 ? 'blush' : 'rose');
+    if (i % 2) c.px(x + 1, y + 1, 'blush');
+  }
+  c.save(OUT + 'scenes/wallpaper-cerejeiras-320x180.png');
+}
+
+// ------------------------------------------------------------------ ícones
+const ICONS = {
+  // coleção: broche (medalha com o número 1 e fita)
+  colecao: [
+    '................',
+    '.....kkkkkk.....',
+    '....kyyyyyyk....',
+    '...kyccyeyyyk...',
+    '...kycyeeyyek...',
+    '...kyyyyeyyek...',
+    '...kyyyyeyyek...',
+    '...kyyyeeeyek...',
+    '....kyyyyyek....',
+    '.....kkkkkk.....',
+    '.....krrrrk.....',
+    '.....krrrrk.....',
+    '.....krrrrk.....',
+    '.....krkkrk.....',
+    '.....kk..kk.....',
+    '................',
+  ],
+  // musicas: nota musical dupla (colcheias ligadas), app de músicas que aparece com o toca-fitas
+  musicas: [
+    '................',
+    '................',
+    '................',
+    '......kkkkkkkk..',
+    '......kooooook..',
+    '......kkkkkkkk..',
+    '......k......k..',
+    '......k......k..',
+    '......k......k..',
+    '......k......k..',
+    '...kkkk...kkkk..',
+    '..kvvok..kvvok..',
+    '..kvvvk..kvvvk..',
+    '...kkk....kkk...',
+    '................',
+    '................',
+  ],
+  // guia: livro aberto (app de ajuda da área de trabalho)
+  guia: [
+    '................',
+    '................',
+    '.kkkkkk..kkkkkk.',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmsssmmkkmsssmmk',
+    'kmmmmmmkkmmmmmmk',
+    'kmssssmkkmssssmk',
+    'kmmmmmmkkmmmmmmk',
+    'kvvvvvvkkvvvvvvk',
+    '.kkkkkkkkkkkkkk.',
+    '.......kk.......',
+    '................',
+  ],
+  bau: [
+    '................',
+    '..kkkkkkkkkkkk..',
+    '.kooooooooooook.',
+    '.koyvvvvvvvvyok.',
+    '.kvyvvvvvvvvyvk.',
+    '.kvvvvvvvvvvvvk.',
+    '.kkkkkkyykkkkkk.',
+    '.kggggkyykggggk.',
+    '.kvvvvkeykvvvvk.',
+    '.kvvvvvkkvvvvvk.',
+    '.kyvvvvvvvvvvyk.',
+    '.kvvvvvvvvvvvvk.',
+    '.kggggggggggggk.',
+    '.kkkkkkkkkkkkkk.',
+    '..kk........kk..',
+    '................',
+  ],
+  email: [
+    '................',
+    '................',
+    '.kkkkkkkkkkkkkk.',
+    '.kckmmmmmmmmkck.',
+    '.kmckmmmmmmkcmk.',
+    '.kmmckmmmmkcmmk.',
+    '.kmmmckmmkcmmmk.',
+    '.kmmmmckkcmmmmk.',
+    '.kmmmmmccmmmmmk.',
+    '.kmmmmmmmmmmmmk.',
+    '.kmmmmmmmmmmmmk.',
+    '.kiiiiiiiiiiiik.',
+    '.kkkkkkkkkkkkkk.',
+    '................',
+    '................',
+    '................',
+  ],
+  editor: [
+    '................',
+    '..kkkkkkkkkk....',
+    '..kmmmmmmmmkk...',
+    '..kmkkkmmmmkmk..',
+    '..kmksskmmmkkkk.',
+    '..kmkkkkmmmmmmk.',
+    '..kmmkmmmmmmmmk.',
+    '..kmmkkkkkmmmmk.',
+    '..kmmmmmmkmmmmk.',
+    '..kmmmmmkkkmmmk.',
+    '..kmmmmmkbkmmmk.',
+    '..kmmmmmkkkmmmk.',
+    '..kmmmmmmmmmmmk.',
+    '..kiiiiiiiiiiik.',
+    '..kkkkkkkkkkkkk.',
+    '................',
+  ],
+  dicas: [
+    '................',
+    '.....kkkkkk.....',
+    '....kyyyyyyk....',
+    '...kyycyyyyyk...',
+    '...kycyyyyyyk...',
+    '...kyyyyyyyyk...',
+    '...kyyyyyyyek...',
+    '....kyyyyyek....',
+    '.....kyyyek.....',
+    '.....kkkkkk.....',
+    '.....kllllk.....',
+    '.....kkkkkk.....',
+    '.....kllllk.....',
+    '......kkkk......',
+    '................',
+    '................',
+  ],
+  loja: [
+    '................',
+    '......kkkk......',
+    '.....k....k.....',
+    '.....k....k.....',
+    '..kkkkkkkkkkkk..',
+    '..kbbbbbbbbbbk..',
+    '..kbcbbbbbbbbk..',
+    '..kbbbbbbbbbbk..',
+    '..kbbbbyybbbbk..',
+    '..kbbbyyyybbbk..',
+    '..kbbbbyybbbbk..',
+    '..kbbbbbbbbbbk..',
+    '..krrrrrrrrrrk..',
+    '..kkkkkkkkkkkk..',
+    '................',
+    '................',
+  ],
+  escritorio: [
+    '................',
+    '....kkkkkkkk....',
+    '....kggggggk....',
+    '....kgvvvvgk....',
+    '....kgvovvgk....',
+    '....kgvvvvgk....',
+    '....kgvvvvgk....',
+    '....kgvvvygk....',
+    '....kgvvvvgk....',
+    '....kgvvvvgk....',
+    '....kgvvvvgk....',
+    '....kgvvvvgk....',
+    '....kggggggk....',
+    '..kkkkkkkkkkkk..',
+    '................',
+    '................',
+  ],
+  cadeado: [
+    '................',
+    '................',
+    '.....kkkkkk.....',
+    '....kk....kk....',
+    '....k......k....',
+    '....k......k....',
+    '...kkkkkkkkkk...',
+    '...kyyyyyyyyk...',
+    '...kyycyyyyyk...',
+    '...kyyykkyyyk...',
+    '...kyyykkyyyk...',
+    '...kyyyykyyyk...',
+    '...keeeeeeeek...',
+    '...kkkkkkkkkk...',
+    '................',
+    '................',
+  ],
+  moeda: [
+    '................',
+    '................',
+    '.....kkkkkk.....',
+    '....kyyyyyyk....',
+    '...kyycyyyyek...',
+    '..kyycyykyyyek..',
+    '..kyyyykkkyyek..',
+    '..kyyyyykyyyek..',
+    '..kyyyykkkyyek..',
+    '..kyyyyykyyyek..',
+    '...kyyyyyyyek...',
+    '....keeeeeek....',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+    '................',
+  ],
+  relogio: [
+    '................',
+    '.....kkkkkk.....',
+    '...kkmmmmmmkk...',
+    '..kmmmmkmmmmmk..',
+    '..kmmmmkmmmmmk..',
+    '.kmmmmmkmmmmmmk.',
+    '.kmmmmmkmmmmmmk.',
+    '.kmmmmmkkkkkmmk.',
+    '.kmmmmmmmmmmmmk.',
+    '.kmmmmmmmmmmmmk.',
+    '..kmmmmmmmmmmk..',
+    '..kimmmmmmmmik..',
+    '...kkiiiiiikk...',
+    '.....kkkkkk.....',
+    '................',
+    '................',
+  ],
+};
+
+// Cápsulas de café (aba Café da lojinha e botões da cafeteira): cor da tampa/corpo = força do café
+const CAPSULA = [
+  '................',
+  '................',
+  '..kkkkkkkkkkkk..',
+  '.kmmmmmmmmmmmmk.',
+  '.kmcmmmmmmmmmmk.',
+  '..kkkkkkkkkkkk..',
+  '..kccXXXXXXXgk..',
+  '..kcXXXXXXXXgk..',
+  '...kcXXXXXXgk...',
+  '...kcXXXXXXgk...',
+  '....kcXXXXgk....',
+  '....kcXXXXgk....',
+  '.....kcXXgk.....',
+  '......kkkk......',
+  '................',
+  '................',
+];
+const COR_CAPSULA = { descafeinado: 't', normal: 'y', forte: 'r' };
+
+function icons() {
+  for (const [tipo, cor] of Object.entries(COR_CAPSULA)) {
+    const c = new Canvas(16, 16);
+    c.sprite(CAPSULA.map((r) => r.replaceAll('X', cor)));
+    c.save(OUT + `ui/capsula-${tipo}-16.png`);
+  }
+  for (const [name, rows] of Object.entries(ICONS)) {
+    const c = new Canvas(16, 16);
+    c.sprite(rows);
+    c.save(OUT + `ui/icon-${name}-16.png`);
+  }
+}
+
+// ------------------------------------------------------------------ mascote
+// Os sprites do mascote (menu, favicon, reações do resultado e fala do tutorial) são desenhados à mão
+// pela equipe: ficam em src/assets/sprites/mascote-*-50x50.png e public/favicon.png, e o gerador não
+// mexe neles. Originais em ../arte e sprites/mascote/.
+
+
+office();
+officeItems();
+sala();
+salaItems();
+albumConquistas(objeto);
+conquistas(objeto, OUT);
+avatar(OUT);
+postersExtras();
+wallpaperSunset();
+wallpaperRain();
+wallpaperLavender();
+wallpaperAurora();
+wallpaperGradeNeon();
+wallpaperPlanetas();
+wallpaperCerejeiras();
+icons();
+writeFileSync(fileURLToPath(new URL('../src/art/objetos.json', import.meta.url)), JSON.stringify(OBJETOS, null, 2) + '\n');
+console.log('Assets gerados em', OUT);

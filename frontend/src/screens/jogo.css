@@ -1,0 +1,755 @@
+/* --------------------------------------------------------------- escritório */
+.camada-escritorio {
+  position: absolute;
+  inset: 0;
+  /* centro da tela do monitor: (160, 74) px de arte × 4 */
+  transform-origin: 640px 296px;
+  /* só transform: um filter (brilho) nesta camada ampliada 5× pesava demais em placa de vídeo fraca */
+  transition: transform 0.75s cubic-bezier(0.6, 0, 0.4, 1);
+}
+.camada-escritorio.zoom { transform: translate(0, 64px) scale(5); }
+.escritorio { position: absolute; inset: 0; }
+.tela-brilho {
+  position: absolute;
+  left: 40%;
+  top: 27.7%;
+  width: 20%;
+  height: 26.7%;
+  background: var(--c-cream);
+  opacity: 0;
+  pointer-events: none;
+  animation: brilho-crt 3s steps(3) infinite;
+}
+@keyframes brilho-crt { 0%, 100% { opacity: 0; } 50% { opacity: 0.12; } }
+
+.monitor-hotspot {
+  position: absolute;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.monitor-hotspot:hover:not(:disabled),
+.monitor-hotspot:focus-visible {
+  outline: var(--px) solid var(--c-butter);
+  outline-offset: 4px;
+  box-shadow: 0 0 0 12px rgba(242, 230, 160, 0.25);
+}
+.monitor-hotspot:disabled { cursor: default; }
+.dica-monitor-camada { position: absolute; z-index: 7; height: 0; pointer-events: none; }
+.dica-monitor {
+  position: absolute;
+  left: 50%;
+  top: -56px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--f-titulo);
+  font-size: 12px;
+  color: var(--c-ink);
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  padding: 8px 10px 6px;
+  opacity: 0;
+  transition: opacity 0.1s steps(1);
+}
+.monitor-hotspot:hover:not(:disabled) ~ .dica-monitor-camada .dica-monitor,
+.monitor-hotspot:focus-visible ~ .dica-monitor-camada .dica-monitor { opacity: 1; }
+.dica-monitor.chamando { opacity: 1; animation: dica-chamando 1s steps(2) infinite; }
+.dica-monitor.reiniciando { color: var(--c-cream); background: var(--c-rose); }
+.dica-monitor.reiniciando.chamando { animation: dica-reiniciando 0.3s steps(2) 5; }
+@keyframes dica-reiniciando { 50% { background: var(--c-ink); } }
+.monitor-hotspot:hover ~ .dica-monitor-camada .dica-monitor.reiniciando { opacity: 1; }
+@keyframes dica-chamando { 50% { background: var(--c-cream); } }
+.badge-email {
+  position: absolute;
+  right: -14px;
+  top: -14px;
+  min-width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  font-family: var(--f-titulo);
+  font-size: 14px;
+  color: var(--c-cream);
+  background: var(--c-rose);
+  border: var(--px) solid var(--c-ink);
+  animation: flutuar 0.6s steps(2) infinite alternate;
+}
+
+.hud {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  z-index: 10;
+  pointer-events: none;
+}
+.hud > * { pointer-events: auto; }
+.hud .espaco { flex: 1; }
+
+/* --------------------------------------------------------------- computador */
+.computador {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  animation: ligar-crt 0.45s steps(6) both;
+}
+@keyframes ligar-crt {
+  0% { transform: scaleY(0.01) scaleX(0.6); filter: brightness(3); }
+  60% { transform: scaleY(1) scaleX(1); filter: brightness(1.6); }
+  100% { transform: none; filter: none; }
+}
+.computador.desligando { animation: desligar-crt 0.3s steps(5) both; }
+@keyframes desligar-crt {
+  0% { transform: none; }
+  70% { transform: scaleY(0.01) scaleX(1); filter: brightness(3); }
+  100% { transform: scaleY(0.01) scaleX(0); filter: brightness(3); }
+}
+.wallpaper { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+/* área dos ícones: o palco inteiro acima da barra de tarefas; cada ícone numa célula do grid
+   (lib/areaTrabalho.js: 132×124 a partir de 16,16) */
+.icones { position: absolute; left: 0; top: 0; right: 0; bottom: 52px; }
+.icone-destino {
+  position: absolute;
+  width: 124px;
+  height: 116px;
+  border: var(--px) dashed var(--c-mist);
+  background: rgba(212, 196, 236, 0.2);
+  pointer-events: none;
+}
+.icone.arrastando { z-index: 5; cursor: grabbing; opacity: 0.85; }
+.icone {
+  position: absolute;
+  width: 124px;
+  touch-action: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 2px;
+  background: transparent;
+  border: var(--px) solid transparent;
+  cursor: pointer;
+}
+.icone:hover, .icone:focus-visible { background: rgba(212, 196, 236, 0.35); border-color: var(--c-mist); outline: none; }
+.icone img { width: 64px; height: 64px; filter: drop-shadow(4px 4px 0 rgba(30, 26, 46, 0.6)); }
+.icone span {
+  font-size: 21px;
+  line-height: 0.9;
+  color: var(--c-cream);
+  text-align: center;
+  text-shadow: 2px 2px 0 var(--c-ink);
+  padding: 2px 4px 0;
+  background: rgba(30, 26, 46, 0.55);
+}
+.icone .badge-email { right: 18px; top: 0; animation: none; }
+
+.barra-tarefas {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  background: var(--c-lavender);
+  border-top: var(--px) solid var(--c-ink);
+  box-shadow: inset 0 var(--px) 0 var(--c-mist);
+  z-index: 700;
+}
+.barra-tarefas .espaco { flex: 1; }
+.tarefa {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 220px;
+  height: 36px;
+  padding: 0 10px;
+  font-size: 22px;
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset 2px 2px 0 var(--c-mist);
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tarefa.foco { background: var(--c-mist); box-shadow: inset 2px 2px 0 var(--c-lavender); }
+.tarefa img { width: 16px; height: 16px; }
+.relogio-pedido { font-family: var(--f-titulo); font-size: 12px; }
+.relogio-pedido.urgente { background: var(--c-rose); color: var(--c-cream); }
+
+.toast {
+  position: absolute;
+  right: 16px;
+  bottom: 68px;
+  z-index: 750;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 24px;
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 6px 6px 0 var(--c-ink);
+  animation: toast 3.2s steps(8) both;
+}
+.toast img { width: 32px; height: 32px; }
+@keyframes toast {
+  0% { transform: translateY(24px); opacity: 0; }
+  10%, 85% { transform: none; opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* --------------------------------------------------------------- modais do jogo */
+.pausa { height: 100%; display: flex; flex-direction: column; }
+.pausa .config { flex: 1; height: auto; min-height: 0; padding-top: 12px; }
+.pausa-titulo { display: flex; align-items: center; justify-content: center; gap: 14px; padding-top: 18px; font-family: var(--f-titulo); font-size: 28px; }
+.fim-dia { height: 100%; box-sizing: border-box; padding: 20px 32px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; text-align: center; font-size: 24px; overflow-y: auto; }
+.fim-dia-linha { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+/* conta do dia: rótulo à esquerda, valor à direita, saldo embaixo com um traço */
+.conta-dia { margin: 0; width: 100%; max-width: 420px; display: grid; grid-template-columns: 1fr auto; gap: 4px 0; padding: 10px 16px; text-align: left; font-size: 22px; background: var(--c-mist); border: var(--px) solid var(--c-ink); }
+.conta-dia dt, .conta-dia dd { margin: 0; }
+.conta-dia dd { padding-left: 16px; font-family: var(--f-titulo); font-size: 15px; color: var(--c-grape); text-align: right; align-self: center; }
+.conta-dia dd.reprovado { color: var(--c-rose); }
+.conta-dia .total { padding-top: 6px; border-top: 3px solid var(--c-ink); font-weight: bold; }
+.conta-dia dd.total { font-size: 17px; }
+.fim-dia h3 { margin: 0; font-family: var(--f-titulo); font-size: 22px; }
+.fim-dia .valor { font-family: var(--f-titulo); font-size: 20px; color: var(--c-grape); }
+
+/* --------------------------------------------------------------- objetos arrastáveis */
+.objeto {
+  position: absolute;
+  pointer-events: none;
+  /* cada objeto na própria camada: o contorno de destaque (drop-shadow) sai junto com ele quando o
+     objeto é pego ou movido. Sem isso, com o palco ampliado por fator não inteiro, o navegador às
+     vezes deixava uma linha de 1 pixel do contorno para trás. */
+  will-change: transform;
+  backface-visibility: hidden;
+}
+.objeto.realce {
+  filter: drop-shadow(4px 0 0 var(--c-butter)) drop-shadow(-4px 0 0 var(--c-butter))
+    drop-shadow(0 4px 0 var(--c-butter)) drop-shadow(0 -4px 0 var(--c-butter));
+}
+.objeto.levantado {
+  z-index: 5;
+  transform: translateY(-8px);
+  filter: drop-shadow(0 12px 0 rgba(30, 26, 46, 0.45));
+}
+.escritorio { isolation: isolate; }
+.escritorio.sobre-objeto, .escritorio.sobre-objeto * { cursor: grab !important; }
+.escritorio.arrastando, .escritorio.arrastando * { cursor: grabbing !important; }
+
+/* ---------------------------------------------------------- objeto na mão */
+.objeto.fantasma { opacity: 0.35; }
+.objeto.levantado { z-index: 6; }
+.objeto.indo-pro-bau { opacity: 0.6; transform: translateY(-8px) scale(0.7); }
+
+/* ---------------------------------------------------------- inventário (baú) */
+/* ------------------------------------------------ seta para a outra sala (escritório ↔ sala de exposição) */
+.seta-sala {
+  position: absolute;
+  top: 50%;
+  z-index: 8;
+  width: 44px;
+  height: 64px;
+  margin-top: -32px;
+  padding: 0 0 4px;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--c-ink);
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-mist), inset -4px -4px 0 var(--c-lavender), 4px 4px 0 var(--sombra-texto);
+  cursor: pointer;
+}
+.seta-sala.direita { right: 16px; }
+.seta-sala.esquerda { left: 16px; }
+.seta-sala:hover:not(:disabled) { background: var(--c-mist); }
+.seta-sala.alvo { animation: seta-pulso 0.8s steps(2) infinite; }
+.seta-sala.brilho { background: var(--c-butter); }
+@keyframes seta-pulso { 50% { box-shadow: inset var(--px) var(--px) 0 var(--c-mist), 0 0 0 4px var(--c-butter); } }
+.seta-dica { position: absolute; top: calc(50% + 40px); z-index: 9; padding: 4px 8px 2px; font-size: 20px; white-space: nowrap; color: var(--c-cream); background: var(--c-ink); pointer-events: none; }
+.seta-dica.direita { right: 16px; }
+.seta-dica.esquerda { left: 16px; }
+/* troca de sala: a cena entra deslizando do lado de onde se veio */
+.troca-sala { position: absolute; inset: 0; }
+.troca-sala.vindo-da-direita { animation: sala-entra-direita 0.35s steps(6) both; }
+.troca-sala.vindo-da-esquerda { animation: sala-entra-esquerda 0.35s steps(6) both; }
+@keyframes sala-entra-direita { from { transform: translateX(18%); opacity: 0.3; } to { transform: none; opacity: 1; } }
+@keyframes sala-entra-esquerda { from { transform: translateX(-18%); opacity: 0.3; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .troca-sala { animation: none !important; } .seta-sala.alvo { animation: none; } }
+.vidro-armario { pointer-events: none; }
+.foto-avatar { overflow: hidden; }
+.foto-avatar svg { display: block; }
+/* começo do dia: a tela sai do preto em ~1 s (em degraus, combinando com o pixel art) */
+.fade-preto { position: absolute; inset: 0; z-index: 990; background: var(--c-ink); pointer-events: none; animation: sai-do-preto 1s steps(10) forwards; }
+@keyframes sai-do-preto { from { opacity: 1; } to { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .fade-preto { animation-duration: 0.3s; } }
+.inventario { position: absolute; right: 16px; bottom: 16px; z-index: 8; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.bau-btn {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-mist), inset -4px -4px 0 var(--c-lavender), 4px 4px 0 var(--sombra-texto);
+  cursor: pointer;
+}
+.bau-btn img { width: 48px; height: 48px; }
+.bau-btn:hover:not(:disabled), .bau-btn.aberto { background: var(--c-mist); }
+.bau-btn .contagem {
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  min-width: 28px;
+  padding: 4px 4px 2px;
+  font-family: var(--f-titulo);
+  font-size: 11px;
+  background: var(--c-butter);
+  border: 3px solid var(--c-ink);
+}
+/* com algo na mão, o baú vira alvo; em cima dele, brilha */
+.bau-btn.alvo { box-shadow: inset var(--px) var(--px) 0 var(--c-mist), inset -4px -4px 0 var(--c-lavender), 0 0 0 4px var(--c-lavender); }
+.bau-btn.brilho {
+  background: var(--c-butter);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-cream), inset -4px -4px 0 var(--c-peach), 0 0 0 4px var(--c-butter), 0 0 0 10px rgba(242, 230, 160, 0.35);
+  animation: bau-brilho 0.5s steps(2) infinite;
+  transform: translateY(-4px);
+}
+@keyframes bau-brilho { 50% { box-shadow: inset var(--px) var(--px) 0 var(--c-cream), inset -4px -4px 0 var(--c-peach), 0 0 0 4px var(--c-butter), 0 0 0 16px rgba(242, 230, 160, 0.2); } }
+.bau-dica {
+  position: relative;
+  padding: 4px 8px 2px;
+  font-size: 20px;
+  white-space: nowrap;
+  background: var(--c-ink);
+  color: var(--c-cream);
+  margin-right: 4px;
+}
+.bau-dica::after {
+  content: '';
+  position: absolute;
+  right: 28px;
+  bottom: -12px;
+  border: 6px solid transparent;
+  border-top-color: var(--c-ink);
+}
+
+.inventario-painel {
+  width: 380px;
+  max-height: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: inset var(--px) var(--px) 0 var(--c-mist), 8px 8px 0 var(--sombra-texto);
+}
+.inventario-painel .titulo { font-family: var(--f-titulo); font-size: 14px; color: var(--c-grape); }
+.inventario-painel ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; overflow-y: auto; }
+.inventario-painel li button {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 4px 4px;
+  background: var(--c-mist);
+  border: 3px solid var(--c-ink);
+  cursor: pointer;
+}
+.inventario-painel li button:hover { background: var(--c-butter); }
+.inventario-painel .miniatura { width: 48px; height: 48px; display: grid; place-items: center; }
+.inventario-painel .nome { font-size: 18px; line-height: 1; text-align: center; }
+.inventario-painel .vazio, .inventario-painel .dica { margin: 0; font-size: 20px; color: var(--c-grape); line-height: 1.1; }
+.inventario-painel .dica { font-size: 18px; }
+
+/* aviso de cliente que foi embora: no topo, para não cobrir o baú nem a barra de tarefas */
+.toast.toast-saiu { top: 64px; bottom: auto; right: 16px; z-index: 950; background: var(--c-blush); pointer-events: none; }
+
+/* ------------------------------------------------ pop-ups de clientes impacientes */
+/* empilhados no canto inferior direito, acima do baú e do aviso de "novo pedido" */
+.alertas {
+  position: absolute;
+  right: 16px;
+  bottom: 140px;
+  z-index: 850;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 10px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+.alerta {
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px 8px;
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  border-left-width: 10px;
+  border-left-color: var(--c-peach);
+  box-shadow: 6px 6px 0 var(--sombra-texto);
+  pointer-events: auto;
+  animation: alerta-entra 0.35s steps(5) both;
+}
+.alerta.saiu { background: var(--c-rose); border-left-color: var(--c-ink); }
+/* pedido normal chegando: azul-céu */
+.alerta.novo { background: var(--c-mist); border-left-color: var(--c-sky); }
+.alerta-selo.novo { background: var(--c-sky); color: var(--c-ink); }
+/* clicável: leva ao e-mail */
+.alerta.clicavel { cursor: pointer; }
+.alerta.clicavel:hover, .alerta.clicavel:focus-visible { outline: 3px solid var(--c-cream); outline-offset: -3px; filter: brightness(1.04); }
+/* pedido urgente: tons de vermelho, com selo e borda piscando */
+.alerta.urgente { background: var(--c-blush); border-color: var(--c-ink); border-left-color: var(--c-rose); animation: alerta-entra 0.35s steps(5) both, urgente-borda 0.6s steps(1) 0.35s 6; }
+.alerta-selo { align-self: flex-start; margin-bottom: 4px; padding: 3px 8px 1px; font-family: var(--f-titulo); font-size: 11px; color: var(--c-cream); background: var(--c-rose); border: var(--px) solid var(--c-ink); }
+.alerta.urgente .alerta-rodape { color: var(--c-ink); font-weight: bold; }
+@keyframes urgente-borda { 50% { border-left-color: var(--c-ink); } }
+@keyframes alerta-entra { from { transform: translateX(380px); } to { transform: none; } }
+.alerta-topo { display: flex; align-items: center; gap: 8px; }
+.alerta-topo img { width: 24px; height: 24px; }
+.alerta-topo strong { flex: 1; font-family: var(--f-titulo); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.alerta-fechar { padding: 0 6px; font-size: 24px; line-height: 1; background: none; border: none; cursor: pointer; color: var(--c-ink); }
+.alerta-fechar:hover { color: var(--c-grape); }
+.alerta-assunto { font-size: 18px; color: var(--c-plum); }
+.alerta.saiu .alerta-assunto { color: var(--c-ink); }
+.alerta-frase { margin: 2px 0; font-size: 24px; line-height: 1.05; }
+.alerta-rodape { font-size: 18px; color: var(--c-plum); }
+.alerta.saiu .alerta-rodape { color: var(--c-ink); font-weight: bold; }
+.alerta.atencao .alerta-rodape { animation: paciencia-pisca 0.8s steps(1) infinite; }
+@keyframes paciencia-pisca { 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .alerta { animation: none; } .alerta.atencao .alerta-rodape { animation: none; } }
+
+/* ---------------------------------------------------------- toca-fitas */
+.dica-objeto {
+  position: absolute;
+  z-index: 7;
+  transform: translate(-50%, calc(-100% - 12px));
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--f-titulo);
+  font-size: 12px;
+  color: var(--c-ink);
+  background: var(--c-butter);
+  border: var(--px) solid var(--c-ink);
+  padding: 8px 10px 6px;
+}
+/* faixa que começou a tocar (some sozinho) */
+.aviso-musica {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  z-index: 940;
+  transform: translateX(-50%);
+  pointer-events: none;
+  font-family: var(--f-titulo);
+  font-size: 14px;
+  color: var(--c-cream);
+  background: var(--c-plum);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 0 4px 0 var(--sombra-suave);
+  padding: 10px 14px 8px;
+  animation: aviso-musica 2.5s steps(10) forwards;
+}
+@keyframes aviso-musica {
+  0% { opacity: 0; transform: translate(-50%, -8px); }
+  12%, 80% { opacity: 1; transform: translate(-50%, 0); }
+  100% { opacity: 0; }
+}
+
+/* fim do dia: aprovado (libera o próximo) ou reprovado (abaixo da média mínima) */
+.fim-dia .valor.reprovado { color: var(--c-rose); }
+.fim-dia .veredito { margin: 0; padding: 6px 14px 4px; border: var(--px) solid var(--c-ink); font-size: 22px; }
+.fim-dia .veredito.aprovado { background: var(--c-mint); }
+.fim-dia .veredito.reprovado { background: var(--c-blush); }
+.fim-dia .botoes-fim { display: flex; gap: 14px; }
+
+/* ---------------------------------------------------------- resumo do dia */
+.resumo-dia { height: 100%; display: flex; flex-direction: column; }
+.resumo-lista { flex: 1; min-height: 0; list-style: none; margin: 0; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px; }
+.resumo-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'cliente ver' 'assunto ver' 'situacao ver';
+  align-items: center;
+  gap: 0 12px;
+  padding: 8px 14px 6px;
+  text-align: left;
+  font-family: var(--f-texto);
+  color: var(--c-ink);
+  background: var(--c-mist);
+  border: var(--px) solid var(--c-ink);
+  cursor: pointer;
+}
+.resumo-item:hover:not(:disabled) { background: var(--c-butter); }
+.resumo-item:disabled { cursor: not-allowed; }
+.resumo-item.urgente:not(.perdido) { border-left: 10px solid var(--c-rose); }
+.resumo-item .cliente { grid-area: cliente; font-size: 24px; font-weight: bold; }
+.resumo-item .assunto { grid-area: assunto; font-size: 19px; color: var(--c-plum); }
+.resumo-item .situacao { grid-area: situacao; font-size: 20px; }
+.resumo-item .ver { grid-area: ver; font-family: var(--f-titulo); font-size: 12px; color: var(--c-grape); }
+.resumo-rodape { display: flex; justify-content: flex-end; padding: 10px 16px; border-top: var(--px) solid var(--c-ink); }
+
+/* aviso antes de sair para o menu no meio do dia */
+.confirmar-saida { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 20px 30px; text-align: center; font-size: 24px; }
+.confirmar-saida h3 { margin: 0; font-family: var(--f-titulo); font-size: 16px; color: var(--c-rose); line-height: 1.4; }
+.confirmar-saida p { margin: 0; line-height: 1.15; }
+.confirmar-saida .nota-saida { font-size: 20px; color: var(--c-plum); }
+.confirmar-saida .botoes-fim { display: flex; gap: 14px; margin-top: 8px; }
+
+/* ---------------------------------------------------------- folha de rascunho */
+.rascunho { height: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 14px 20px 10px; }
+/* papel pautado: linhas a cada 8 pixels de arte (32px) e margem rosa; cores lisas, sem degradê */
+.folha {
+  position: relative;
+  flex: none;
+  box-sizing: content-box; /* a borda fica por fora: o canvas tem exatamente 4px por pixel de arte */
+  cursor: none;
+  background-color: var(--c-butter); /* folha amarelada */
+  background-image:
+    linear-gradient(90deg, transparent 52px, var(--c-blush) 52px, var(--c-blush) 56px, transparent 56px),
+    repeating-linear-gradient(180deg, transparent 0 28px, var(--c-sky) 28px 32px);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 6px 6px 0 var(--sombra-texto);
+}
+.folha canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.lapis-cursor { position: absolute; pointer-events: none; image-rendering: pixelated; }
+.rascunho-rodape { width: 100%; display: flex; align-items: center; gap: 10px; font-size: 19px; color: var(--c-plum); }
+.rascunho-rodape .espaco { flex: 1; }
+
+/* cores do pote de canetas na folha de rascunho */
+.rascunho-cores { display: flex; gap: 6px; align-self: flex-start; }
+.rascunho-cor { width: 34px; height: 34px; padding: 4px; background: var(--c-mist); border: 3px solid var(--c-ink); cursor: pointer; }
+.rascunho-cor span { display: block; width: 100%; height: 100%; background: var(--tinta); border: 2px solid var(--c-ink); }
+.rascunho-cor:hover { background: var(--c-butter); }
+.rascunho-cor.ativa { background: var(--c-grape); box-shadow: 0 -4px 0 var(--c-grape); transform: translateY(-4px); }
+
+/* ---------------------------------------------------------- café (data/cafe.js) */
+/* vapor da caneca cheia: sobe e some, em passos (sem suavizar o pixel art) */
+.objeto.vapor { animation: vapor 1.6s steps(4) infinite; }
+@keyframes vapor {
+  0% { transform: translateY(0); opacity: 0.9; }
+  100% { transform: translateY(-8px); opacity: 0.2; }
+}
+/* fio de café caindo do bico enquanto a cafeteira prepara */
+.cafe-gotejando {
+  position: absolute;
+  width: 4px;
+  pointer-events: none;
+  background: repeating-linear-gradient(to bottom, var(--c-plum) 0 8px, transparent 8px 12px);
+  animation: gotejar 0.4s steps(3) infinite;
+}
+@keyframes gotejar {
+  from { background-position: 0 0; }
+  to { background-position: 0 12px; }
+}
+.efeito-cafe { gap: 6px; color: var(--c-ink); background: var(--c-peach); }
+.barra-tarefas .efeito-cafe { margin-right: 8px; }
+
+/* Café: linhas de velocidade estilo anime sobre a tela inteira (components/VelocidadeCafe.jsx).
+   Canvas 320×180 ampliado sem suavização; 50% de transparência; não bloqueia cliques. */
+.velocidade-cafe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 860;
+  opacity: 0.5;
+  pointer-events: none;
+  image-rendering: pixelated;
+  animation: velocidade-entra 0.4s steps(4) both;
+}
+@keyframes velocidade-entra { from { opacity: 0; } to { opacity: 0.5; } }
+
+/* ---------------------------------------------------------- tutorial (primeira vez no computador) */
+/* por cima da área de trabalho e dos pop-ups, abaixo das janelas modais (pausa) */
+.tutorial { position: absolute; inset: 0; z-index: 880; }
+.tutorial.sem-alvo { background: rgba(30, 26, 46, 0.62); }
+/* o "buraco" iluminado: a sombra gigante escurece todo o resto */
+.tutorial-destaque {
+  position: absolute;
+  box-shadow: 0 0 0 2000px rgba(30, 26, 46, 0.62);
+  outline: var(--px) dashed var(--c-butter);
+  outline-offset: 2px;
+  pointer-events: none;
+  animation: tutorial-pulsa 1.2s steps(2) infinite;
+}
+@keyframes tutorial-pulsa { 50% { outline-color: var(--c-cream); } }
+.tutorial-cartao {
+  position: absolute;
+  box-sizing: border-box;
+  padding: 16px 20px 14px;
+  background: var(--c-lilac);
+  border: var(--px) solid var(--c-ink);
+  box-shadow: 8px 8px 0 rgba(30, 26, 46, 0.55);
+  font-size: 23px;
+  line-height: 1.05;
+  color: var(--c-ink);
+  animation: tutorial-entra 0.2s steps(3) both;
+}
+@keyframes tutorial-entra { from { transform: translateY(8px); opacity: 0; } }
+.tutorial-cartao p { margin: 0 0 10px; }
+.tutorial-topo { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.tutorial-mascote { width: 100px; height: 100px; flex: none; }
+.tutorial-topo h3 { margin: 0; font-family: var(--f-titulo); font-size: 18px; color: var(--c-grape); }
+.tutorial-rodape { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.tutorial-passo { flex: 1; font-family: var(--f-titulo); font-size: 12px; color: var(--c-grape); }
+@media (prefers-reduced-motion: reduce) {
+  .tutorial-destaque, .tutorial-cartao { animation: none; }
+}
+
+/* corações do modo infinito (components/Coracoes.jsx): no topo, no meio da tela, por cima das
+   janelas do computador e abaixo das janelas modais */
+.painel-infinito { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 870; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; }
+.painel-infinito > * { pointer-events: auto; }
+.coracoes { display: flex; gap: 6px; padding: 6px 10px 4px; background: var(--c-lilac); border: var(--px) solid var(--c-ink); box-shadow: 4px 4px 0 var(--sombra-suave); pointer-events: auto; }
+.coracao { display: block; }
+.coracao.perdendo { animation: coracao-some 0.9s steps(6); }
+@keyframes coracao-some { 0%, 32%, 66% { opacity: 0.2; transform: translateY(-4px); } 16%, 50%, 84%, 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .coracao.perdendo { animation: none; } }
+.fim-de-jogo .coracoes { box-shadow: none; }
+.fim-de-jogo .motivo { margin: 0; font-size: 20px; color: var(--c-grape); }
+
+/* eventos aleatórios do modo infinito (screens/EventoAleatorio.jsx, lib/eventos.js) */
+.evento-aleatorio { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 16px 28px; text-align: center; font-size: 22px; line-height: 1.2; }
+.evento-aleatorio h3 { margin: 0; font-family: var(--f-titulo); font-size: 20px; }
+.evento-aleatorio p { margin: 0; }
+.evento-aleatorio .evento-nota { font-size: 18px; color: var(--c-grape); }
+.evento-opcoes { display: flex; gap: 22px; margin-top: 6px; }
+.evento-opcao { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.evento-opcao .px-btn { white-space: nowrap; }
+.evento-opcao small { font-size: 18px; color: var(--c-plum); }
+.evento-opcao small.falta { color: var(--c-rose); }
+/* minijogo da pane: por cima da tela do jogo (bloqueia os cliques no que está embaixo) */
+.conserto { position: absolute; inset: 0; z-index: 905; background: rgba(30, 26, 46, 0.25); }
+.conserto-aviso { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); width: max-content; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 14px 20px 10px; text-align: center; color: var(--c-cream); background: var(--c-ink); border: var(--px) solid var(--c-rose); box-shadow: 6px 6px 0 var(--sombra-texto); }
+.conserto-aviso strong { font-family: var(--f-titulo); font-size: 15px; white-space: nowrap; line-height: 1.5; color: var(--c-rose); animation: conserto-pisca 0.5s steps(1) infinite; }
+.conserto-contagem { font-family: var(--f-titulo); font-size: 28px; color: var(--c-butter); }
+.conserto-contagem.pouco { color: var(--c-rose); }
+@keyframes conserto-pisca { 50% { color: var(--c-cream); } }
+@media (prefers-reduced-motion: reduce) { .conserto-aviso strong { animation: none; } }
+.janela-erro { position: absolute; width: 220px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding-bottom: 8px; font-size: 17px; line-height: 1.1; background: var(--c-mist); border: var(--px) solid var(--c-ink); box-shadow: 4px 4px 0 var(--sombra-texto); }
+.janela-erro-titulo { align-self: stretch; padding: 3px 6px 1px; font-family: var(--f-titulo); font-size: 10px; text-align: left; color: var(--c-cream); background: var(--c-rose); }
+.janela-erro p { padding: 0 8px; }
+.bloqueio-evento { position: absolute; inset: 0; z-index: 866; display: grid; place-items: center; }
+.bloqueio-cafe { background: rgba(30, 26, 46, 0.55); }
+.bloqueio-pane { background-color: var(--c-sky); background-image: repeating-linear-gradient(to bottom, transparent 0 6px, rgba(30, 26, 46, 0.08) 6px 8px); }
+.bloqueio-caixa { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 18px 28px 14px; font-size: 24px; color: var(--c-ink); background: var(--c-lilac); border: var(--px) solid var(--c-ink); box-shadow: 6px 6px 0 var(--sombra-texto); }
+.bloqueio-caixa strong { font-family: var(--f-titulo); font-size: 20px; }
+.bloqueio-barra { width: 260px; height: 16px; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.bloqueio-barra i { display: block; height: 100%; background: var(--c-butter); }
+
+/* pane: glitch que pisca por cima da tela antes do minijogo (GlitchPane); cada ciclo da animação é
+   uma piscada, e o número de ciclos (3 a 5) vem no style */
+.glitch-pane {
+  position: absolute; inset: 0 -32px; z-index: 905; pointer-events: auto; overflow: hidden; opacity: 0;
+  background-color: rgba(30, 26, 46, 0.78); /* ink translúcido: a tela aparece por baixo */
+  background-image:
+    repeating-linear-gradient(to bottom, transparent 0 4px, rgba(169, 196, 236, 0.35) 4px 8px),
+    repeating-linear-gradient(to right, rgba(232, 138, 158, 0.5) 0 12px, transparent 12px 40px, rgba(168, 216, 208, 0.45) 40px 52px, transparent 52px 96px);
+  animation: glitch-pisca 0.3s steps(1) both;
+}
+.glitch-pane .faixa { position: absolute; left: -8%; width: 116%; }
+.glitch-pane .f1 { top: 18%; height: 9%; background: repeating-linear-gradient(to right, var(--c-rose) 0 24px, var(--c-sky) 24px 40px, var(--c-ink) 40px 64px); }
+.glitch-pane .f2 { top: 47%; height: 5%; background: repeating-linear-gradient(to right, var(--c-mint) 0 16px, var(--c-cream) 16px 20px, var(--c-plum) 20px 52px); }
+.glitch-pane .f3 { top: 71%; height: 12%; background: repeating-linear-gradient(to right, var(--c-violet) 0 32px, var(--c-blush) 32px 44px, var(--c-ink) 44px 80px); }
+@keyframes glitch-pisca {
+  0% { opacity: 1; transform: translateX(-12px); }
+  20% { opacity: 1; transform: translateX(16px) skewX(-6deg); }
+  40% { opacity: 0.85; transform: translateX(-6px); }
+  60%, 100% { opacity: 0; transform: none; }
+}
+@keyframes glitch-faixa { 0% { transform: translateX(-24px); } 50% { transform: translateX(28px); } 100% { transform: translateX(0); } }
+.glitch-pane .faixa { animation: glitch-faixa 0.15s steps(2) infinite; }
+
+/* queda de energia (QuedaDeEnergia): textura preta a 60% que pisca duas vezes e fica; aviso com o
+   botão do raio e a opção do gerador, que sai do botão para a direita */
+.apagao {
+  position: absolute; inset: 0; z-index: 866; pointer-events: none;
+  background-color: rgba(0, 0, 0, 0.6);
+  background-image: repeating-linear-gradient(to bottom, transparent 0 4px, rgba(0, 0, 0, 0.18) 4px 8px);
+}
+.apagao.piscando { animation: apagao-pisca 0.5s steps(1) both; }
+@keyframes apagao-pisca { 0% { opacity: 1; } 20% { opacity: 0; } 40% { opacity: 1; } 60% { opacity: 0; } 80%, 100% { opacity: 1; } }
+.energia-aviso { position: absolute; left: 50%; bottom: 28px; transform: translateX(-50%); z-index: 867; display: flex; align-items: stretch; }
+.energia-texto { display: flex; align-items: center; gap: 8px; padding: 12px 18px 10px; font-size: 26px; color: var(--c-cream); background: var(--c-night); border: var(--px) solid var(--c-plum); box-shadow: 6px 6px 0 var(--sombra-texto); }
+.energia-texto b { color: var(--c-butter); }
+.energia-raio { width: 60px; margin-left: -4px; display: grid; place-items: center; cursor: pointer; background: var(--c-plum); border: var(--px) solid var(--c-ink); box-shadow: 6px 6px 0 var(--sombra-texto); }
+.energia-raio:hover, .energia-raio.aberto { background: var(--c-grape); }
+.energia-raio:hover .raio { transform: translateY(-2px); }
+.energia-gerador {
+  position: absolute; left: 100%; bottom: 0; margin-left: 8px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px;
+  width: max-content; padding: 10px 14px; font-size: 20px; color: var(--c-ink); background: var(--c-lilac); border: var(--px) solid var(--c-ink); box-shadow: 6px 6px 0 var(--sombra-texto);
+  transform-origin: left center; animation: gerador-abre 0.18s steps(3) both;
+}
+.energia-gerador small { font-size: 16px; color: var(--c-rose); }
+@keyframes gerador-abre { from { transform: translateX(-24px) scaleX(0.2); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .energia-gerador { animation: none; } }
+
+/* café derramado (Escritorio): poça debaixo da cafeteira; clicar limpa (barra de progresso) e a
+   poça encolhe com o que falta (--resta). A dica do monitor fica sempre à mostra (.fixa) */
+.poca-cafe { position: absolute; z-index: 6; width: 144px; height: 32px; margin-left: -72px; padding: 0; background: none; border: 0; cursor: pointer; }
+.poca-cafe .poca {
+  position: absolute; inset: 0; transform: scale(calc(0.25 + 0.75 * var(--resta, 1)));
+  background: #6b4a3a;
+  clip-path: polygon(8% 25%, 24% 25%, 24% 0, 64% 0, 64% 25%, 88% 25%, 88% 50%, 100% 50%, 100% 75%, 80% 75%, 80% 100%, 16% 100%, 16% 75%, 0 75%, 0 50%, 8% 50%);
+  box-shadow: inset 0 -8px 0 #4e3328;
+}
+.poca-cafe .poca::after { content: ''; position: absolute; left: 30%; top: 30%; width: 16px; height: 4px; background: #9c7560; }
+.poca-cafe .poca-dica { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%); white-space: nowrap; font-family: var(--f-titulo); font-size: 10px; padding: 6px 8px 4px; color: var(--c-ink); background: var(--c-butter); border: var(--px) solid var(--c-ink); opacity: 0; pointer-events: none; }
+.poca-cafe:hover .poca-dica, .poca-cafe.limpando .poca-dica { opacity: 1; }
+.poca-cafe .poca-barra { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); width: 120px; height: 14px; background: var(--c-mist); border: 3px solid var(--c-ink); }
+.poca-cafe .poca-barra i { display: block; height: 100%; background: var(--c-mint); }
+.poca-cafe.limpando { cursor: progress; }
+.poca-cafe.limpando .poca { animation: poca-esfrega 0.25s steps(2) infinite; }
+@keyframes poca-esfrega { 50% { translate: 3px 0; } }
+.dica-monitor.reiniciando.fixa { opacity: 1; }
+
+/* cansaço (Cansaco em EventoAleatorio.jsx): vinheta que fecha das bordas e depois o preto por cima;
+   as opacidades mudam a cada segundo de jogo e a transição de 1 s deixa contínuo */
+.cansaco { position: absolute; inset: 0; z-index: 868; pointer-events: none; }
+.cansaco-vinheta { position: absolute; inset: 0; background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 22%, rgba(0, 0, 0, 0.7) 62%, #000 100%); transition: opacity 1s linear; }
+.cansaco-preto { position: absolute; inset: 0; background: #000; transition: opacity 1s linear; }
+.cansaco-texto { position: absolute; left: 50%; top: 90px; transform: translateX(-50%); margin: 0; padding: 10px 18px 8px; white-space: nowrap; font-size: 26px; color: var(--c-cream); background: rgba(30, 26, 46, 0.85); border: var(--px) solid var(--c-grape); box-shadow: 4px 4px 0 var(--sombra-texto); animation: cansaco-texto 1.2s steps(6) both; }
+@keyframes cansaco-texto { from { opacity: 0; transform: translate(-50%, -8px); } }
+@media (prefers-reduced-motion: reduce) { .cansaco-vinheta, .cansaco-preto { transition: none; } .cansaco-texto { animation: none; } }
+
+/* sono (Sono em EventoAleatorio.jsx): tela preta com Zzz; ao acordar, um aviso no topo */
+.sono { position: absolute; inset: 0; z-index: 869; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: #000; color: var(--c-lavender); pointer-events: auto; }
+.sono .zzz { font-family: var(--f-titulo); font-size: 56px; color: var(--c-cream); animation: zzz 1.6s steps(4) infinite; }
+.sono .zzz small { font-size: 36px; margin-left: 8px; }
+.sono .zzz small.mini { font-size: 22px; }
+.sono-texto { font-size: 24px; }
+@keyframes zzz { 50% { transform: translateY(-8px); opacity: 0.7; } }
+.acordou { position: absolute; left: 50%; top: 90px; z-index: 869; transform: translateX(-50%); margin: 0; padding: 10px 18px 8px; white-space: nowrap; font-size: 24px; color: var(--c-ink); background: var(--c-butter); border: var(--px) solid var(--c-ink); box-shadow: 4px 4px 0 var(--sombra-texto); pointer-events: none; animation: cansaco-texto 0.6s steps(4) both; }
+@media (prefers-reduced-motion: reduce) { .sono .zzz { animation: none; } }
+
+/* raios para coletar na queda de energia (QuedaDeEnergia): acima do apagão, abaixo do aviso */
+.raios-coleta { position: absolute; inset: 0; z-index: 867; pointer-events: none; }
+.raio-coleta { position: absolute; width: 56px; height: 72px; margin: -36px 0 0 -28px; display: grid; place-items: center; padding: 0; background: none; border: 0; cursor: pointer; pointer-events: auto; filter: drop-shadow(0 0 6px rgba(242, 230, 160, 0.9)); animation: raio-surge 0.35s steps(4) both, raio-brilho 0.9s steps(2) 0.35s infinite; }
+@keyframes raio-surge { from { opacity: 0; transform: scale(0.3); } }
+.raio-coleta .raio { width: 42px; height: 60px; }
+.raio-coleta:hover { transform: scale(1.1); }
+.raio-coleta:active { transform: scale(0.9); }
+.raio-pips { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); display: flex; gap: 3px; }
+.raio-pips i { width: 6px; height: 6px; background: var(--c-butter); border: 2px solid var(--c-ink); }
+@keyframes raio-brilho { 50% { filter: drop-shadow(0 0 12px rgba(242, 230, 160, 1)); } }
+.faiscas { position: absolute; width: 0; height: 0; pointer-events: none; }
+.faiscas i { position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; background: var(--c-butter); animation: faisca 0.5s steps(5) forwards; }
+.faiscas i.clara { background: var(--c-cream); width: 4px; height: 4px; }
+@keyframes faisca { to { transform: translate(var(--dx), var(--dy)); opacity: 0; } }
+.energia-texto { flex-direction: column; align-items: flex-start; gap: 2px; }
+.energia-contador { font-size: 20px; color: var(--c-butter); }
+@media (prefers-reduced-motion: reduce) { .raio-coleta { animation: none; } }

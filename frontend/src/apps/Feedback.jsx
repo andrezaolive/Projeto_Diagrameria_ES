@@ -1,0 +1,260 @@
+import { Botao, Modal } from '../components/ui.jsx';
+import { CONCEITOS, NOME_TIPO, gerarFeedback } from '../lib/feedback.js';
+import { lerMult } from '../lib/multiplicidade.js';
+import { VISIBILIDADES } from '../lib/membros.js';
+import './apps.css';
+
+// Trecho errado, em vermelho
+const Errado = ({ children }) => <mark className="fb-errado">{children}</mark>;
+// O que faltou (não está no diagrama do jogador), em verde sublinhado, como diz a legenda
+const Faltou = ({ children }) => <u className="fb-faltou">{children}</u>;
+const Nome = ({ children }) => <b>"{children}"</b>;
+
+// Relação escrita como no diagrama: A — B, A → «include» → B, A → herda de → B...
+// errada = está no diagrama mas não devia (vermelho); faltou = devia estar e não está (verde sublinhado)
+function Relacao({ r, errada = false, faltou = false }) {
+  const marcar = (t) => (errada ? <Errado>{t}</Errado> : faltou ? <Faltou>{t}</Faltou> : <span className="fb-certo">{t}</span>);
+  if (r.tipo === 'transicao') return marcar(`"${r.ra}" —${r.ev ? ` ${r.ev} ` : ''}→ "${r.rb}"`);
+  const meio = {
+    associacao: ' — ',
+    include: ' → «include» → ',
+    extend: ' → «extend» → ',
+    heranca: ' → herda de → ',
+    dependencia: ' ⇢ depende de ⇢ ',
+    agregacao: ' ◇— agrega — ',
+    composicao: ' ◆— é composto de — ',
+  }[r.tipo] ?? ` → ${NOME_TIPO[r.tipo] ?? r.tipo} → `;
+  return marcar(`"${r.ra}"${meio}"${r.rb}"`);
+}
+
+// Por que o sentido importa, por tipo de relação
+const SENTIDO = {
+  include: 'No include a seta sai do caso que SEMPRE executa o outro (o base) e aponta para o incluído.',
+  extend: 'No extend a seta sai do caso OPCIONAL e aponta para o caso base que ele estende.',
+  heranca: 'Na herança a seta sai da classe filha e aponta para a mãe ("filha é um tipo de mãe").',
+  dependencia: 'Na dependência a seta sai de quem usa e aponta para quem é usado.',
+  agregacao: 'Na agregação a ligação sai do "todo" (o losango vazado fica nele) e vai até a parte.',
+  composicao: 'Na composição a ligação sai do "todo" (o losango cheio fica nele) e vai até a parte.',
+  transicao: 'A transição sai do estado em que o objeto está e aponta para o estado seguinte.',
+};
+
+function Problema({ p }) {
+  switch (p.tipo) {
+    case 'grafia':
+      return (
+        <>
+          <p>
+            Erro de escrita:{' '}
+            {/* palavra escrita inteira em vermelho; letras trocadas/sobrando sublinhadas dentro dela */}
+            <Errado>
+              <span className="fb-palavra">
+                {p.diff.escrito.map((x, i) => (x.errado ? <s key={i} className="fb-letra-errada">{x.t}</s> : <span key={i}>{x.t}</span>))}
+              </span>
+            </Errado>{' '}
+            → o certo é{' '}
+            <span className="fb-palavra">
+              {p.diff.correto.map((x, i) => (x.faltou ? <u key={i} className="fb-faltou">{x.t}</u> : <span key={i}>{x.t}</span>))}
+            </span>
+          </p>
+          <p className="fb-sugestao">Com outro nome, o elemento conta como diferente, e as relações ligadas a ele também deixam de valer.</p>
+        </>
+      );
+    case 'tipoErrado':
+      return (
+        <p>
+          <Nome>{p.rotulo}</Nome> deveria ser <b>{NOME_TIPO[p.certo]}</b>, mas você usou <Errado>{NOME_TIPO[p.usado]}</Errado>.
+        </p>
+      );
+    case 'faltando':
+      return (
+        <p>
+          Faltou {NOME_TIPO[p.esperado.tipo]}: <Faltou>"{p.esperado.rotulo}"</Faltou>
+        </p>
+      );
+    case 'sobrando':
+      return (
+        <p>
+          <Errado>"{p.jogador.rotulo}"</Errado> ({NOME_TIPO[p.jogador.tipo]}) não foi pedido no e-mail.
+        </p>
+      );
+    case 'foraDoSistema':
+      return (
+        <>
+          <p>
+            O caso de uso <Nome>{p.rotulo}</Nome> está <Errado>fora do sistema</Errado>.
+          </p>
+          <p className="fb-sugestao">Os casos de uso são o que o sistema faz: arraste-o para dentro do retângulo do sistema (aumente o retângulo pelas setinhas, se faltar espaço).</p>
+        </>
+      );
+    case 'atorNoSistema':
+      return (
+        <>
+          <p>
+            O ator <Nome>{p.rotulo}</Nome> está <Errado>dentro do sistema</Errado>.
+          </p>
+          <p className="fb-sugestao">O ator é quem usa o sistema de fora: deixe-o do lado de fora do retângulo, ligado aos casos de uso por associação.</p>
+        </>
+      );
+    case 'membroFaltando':
+      return (
+        <p>
+          Na classe <Nome>{p.classe}</Nome> faltou o {p.tipoMembro === 'metodo' ? 'método' : 'atributo'} <Faltou>{p.membro.texto}</Faltou>.
+        </p>
+      );
+    case 'membroNoLugarErrado':
+      return (
+        <>
+          <p>
+            O {p.tipoMembro === 'metodo' ? 'método' : 'atributo'} <b>{p.membro.texto}</b> é da classe <Nome>{p.classe}</Nome>, mas você colocou em <Errado>{p.outra}</Errado>.
+          </p>
+          <p className="fb-sugestao">Cada classe guarda os próprios dados e sabe fazer as próprias operações: releia de quem o e-mail diz que é.</p>
+        </>
+      );
+    case 'membroTipo':
+      return (
+        <>
+          <p>
+            Em <Nome>{p.classe}</Nome>, o {p.tipoMembro === 'metodo' ? 'retorno de' : 'tipo de'} <b>{p.membro.nome}</b> deveria ser {p.usado.tipo ? <b>{p.membro.tipo}</b> : <Faltou>{p.membro.tipo}</Faltou>}, mas você usou{' '}
+            {p.usado.tipo ? <Errado>{p.usado.tipo}</Errado> : <Errado>nenhum</Errado>}.
+          </p>
+          <p className="fb-sugestao">O tipo vem depois dos dois-pontos: "- saldo: float", "+ consultarSaldo(): float".</p>
+        </>
+      );
+    case 'membroVisibilidade': {
+      const nome = (s) => VISIBILIDADES.find((v) => v.simbolo === s)?.nome ?? 'sem visibilidade';
+      return (
+        <>
+          <p>
+            Em <Nome>{p.classe}</Nome>, {p.tipoMembro === 'metodo' ? 'o método' : 'o atributo'} <b>{p.membro.nome}</b> deveria ser <b>{p.membro.visibilidade} {nome(p.membro.visibilidade)}</b>, mas você usou{' '}
+            <Errado>{p.usado.visibilidade ? `${p.usado.visibilidade} ${nome(p.usado.visibilidade)}` : 'nenhuma'}</Errado>.
+          </p>
+          <p className="fb-sugestao">Escolha com os botões "-" (privado), "+" (público) e "#" (protegido) ao lado da linha.</p>
+        </>
+      );
+    }
+    case 'sentidoInvertido':
+      return (
+        <>
+          <p>
+            O <b>{NOME_TIPO[p.certa.tipo]}</b> entre <Nome>{p.certa.ra}</Nome> e <Nome>{p.certa.rb}</Nome> está <Errado>ao contrário</Errado>.
+          </p>
+          <p className="fb-sugestao">
+            O certo seria: <Relacao r={p.certa} />. {SENTIDO[p.certa.tipo]}
+          </p>
+        </>
+      );
+    case 'eventoErrado':
+      return (
+        <>
+          <p>
+            Na transição de <Nome>{p.certa.ra}</Nome> para <Nome>{p.certa.rb}</Nome> o evento deveria ser {p.certa.ev ? (p.usado ? <b>"{p.certa.ev}"</b> : <Faltou>"{p.certa.ev}"</Faltou>) : <b>(nenhum)</b>}, mas você{' '}
+            {p.usado ? <>escreveu <Errado>"{p.usado}"</Errado></> : <Errado>não escreveu nenhum</Errado>}.
+          </p>
+          <p className="fb-sugestao">Selecione a seta no editor e escreva o evento no campo "Evento" da barra de cima.</p>
+        </>
+      );
+    case 'relacaoTipoErrado':
+      return (
+        <>
+          <p>
+            Entre <Nome>{p.certa.ra}</Nome> e <Nome>{p.certa.rb}</Nome> você usou <Errado>{NOME_TIPO[p.usada.tipo]}</Errado>, mas o pedido pede{' '}
+            <b>{NOME_TIPO[p.certa.tipo]}</b>.
+          </p>
+          <p className="fb-sugestao">
+            O certo seria: <Relacao r={p.certa} />
+          </p>
+        </>
+      );
+    case 'relacaoFaltando':
+      return (
+        <>
+          <p>
+            Faltou a relação: <Relacao r={p.certa} faltou />
+          </p>
+          <p className="fb-sugestao">Releia o e-mail: cada frase com "participa", "inclui", "estende", "herda", "agrega", "é composto de" ou "vai para ... com o evento" vira uma ligação.</p>
+        </>
+      );
+    case 'multiplicidade':
+      return (
+        <>
+          <p>
+            Na relação <Relacao r={p.certa} />, do lado de <Nome>{p.lado}</Nome> a multiplicidade deveria ser {p.usado ? <b>{p.esperado}</b> : <Faltou>{p.esperado}</Faltou>}, mas você{' '}
+            {p.usado ? <>colocou <Errado>{p.usado}</Errado></> : <Errado>não colocou nenhuma</Errado>}.
+          </p>
+          <p className="fb-sugestao">
+            Leia assim: cada "{p.outro}" tem <b>{lerMult(p.esperado)}</b> "{p.lado}". O número fica na ponta da classe que está sendo contada.
+          </p>
+        </>
+      );
+    case 'relacaoSobrando':
+      return (
+        <p>
+          A relação <Relacao r={p.usada} errada /> não foi pedida.
+        </p>
+      );
+    default:
+      return null;
+  }
+}
+
+const SECOES = [
+  ['nome', 'Nomes'],
+  ['elemento', 'Elementos'],
+  ['membro', 'Atributos e métodos'],
+  ['relacao', 'Relações'],
+];
+
+export default function Feedback({ diagrama, esperado, onFechar }) {
+  const { problemas, conceitos } = gerarFeedback(diagrama, esperado);
+  return (
+    <Modal titulo="FEEDBACK.TXT" w={920} h={620} onFechar={onFechar}>
+      <div className="feedback">
+        <div className="feedback-corpo rolagem">
+          {problemas.length === 0 ? (
+            <p className="fb-tudo-certo">Nenhum erro encontrado. Diagrama igual ao pedido!</p>
+          ) : (
+            SECOES.map(([cat, titulo]) => {
+              const lista = problemas.filter((p) => p.categoria === cat);
+              if (!lista.length) return null;
+              return (
+                <section key={cat}>
+                  <h4>
+                    {titulo} <span className="contagem">{lista.length}</span>
+                  </h4>
+                  <ul>
+                    {lista.map((p, i) => (
+                      <li key={i}>
+                        <Problema p={p} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })
+          )}
+
+          {conceitos.length > 0 && (
+            <section className="fb-dicas">
+              <h4>Dicas</h4>
+              {conceitos.map((c) => (
+                <div key={c} className="fb-dica">
+                  <b>{CONCEITOS[c].titulo}</b>
+                  <p>{CONCEITOS[c].texto}</p>
+                  <p className="exemplo">Exemplo: {CONCEITOS[c].exemplo}</p>
+                </div>
+              ))}
+            </section>
+          )}
+        </div>
+        <div className="feedback-rodape">
+          <span className="legenda">
+            <mark className="fb-errado">vermelho</mark> = o que está errado · <u className="fb-faltou">verde sublinhado</u> = o que faltou
+          </span>
+          <Botao variante="menta" onClick={onFechar} autoFocus>
+            Entendi
+          </Botao>
+        </div>
+      </div>
+    </Modal>
+  );
+}

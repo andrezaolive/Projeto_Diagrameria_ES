@@ -1,0 +1,86 @@
+{
+  "versao": "1.0",
+  "classes": [
+    {
+      "id": "v1",
+      "nome": "Manutenivel",
+      "estereotipo": "interface",
+      "atributos": [],
+      "metodos": [
+        { "nome": "agendarRevisao", "retorno": "void", "visibilidade": "publico" },
+        { "nome": "custoManutencao", "retorno": "double", "visibilidade": "publico" }
+      ],
+      "posicao": { "x": 60, "y": 40 }
+    },
+    {
+      "id": "v2",
+      "nome": "Veiculo",
+      "estereotipo": "abstrata",
+      "atributos": [
+        { "nome": "placa", "tipo": "String", "visibilidade": "protegido" },
+        { "nome": "quilometragem", "tipo": "double", "visibilidade": "protegido" }
+      ],
+      "metodos": [{ "nome": "custoManutencao", "retorno": "double", "visibilidade": "publico" }],
+      "posicao": { "x": 60, "y": 240 }
+    },
+    {
+      "id": "v3",
+      "nome": "Caminhao",
+      "atributos": [{ "nome": "capacidadeCarga", "tipo": "double", "visibilidade": "privado" }],
+      "metodos": [{ "nome": "custoManutencao", "retorno": "double", "visibilidade": "publico" }],
+      "posicao": { "x": 60, "y": 440 }
+    },
+    {
+      "id": "v4",
+      "nome": "Motor",
+      "atributos": [
+        { "nome": "numeroSerie", "tipo": "String", "visibilidade": "privado" },
+        { "nome": "potencia", "tipo": "int", "visibilidade": "privado" }
+      ],
+      "metodos": [],
+      "posicao": { "x": 380, "y": 240 }
+    },
+    {
+      "id": "v5",
+      "nome": "TipoCombustivel",
+      "estereotipo": "enum",
+      "atributos": [
+        { "nome": "DIESEL", "tipo": "TipoCombustivel", "visibilidade": "publico" },
+        { "nome": "GASOLINA", "tipo": "TipoCombustivel", "visibilidade": "publico" },
+        { "nome": "ELETRICO", "tipo": "TipoCombustivel", "visibilidade": "publico" }
+      ],
+      "metodos": [],
+      "posicao": { "x": 380, "y": 440 }
+    },
+    {
+      "id": "v6",
+      "nome": "RelatorioFrota",
+      "atributos": [],
+      "metodos": [{ "nome": "gerar", "retorno": "List<Veiculo>", "visibilidade": "publico" }],
+      "posicao": { "x": 700, "y": 40 }
+    }
+  ],
+  "relacionamentos": [
+    { "id": "rv1", "tipo": "heranca", "origem": "v2", "destino": "v1" },
+    { "id": "rv2", "tipo": "heranca", "origem": "v3", "destino": "v2" },
+    {
+      "id": "rv3",
+      "tipo": "agregacao",
+      "origem": "v2",
+      "destino": "v4",
+      "multiplicidadeOrigem": "1",
+      "multiplicidadeDestino": "1",
+      "rotulo": "possui"
+    },
+    {
+      "id": "rv4",
+      "tipo": "associacao",
+      "origem": "v4",
+      "destino": "v5",
+      "multiplicidadeOrigem": "0..*",
+      "multiplicidadeDestino": "1",
+      "rotulo": "usa"
+    },
+    { "id": "rv5", "tipo": "dependencia", "origem": "v6", "destino": "v2" }
+  ]
+}

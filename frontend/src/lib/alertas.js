@@ -1,0 +1,91 @@
+// Alertas de clientes impacientes (pop-ups no canto inferior direito).
+//  - "atencao": pedido novo com 25% ou menos da paciência → o cliente cobra uma resposta
+//  - "saiu": o cliente foi embora, mas ainda há outros pedidos na fila
+//    (se era o último pedido do dia, nada aparece)
+//  - "urgente": chegou um pedido urgente (paga mais, prazo curto)
+//  - "novo": chegou um pedido normal (só com `vistos.novo`, ou seja, depois de vistosIniciais: os
+//    pedidos que já estavam na caixa ao abrir o jogo não avisam)
+// Os que falam de um pedido ainda esperando resposta (novo, urgente, atenção) são clicáveis:
+// levam ao e-mail com o pedido aberto (CLICAVEIS).
+
+export const LIMITE_ATENCAO = 0.25;
+
+export const CLICAVEIS = ['novo', 'urgente', 'atencao'];
+
+export const FRASES = {
+  novo: [
+    'Oi! Tenho um pedido novo para vocês.',
+    'Boa! Mandei um e-mail com o que preciso.',
+    'Olá! Vocês pegam mais um pedido?',
+    'Acabei de mandar meu pedido, dá uma olhada!',
+    'Tenho um trabalhinho para a agência.',
+  ],
+  atencao: [
+    'Olá? Tem alguém aí?',
+    'Oi! Alguém leu meu e-mail?',
+    'Ainda estão vendo meu pedido?',
+    'Estou esperando uma resposta...',
+    'Tic-tac... vou acabar procurando outra agência.',
+    'Psiu! Esqueceram de mim?',
+  ],
+  urgente: [
+    'Preciso disso pra ontem!',
+    'É urgente! Pago bem, mas preciso rápido.',
+    'Socorro! O prazo é curtíssimo!',
+    'Larga tudo e faz o meu, por favor!',
+    'Emergência! Reunião daqui a pouco!',
+  ],
+  saiu: [
+    'Cansei de esperar. Vou procurar outra agência.',
+    'Ninguém me respondeu... tchau!',
+    'Desisto. Fica para a próxima.',
+    'Esperei demais. Até nunca mais!',
+  ],
+};
+
+// `evitar`: frases já na tela, para dois pop-ups juntos não dizerem a mesma coisa
+export const sortearFrase = (tipo, aleatorio = Math.random, evitar = []) => {
+  const livres = FRASES[tipo].filter((f) => !evitar.includes(f));
+  const lista = livres.length ? livres : FRASES[tipo];
+  return lista[Math.min(lista.length - 1, Math.floor(aleatorio() * lista.length))];
+};
+
+const NA_FILA = ['novo', 'aceito'];
+
+// Compara os pedidos com o que já foi avisado e devolve os alertas novos.
+// `vistos` = { atencao, saiu, urgente: Set<id> } (não é alterado: devolve cópias atualizadas)
+export function detectarAlertas(pedidos = [], vistos = { atencao: new Set(), saiu: new Set(), urgente: new Set() }) {
+  const atencao = new Set(vistos.atencao);
+  const saiu = new Set(vistos.saiu);
+  const urgente = new Set(vistos.urgente ?? []);
+  const novo = vistos.novo ? new Set(vistos.novo) : null;
+  const alertas = [];
+  for (const p of pedidos) {
+    if (novo && !p.urgente && p.status === 'novo' && !novo.has(p.id)) {
+      novo.add(p.id);
+      alertas.push({ tipo: 'novo', pedido: p });
+    }
+    if (p.urgente && p.status === 'novo' && !urgente.has(p.id)) {
+      urgente.add(p.id);
+      alertas.push({ tipo: 'urgente', pedido: p });
+    }
+    if (p.status === 'novo' && p.paciencia != null && !atencao.has(p.id) && p.paciencia / p.pacienciaTotal <= LIMITE_ATENCAO) {
+      atencao.add(p.id);
+      alertas.push({ tipo: 'atencao', pedido: p });
+    }
+    if (p.status === 'expirado' && !saiu.has(p.id)) {
+      saiu.add(p.id);
+      const temFila = pedidos.some((o) => o.id !== p.id && NA_FILA.includes(o.status));
+      if (temFila) alertas.push({ tipo: 'saiu', pedido: p });
+    }
+  }
+  return { alertas, vistos: { atencao, saiu, urgente, ...(novo ? { novo } : {}) } };
+}
+
+// Ponto de partida ao abrir o jogo: o que já estava expirado não gera alerta de novo
+export const vistosIniciais = (pedidos = []) => ({
+  atencao: new Set(pedidos.filter((p) => p.status !== 'novo').map((p) => p.id)),
+  saiu: new Set(pedidos.filter((p) => p.status === 'expirado').map((p) => p.id)),
+  urgente: new Set(pedidos.filter((p) => p.urgente).map((p) => p.id)),
+  novo: new Set(pedidos.map((p) => p.id)),
+});
