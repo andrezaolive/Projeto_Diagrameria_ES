@@ -121,7 +121,7 @@ export default function Menu({ onJogar, onEditarPerfil, onConta, onResetado, sob
         </Modal>
       )}
       {!sobreposto && modal === 'creditos' && (
-        <Modal titulo="CREDITOS.TXT" w={560} h={380} onFechar={() => setModal(null)}>
+        <Modal titulo="CREDITOS.TXT" w={560} h={440} onFechar={() => setModal(null)}>
           <div className="creditos">
             <h3>Diagrameria</h3>
             <div>Engenharia de Software II</div>
@@ -129,6 +129,8 @@ export default function Menu({ onJogar, onEditarPerfil, onConta, onResetado, sob
             <div>Equipe de Design</div>
             <h3>Desenvolvimento</h3>
             <div>Equipe Diagrameria</div>
+            <h3>Contato</h3>
+            <a href="mailto:projectdiagrameria@gmail.com">projectdiagrameria@gmail.com</a>
             <div style={{ marginTop: 24 }}>
               <Botao tamanho="pequeno" onClick={() => setModal(null)}>Fechar</Botao>
             </div>
