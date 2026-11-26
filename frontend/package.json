@@ -2,6 +2,7 @@
   "name": "diagrameria-frontend",
   "version": "1.0.0",
   "description": "Frontend em React",
+  "license": "MIT",
   "private": true,
   "type": "module",
   "scripts": {
