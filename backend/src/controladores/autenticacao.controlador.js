@@ -25,4 +25,10 @@ async function eu(req, res) {
   res.status(200).json({ usuario });
 }
 
-module.exports = { cadastrar, entrar, eu };
+async function alterar(req, res) {
+  const { senhaAtual, email, senha } = req.body;
+  const resultado = await servico.alterar(req.usuario.id, { senhaAtual, email, senha });
+  res.status(200).json(resultado);
+}
+
+module.exports = { cadastrar, entrar, eu, alterar };

@@ -40,6 +40,8 @@ tags:
     description: Verificação de que o processo está de pé
   - name: Autenticação
     description: Cadastro, login e perfil do jogador
+  - name: Progresso
+    description: Save do jogo guardado na conta, para jogar em qualquer aparelho
 
 paths:
   /saude:
@@ -188,6 +190,96 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Erro' }
+    patch:
+      tags: [Autenticação]
+      summary: Troca email e/ou senha
+      description: |
+        Exige a senha atual. Devolve um token novo, porque o JWT carrega o email.
+        Limitado a 30 tentativas por IP a cada 15 minutos.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [senhaAtual]
+              description: Pelo menos um de `email` e `senha`.
+              additionalProperties: false
+              properties:
+                senhaAtual: { type: string, maxLength: 72 }
+                email: { type: string, format: email, maxLength: 255 }
+                senha:
+                  { type: string, minLength: 8, maxLength: 72, description: 'No máximo 72 bytes.' }
+      responses:
+        '200':
+          description: Conta atualizada
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RespostaDeSessao' }
+        '400':
+          $ref: '#/components/responses/EntradaInvalida'
+        '401':
+          description: Sem token, token inválido ou senha atual incorreta
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '409':
+          description: O email novo já é de outra conta (`EMAIL_EM_USO`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+        '429':
+          $ref: '#/components/responses/MuitasTentativas'
+
+  /progresso:
+    get:
+      tags: [Progresso]
+      summary: Lê o save do jogo guardado na conta
+      responses:
+        '200':
+          description: Save da conta
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Progresso' }
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '404':
+          description: A conta ainda não salvou nada (`SEM_PROGRESSO`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
+    put:
+      tags: [Progresso]
+      summary: Grava (substitui) o save do jogo na conta
+      description: |
+        O save é opaco para o servidor: ele guarda e devolve sem interpretar (a
+        correção dos diagramas roda no navegador). Esta rota aceita corpo de até
+        2 MB; o resto da API, 100 kB.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [dados]
+              additionalProperties: false
+              properties:
+                dados: { type: object, description: 'Estado do jogo, como o frontend o serializa.' }
+      responses:
+        '200':
+          description: Save gravado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Progresso' }
+        '400':
+          $ref: '#/components/responses/EntradaInvalida'
+        '401':
+          $ref: '#/components/responses/NaoAutenticado'
+        '413':
+          description: Save maior que 2 MB (`CORPO_GRANDE_DEMAIS`)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Erro' }
 
 components:
   securitySchemes:
@@ -197,6 +289,14 @@ components:
       bearerFormat: JWT
 
   schemas:
+    Progresso:
+      type: object
+      required: [dados, versao, atualizadoEm]
+      properties:
+        dados: { type: object }
+        versao: { type: integer, description: Sobe a cada gravação. }
+        atualizadoEm: { type: string, format: date-time }
+
     Usuario:
       type: object
       description: |

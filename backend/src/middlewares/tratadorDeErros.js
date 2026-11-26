@@ -69,6 +69,14 @@ function tratadorDeErros(erro, req, res, _proximo) {
     });
   }
 
+  // Corpo maior que o limite do express.json() (src/app.js). Sem isto viraria 500,
+  // e o frontend nao saberia que o problema e o tamanho do save.
+  if (erro.type === 'entity.too.large') {
+    return res.status(413).json({
+      erro: { codigo: 'CORPO_GRANDE_DEMAIS', mensagem: 'O corpo da requisicao e grande demais.' },
+    });
+  }
+
   if (!ambiente.ehTeste) {
     console.error(`[erro nao tratado] ${req.method} ${req.path}`, erro);
   }

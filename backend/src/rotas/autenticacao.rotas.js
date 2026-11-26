@@ -41,6 +41,21 @@ const schemaLogin = {
   },
 };
 
+// Troca de email e/ou senha. A senha nova segue a mesma regra do cadastro; a
+// atual, a mesma do login (sem minLength, pelo mesmo motivo).
+const schemaAlterar = {
+  type: 'object',
+  required: ['senhaAtual'],
+  // senhaAtual + pelo menos um de email/senha (additionalProperties barra o resto).
+  minProperties: 2,
+  additionalProperties: false,
+  properties: {
+    senhaAtual: schemaLogin.properties.senha,
+    email: schemaCadastro.properties.email,
+    senha: schemaCadastro.properties.senha,
+  },
+};
+
 // Desligados na suite de integracao, que faz dezenas de cadastros e logins
 // seguidos do mesmo IP. O comportamento do limite tem teste proprio em
 // testes/unitarios/limitaTentativas.test.js.
@@ -62,11 +77,26 @@ const limiteDeCadastro = limitaTentativas({
   ativo: !ambiente.ehTeste,
 });
 
+// A troca de conta tambem confere senha, entao tambem serve para chutar senha.
+// So por IP: o email do corpo aqui e o novo, e trocar ele zeraria o contador.
+const limiteDeAlteracao = limitaTentativas({
+  limite: 30,
+  janelaMs: QUINZE_MINUTOS,
+  ativo: !ambiente.ehTeste,
+});
+
 const rotas = Router();
 
 // O limite vem antes da validacao: corpo invalido tambem conta como tentativa.
 rotas.post('/cadastro', limiteDeCadastro, validaCorpo(schemaCadastro), controlador.cadastrar);
 rotas.post('/login', limiteDeLogin, validaCorpo(schemaLogin), controlador.entrar);
 rotas.get('/eu', exigeAutenticacao, controlador.eu);
+rotas.patch(
+  '/eu',
+  exigeAutenticacao,
+  limiteDeAlteracao,
+  validaCorpo(schemaAlterar),
+  controlador.alterar
+);
 
 module.exports = rotas;

@@ -40,14 +40,23 @@ if (!AMBIENTES_VALIDOS.includes(nomeDoAmbiente)) {
 
 const ehTeste = nomeDoAmbiente === 'test';
 
-const ambiente = {
-  ambiente: nomeDoAmbiente,
-  ehTeste,
-  ehProducao: nomeDoAmbiente === 'production',
-  porta: Number(opcional('PORTA', '3000')),
-  origemPermitida: opcional('ORIGEM_PERMITIDA', 'http://localhost:5173'),
+/**
+ * Banco por URL (DATABASE_URL) ou por partes (DB_HOST, DB_USUARIO...).
+ *
+ * A URL e o que o Neon instalado pelo Marketplace da Vercel injeta no projeto:
+ * DATABASE_URL (com pooler, para a API) e DATABASE_URL_UNPOOLED (conexao
+ * direta, para as migrations). Os testes ignoram a URL de proposito: um
+ * DATABASE_URL esquecido no terminal faria a suite limpar o banco de producao.
+ */
+function configuracaoDoBanco() {
+  const ssl = opcional('DB_SSL', 'false') === 'true';
+  const url = ehTeste ? null : opcional('DATABASE_URL', null);
 
-  banco: {
+  if (url) {
+    return { url, urlDireta: opcional('DATABASE_URL_UNPOOLED', url), ssl };
+  }
+
+  return {
     host: opcional('DB_HOST', 'localhost'),
     porta: Number(opcional('DB_PORTA', '5432')),
     usuario: obrigatoria('DB_USUARIO'),
@@ -55,7 +64,22 @@ const ambiente = {
     // Os testes de integracao limpam as tabelas entre os casos. Apontar para o
     // banco de desenvolvimento aqui apagaria os gabaritos do time.
     nome: ehTeste ? obrigatoria('DB_NOME_TESTE') : obrigatoria('DB_NOME'),
-  },
+    ssl,
+  };
+}
+
+const ambiente = {
+  ambiente: nomeDoAmbiente,
+  ehTeste,
+  ehProducao: nomeDoAmbiente === 'production',
+  porta: Number(opcional('PORTA', '3000')),
+  origemPermitida: opcional('ORIGEM_PERMITIDA', 'http://localhost:5173'),
+
+  // A Vercel define VERCEL=1. La o app fica atras do proxy dela, e sem confiar
+  // no X-Forwarded-For todo jogador teria o mesmo IP para o limite de tentativas.
+  atrasDeProxy: opcional('VERCEL', '') !== '',
+
+  banco: configuracaoDoBanco(),
 };
 
 module.exports = ambiente;

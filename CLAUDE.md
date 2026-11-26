@@ -119,6 +119,29 @@ same DB. When `NODE_ENV=test`, the DB name switches to `DB_NOME_TESTE` and bcryp
 - CI (`.github/workflows/ci-testes.yml`, at the repo root) creates `diagrameria_teste` manually and runs migrations before
   `npm test`.
 
+## Accounts and saved progress
+
+Only login and saved progress live on the server; grading, economy and the rest of the game run in
+the browser (`frontend/src/lib/conta.js`). `progressos` holds one opaque JSONB save per user
+(`GET`/`PUT /api/progresso`, 2 MB body limit on that route only, set in `src/app.js`); the server
+does not validate game rules inside it. `PATCH /api/auth/eu` changes email/password (requires the
+current password, returns a new token). This deliberately relaxes "server is the authority" below
+for now: a saved game can be edited by its owner.
+
+## Deploy (Vercel)
+
+Production deploys from `main`; other branches get Preview deploys. Two Vercel projects on the same
+repo: Root Directory `frontend` (Vite preset, `VITE_API_URL` = API URL + `/api`) and Root
+Directory `backend` (`backend/vercel.json`: no framework, every path rewritten to the serverless
+entry `api/index.js`, which exports `criarApp()`; `src/server.js` is only for local runs).
+Database: Neon from the Vercel Marketplace, which injects `DATABASE_URL` (pooled, used by the
+app) and `DATABASE_URL_UNPOOLED` (direct, used by the `migracao` knexfile entry). With
+`DATABASE_URL` set, the `DB_*` parts are ignored (never in tests). `DB_SSL=true` turns on TLS with
+certificate verification (`src/config/conexao.js`). `scripts/vercel-build.js` runs migrations
+**only when `VERCEL_ENV=production`**, so a preview of a branch never migrates the production DB.
+`VERCEL=1` makes the app trust one proxy hop (`trust proxy`), so rate limits see the real client
+IP. The rate limiter is in memory, per function instance: weaker on serverless, acceptable for now.
+
 ## Scope / roadmap
 
 Sprint 1 (done): diagram schema, `usuarios` and `gabaritos` migrations, OpenAPI, auth

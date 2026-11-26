@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 import { CABELOS, CORES_CHAVE, ITENS_AVATAR, OPCOES_AVATAR, TAM_AVATAR, alternar, avatarPadrao, camadasExportaveis, gradeDaCamada, montarAvatar, opcoesDoJogador, temOpcao } from './avatar.js';
 import { ITENS_LOJA } from '../data/loja.js';
 import { PALETTE } from '../art/palette.js';
-import { criarServicoContas } from './conta.js';
 import { resumoEstatisticas } from './estatisticas.js';
 import { criarPedido } from '../data/pedidos.js';
 import { chegarAgora } from '../state/testeAjuda.js';
@@ -121,33 +120,6 @@ describe('perfil e estatísticas', () => {
   });
 });
 
-function memoria() {
-  const m = new Map();
-  return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, String(v)) };
-}
-
-describe('contas', () => {
-  it('registra, entra, guarda progresso e altera e-mail/senha', async () => {
-    const c = criarServicoContas(memoria());
-    const email = await c.registrar('Ana@Email.com', 'segredo1', { dinheiro: 5 });
-    expect(email).toBe('ana@email.com');
-    await expect(c.registrar('ana@email.com', 'outra123', {})).rejects.toThrow(/existe/);
-    await expect(c.entrar('ana@email.com', 'errada')).rejects.toThrow(/incorretos/);
-    c.salvarProgresso(email, { dinheiro: 99 });
-    expect(await c.entrar('ana@email.com', 'segredo1')).toEqual({ dinheiro: 99 });
-
-    const novo = await c.alterar(email, 'segredo1', { email: 'bia@email.com', senha: 'nova1234' });
-    expect(novo).toBe('bia@email.com');
-    await expect(c.entrar('ana@email.com', 'segredo1')).rejects.toThrow();
-    expect(await c.entrar('bia@email.com', 'nova1234')).toEqual({ dinheiro: 99 });
-  });
-
-  it('valida e-mail e senha', async () => {
-    const c = criarServicoContas(memoria());
-    await expect(c.registrar('nao-e-email', 'segredo1')).rejects.toThrow(/E-mail/);
-    await expect(c.registrar('a@b.co', '123')).rejects.toThrow(/6/);
-  });
-});
 
 describe('gráficos das estatísticas e nível da interface', () => {
   it('guarda histórico limitado e jogos por modo', () => {

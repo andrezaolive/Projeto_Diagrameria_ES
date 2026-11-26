@@ -42,8 +42,8 @@ class ErroDeConflito extends ErroDaAplicacao {
 }
 
 class ErroNaoEncontrado extends ErroDaAplicacao {
-  constructor(mensagem = 'Recurso nao encontrado.') {
-    super('NAO_ENCONTRADO', mensagem);
+  constructor(mensagem = 'Recurso nao encontrado.', codigo = 'NAO_ENCONTRADO') {
+    super(codigo, mensagem);
   }
 }
 
