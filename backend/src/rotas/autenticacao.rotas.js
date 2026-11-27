@@ -59,13 +59,17 @@ const schemaAlterar = {
 // Desligados na suite de integracao, que faz dezenas de cadastros e logins
 // seguidos do mesmo IP. O comportamento do limite tem teste proprio em
 // testes/unitarios/limitaTentativas.test.js.
-const QUINZE_MINUTOS = 15 * 60 * 1000;
-const UMA_HORA = 60 * 60 * 1000;
+const UM_MINUTO = 60 * 1000;
+const QUINZE_MINUTOS = 15 * UM_MINUTO;
+const UMA_HORA = 60 * UM_MINUTO;
 
+// RNF22: 5 logins errados em 60 s bloqueiam aquela conta naquele IP ate a
+// janela fechar. Login certo nao conta.
 const limiteDeLogin = limitaTentativas({
-  limite: 10,
-  janelaMs: QUINZE_MINUTOS,
+  limite: 5,
+  janelaMs: UM_MINUTO,
   porEmail: true,
+  soFalhas: true,
   ativo: !ambiente.ehTeste,
 });
 
