@@ -45,5 +45,16 @@ function tamanhoDosPremios() {
 export default defineConfig({
   plugins: [react(), tamanhoDosPremios()],
   build: { assetsInlineLimit: 0 }, // mantém os PNGs como arquivos
-  test: { environment: 'node' },
+  test: {
+    environment: 'node',
+    // RNF13: cobertura minima de 80% nas regras do jogo (avaliacao do diagrama, estado,
+    // economia, pedidos, conta). As telas .jsx ficam de fora ate existirem testes de interface.
+    coverage: {
+      provider: 'v8',
+      include: ['src/lib/**/*.js', 'src/state/**/*.js', 'src/data/**/*.js'],
+      exclude: ['**/*.test.js', 'src/state/testeAjuda.js'],
+      reporter: ['text-summary', 'text', 'html'],
+      thresholds: { statements: 80, branches: 80, functions: 80, lines: 80 },
+    },
+  },
 });

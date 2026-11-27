@@ -381,8 +381,9 @@ components:
 
     MuitasTentativas:
       description: |
-        Limite de tentativas estourado. No login o limite é de 10 tentativas por
-        IP + email a cada 15 minutos; no cadastro, 60 por IP por hora. Os
+        Limite de tentativas estourado. No login, 5 tentativas malsucedidas por
+        IP + email em 60 segundos bloqueiam até a janela fechar (login certo não
+        conta); no cadastro, 60 por IP por hora. Os
         cabeçalhos `RateLimit` e `RateLimit-Policy` dizem quanto falta para
         liberar.
       content:

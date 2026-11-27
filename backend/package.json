@@ -15,6 +15,7 @@
     "vercel-build": "node scripts/vercel-build.js",
     "seed": "knex seed:run",
     "test": "jest --runInBand",
+    "test:cobertura": "jest --runInBand --coverage",
     "test:unitarios": "jest testes/unitarios",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",

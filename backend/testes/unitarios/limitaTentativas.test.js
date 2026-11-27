@@ -12,7 +12,9 @@ const { tratadorDeErros } = require('../../src/middlewares/tratadorDeErros');
 function appCom(opcoes) {
   const app = express();
   app.use(express.json());
-  app.post('/', limitaTentativas({ janelaMs: 60_000, ...opcoes }), (_req, res) => {
+  app.post('/', limitaTentativas({ janelaMs: 60_000, ...opcoes }), (req, res) => {
+    // senha "errada" simula login malsucedido
+    if (req.body?.senha === 'errada') return res.status(401).json({ ok: false });
     res.json({ ok: true });
   });
   app.use(tratadorDeErros);
@@ -54,5 +56,40 @@ describe('limitaTentativas', () => {
 
     await request(app).post('/');
     expect((await request(app).post('/')).status).toBe(200);
+  });
+
+  describe('com soFalhas (regra do login, RNF22)', () => {
+    const regraDoLogin = { limite: 5, porEmail: true, soFalhas: true };
+    const tentar = (app, senha) => request(app).post('/').send({ email: 'ana@x.dev', senha });
+
+    it('bloqueia na sexta tentativa depois de 5 falhas', async () => {
+      const app = appCom(regraDoLogin);
+      for (let i = 0; i < 5; i++) expect((await tentar(app, 'errada')).status).toBe(401);
+
+      const bloqueada = await tentar(app, 'certa');
+      expect(bloqueada.status).toBe(429);
+      expect(bloqueada.body.erro.codigo).toBe('MUITAS_TENTATIVAS');
+    });
+
+    it('login certo nao gasta tentativa', async () => {
+      const app = appCom(regraDoLogin);
+      for (let i = 0; i < 10; i++) expect((await tentar(app, 'certa')).status).toBe(200);
+      for (let i = 0; i < 4; i++) expect((await tentar(app, 'errada')).status).toBe(401);
+      expect((await tentar(app, 'certa')).status).toBe(200);
+    });
+
+    it('libera de novo quando a janela fecha', async () => {
+      jest.useFakeTimers({ doNotFake: ['nextTick', 'setImmediate'] });
+      try {
+        const app = appCom(regraDoLogin);
+        for (let i = 0; i < 5; i++) await tentar(app, 'errada');
+        expect((await tentar(app, 'certa')).status).toBe(429);
+
+        jest.advanceTimersByTime(60_001);
+        expect((await tentar(app, 'certa')).status).toBe(200);
+      } finally {
+        jest.useRealTimers();
+      }
+    });
   });
 });
