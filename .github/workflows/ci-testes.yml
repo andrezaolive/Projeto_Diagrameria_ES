@@ -104,8 +104,8 @@ jobs:
       - name: Aplicar migrations
         run: npm run migrate
 
-      - name: Executar Testes
-        run: npm test
+      - name: Executar Testes (com cobertura minima de 80%, RNF13)
+        run: npm run test:cobertura
 
   validar-frontend:
     runs-on: ubuntu-latest
@@ -127,5 +127,5 @@ jobs:
       - name: Executar Linter
         run: npm run lint
 
-      - name: Executar Testes
-        run: npm test
+      - name: Executar Testes (com cobertura minima de 80%, RNF13)
+        run: npm run test:cobertura

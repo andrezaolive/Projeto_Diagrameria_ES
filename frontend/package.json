@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "assets": "node scripts/gen-assets.mjs",
     "test": "vitest run",
+    "test:cobertura": "vitest run --coverage",
     "lint": "echo 'Linter pendente' && exit 0"
   },
   "dependencies": {
@@ -21,6 +22,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "4.3.4",
+    "@vitest/coverage-v8": "2.1.8",
     "vite": "6.0.7",
     "vitest": "2.1.8"
   }
