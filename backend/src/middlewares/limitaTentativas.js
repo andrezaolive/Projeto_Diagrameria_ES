@@ -30,14 +30,17 @@ function chavePorIpEEmail(req) {
  * @param {number} opcoes.limite  Requisicoes aceitas por janela.
  * @param {number} opcoes.janelaMs  Tamanho da janela.
  * @param {boolean} [opcoes.porEmail]  Conta por IP + email em vez de so por IP.
+ * @param {boolean} [opcoes.soFalhas]  Conta so as respostas com erro (status >= 400):
+ *   quem acerta a senha nao gasta tentativa.
  * @param {boolean} [opcoes.ativo]  false desliga o limite (usado na suite de integracao).
  * @returns {Function} middleware Express.
  */
-function limitaTentativas({ limite, janelaMs, porEmail = false, ativo = true }) {
+function limitaTentativas({ limite, janelaMs, porEmail = false, soFalhas = false, ativo = true }) {
   return rateLimit({
     limit: limite,
     windowMs: janelaMs,
     skip: () => !ativo,
+    skipSuccessfulRequests: soFalhas,
     ...(porEmail ? { keyGenerator: chavePorIpEEmail } : {}),
     // Cabecalhos RateLimit-* padronizados (draft-8), para o frontend saber
     // quanto falta sem ter que adivinhar.
