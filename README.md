@@ -9,7 +9,7 @@ O projeto Diagrameria foi concebido como um jogo educativo digital para apoiar o
 <div align="center">
   <img width="1623" height="902" alt="tela-inicial-diagrameria" src="https://github.com/user-attachments/assets/48744294-6fcd-4afd-8304-9fba64dcc009" width="85%" />
   <br />
-  <sub><em>Interface inicial do Diagrameria — substitua o caminho acima pela captura de tela oficial do projeto.</em></sub>
+  <sub><em>Interface inicial do Diagrameria</em></sub>
 </div>
 
 ---
@@ -58,3 +58,8 @@ Os READMEs de cada pasta contêm os comandos detalhados, as variáveis de ambien
 ## 🤝 Contribuições
 
 Contribuições são sempre bem-vindas! Veja o nosso arquivo [CONTRIBUTING.md](CONTRIBUTING.md) para saber como começar.
+
+## ✉️ Contato
+
+Tem dúvidas, sugestões ou quer conversar sobre o projeto? Escreva para
+[projectdiagrameria@gmail.com](mailto:projectdiagrameria@gmail.com).
